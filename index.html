@@ -5,18 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mario Güizzo Transporte</title>
   <link rel="stylesheet" href="style.css" />
+  <!-- Librería de iconos -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
   <header>
-    <img src="logo.png" alt="Logo Mario Güizzo" class="logo" />
     <h1>Transporte Mario Güizzo</h1>
+    <img src="logo.png" alt="Logo Mario Güizzo" class="logo" />
   </header>
 
   <main>
-    <h2>Bienvenido, chofer</h2>
-    <button class="btn-principal">Registrar carga</button>
-    <button class="btn-principal">Ver asignaciones</button>
-    <button class="btn-alerta">Reportar problema</button>
+    <h2>Bienvenido</h2>
+
+    <button class="btn-principal">
+      <i class="fas fa-truck"></i>
+      Agregar viaje
+    </button>
+
+    <button class="btn-principal">
+      <i class="fas fa-gas-pump"></i>
+      Agregar carga de combustible
+    </button>
+
+    <button class="btn-alerta">
+      <i class="fas fa-file-alt"></i>
+      Ver viajes cargados
+    </button>
   </main>
 
   <script src="main.js"></script>
