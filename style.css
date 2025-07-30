@@ -17,8 +17,8 @@ header h1 {
 }
 
 .logo {
-  height: 120px; /* Aumentamos tamaño del logo */
-  margin-top: 10px;
+  height: 400px; /* Aumentamos tamaño del logo */
+  margin-top: 20px;
 }
 
 main {
