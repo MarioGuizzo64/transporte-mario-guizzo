@@ -7,7 +7,7 @@ body {
 }
 
 header {
-  padding: 20px;
+  padding: 25px;
   background-color: #121212; /* Mismo fondo que el body */
 }
 
@@ -18,11 +18,11 @@ header h1 {
 
 .logo {
   height: 400px; /* Aumentamos tamaño del logo */
-  margin-top: 15px;
+  margin-top: 20px;
 }
 
 main {
-  padding: 40px;
+  padding: 30px;
 }
 
 /* Estilo general de botones */
