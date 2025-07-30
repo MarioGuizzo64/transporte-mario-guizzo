@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Agregar Carga de Combustible</title>
+  <style>
+    body {
+      background-color: #FFD700;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 50px auto;
+      background-color: black;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #333;
+    }
+
+    h1 {
+      text-align: center;
+      color: white;
+      text-transform: uppercase;
+      text-decoration: underline;
+    }
+
+    label {
+      color: white;
+      font-weight: bold;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      background-color: white;
+      border: 1px solid black;
+      border-radius: 5px;
+    }
+
+    .button-container {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid black;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+      color: white;
+      background-color: orange;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #ff8c00;
+    }
+
+    #successModal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.7);
+    }
+
+    #successModalContent {
+      background-color: white;
+      margin: 20% auto;
+      padding: 20px;
+      border: 3px solid green;
+      width: 80%;
+      max-width: 400px;
+      text-align: center;
+      border-radius: 10px;
+      font-size: 20px;
+    }
+
+    #successModalContent span {
+      font-size: 40px;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Agregar Carga de Combustible</h1>
+    <form id="combustibleForm">
+      <label for="fecha">FECHA DE CARGA</label>
+      <input type="date" id="fecha" required />
+
+      <label for="patente">PATENTE DEL CAMIÓN</label>
+      <input type="text" id="patente" required />
+
+      <label for="localidad">LOCALIDAD DEL LUGAR DE CARGA</label>
+      <input type="text" id="localidad" required />
+
+      <label for="litros">LITROS CARGADOS</label>
+      <input type="number" id="litros" step="any" required />
+
+      <label for="importe">IMPORTE TOTAL</label>
+      <input type="number" id="importe" step="any" required />
+
+      <label for="metodo">MÉTODO DE PAGO</label>
+      <select id="metodo" required>
+        <option value="">Seleccione...</option>
+        <option value="Efectivo">Efectivo</option>
+        <option value="Débito">Débito</option>
+        <option value="Crédito">Crédito</option>
+        <option value="Cuenta Corriente">Cuenta Corriente</option>
+      </select>
+
+      <div class="button-container">
+        <button type="button" onclick="window.location.href='index.html'">Volver</button>
+        <button type="submit">Guardar Carga</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="successModal">
+    <div id="successModalContent">
+      <span>✔</span>
+      <p>Guardado correctamente</p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "TU_API_KEY",
+      authDomain: "TU_AUTH_DOMAIN",
+      projectId: "TU_PROJECT_ID",
+      storageBucket: "TU_STORAGE_BUCKET",
+      messagingSenderId: "TU_MESSAGING_SENDER_ID",
+      appId: "TU_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const form = document.getElementById("combustibleForm");
+    const modal = document.getElementById("successModal");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const fecha = document.getElementById("fecha").value;
+      const patente = document.getElementById("patente").value.trim();
+      const localidad = document.getElementById("localidad").value.trim();
+      const litros = document.getElementById("litros").value.trim();
+      const importe = document.getElementById("importe").value.trim();
+      const metodo = document.getElementById("metodo").value;
+
+      if (!fecha || !patente || !localidad || !litros || !importe
