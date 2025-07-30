@@ -1,5 +1,84 @@
-<script type="module">
-  import { guardarViaje } from "./agregar-viaje.js";
-  document.getElementById("btnGuardar").addEventListener("click", guardarViaje);
-</script>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Agregar Viaje</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Agregar nuevo viaje</h1>
 
+  <form id="formulario-viaje">
+    <input type="date" id="fecha" required placeholder="Fecha del viaje" />
+    <input type="text" id="origen" required placeholder="Origen" />
+    <input type="text" id="destino" required placeholder="Destino" />
+    <input type="text" id="patente" required placeholder="Patente" />
+    <input type="text" id="chofer" required placeholder="Nombre del chofer" />
+    <input type="text" id="tipoCarga" required placeholder="Tipo de carga" />
+    <input type="number" id="peso" required placeholder="Peso (kg)" />
+    <input type="text" id="observaciones" placeholder="Observaciones" />
+    <input type="text" id="cuit" required placeholder="CUIT del cliente" />
+    <input type="number" id="adelanto" placeholder="Adelanto ($)" />
+    <input type="number" id="peaje" placeholder="Peajes ($)" />
+    <input type="number" id="entrada" placeholder="Entrada ($)" />
+
+    <button type="button" onclick="guardarViaje()">Guardar viaje</button>
+  </form>
+
+  <div id="modalExito" style="display:none;">
+    <p>¡Viaje guardado correctamente!</p>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
+      authDomain: "transporte-mario-guizzo.firebaseapp.com",
+      projectId: "transporte-mario-guizzo",
+      storageBucket: "transporte-mario-guizzo.appspot.com",
+      messagingSenderId: "465536166890",
+      appId: "1:465536166890:web:f658690629b09eca8fa093"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function guardarViaje() {
+      const viaje = {
+        fecha: document.getElementById("fecha").value,
+        origen: document.getElementById("origen").value,
+        destino: document.getElementById("destino").value,
+        patente: document.getElementById("patente").value,
+        chofer: document.getElementById("chofer").value,
+        tipoCarga: document.getElementById("tipoCarga").value,
+        peso: document.getElementById("peso").value,
+        observaciones: document.getElementById("observaciones").value,
+        cuit: document.getElementById("cuit").value,
+        adelanto: document.getElementById("adelanto").value,
+        peaje: document.getElementById("peaje").value,
+        entrada: document.getElementById("entrada").value
+      };
+
+      try {
+        await addDoc(collection(db, "viajes"), viaje);
+        mostrarModalGuardado();
+      } catch (e) {
+        alert("Error al guardar: " + e);
+      }
+    }
+
+    function mostrarModalGuardado() {
+      const modal = document.getElementById("modalExito");
+      modal.style.display = "block";
+      setTimeout(() => {
+        modal.style.display = "none";
+        window.location.href = "index.html";
+      }, 5000);
+    }
+  </script>
+</body>
+</html>
