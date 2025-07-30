@@ -7,13 +7,13 @@ body {
 }
 
 header {
-  padding: 25px;
+  padding: 10px;
   background-color: #121212; /* Mismo fondo que el body */
 }
 
 header h1 {
   font-size: 2rem;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 .logo {
@@ -22,7 +22,7 @@ header h1 {
 }
 
 main {
-  padding: 30px;
+  padding: 20px;
 }
 
 /* Estilo general de botones */
@@ -46,5 +46,5 @@ button:hover {
 }
 
 button i {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
 }
