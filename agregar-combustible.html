@@ -124,55 +124,80 @@
   </div>
 
   <div class="modal" id="modal-confirmacion">Carga guardada correctamente</div>
+<script type="module">
+  // Importa y usa las funciones de los SDK que necesites
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  <script>
-    const litros = document.getElementById('litros');
-    const precio = document.getElementById('precio');
-    const total = document.getElementById('total');
+  // Tu configuración de Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
+    authDomain: "transporte-mario-guizzo.firebaseapp.com",
+    projectId: "transporte-mario-guizzo",
+    storageBucket: "transporte-mario-guizzo.firebasestorage.app",
+    messagingSenderId: "465536166890",
+    appId: "1:465536166890:web:f658690629b09eca8fa093",
+    measurementId: "G-187MCQ2XPW"
+  };
 
-    litros.addEventListener('input', calcularTotal);
-    precio.addEventListener('input', calcularTotal);
+  // Inicializar Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-    function calcularTotal() {
-      const litrosVal = parseFloat(litros.value);
-      const precioVal = parseFloat(precio.value);
-      if (!isNaN(litrosVal) && !isNaN(precioVal)) {
-        total.value = (litrosVal * precioVal).toFixed(2);
-      } else {
-        total.value = '';
-      }
+  const litros = document.getElementById('litros');
+  const precio = document.getElementById('precio');
+  const total = document.getElementById('total');
+  const formCarga = document.getElementById('form-carga');
+
+  litros.addEventListener('input', calcularTotal);
+  precio.addEventListener('input', calcularTotal);
+
+  function calcularTotal() {
+    const litrosVal = parseFloat(litros.value);
+    const precioVal = parseFloat(precio.value);
+    if (!isNaN(litrosVal) && !isNaN(precioVal)) {
+      total.value = (litrosVal * precioVal).toFixed(2);
+    } else {
+      total.value = '';
     }
+  }
 
-    document.getElementById('form-carga').addEventListener('submit', async (e) => {
-      e.preventDefault();
+  formCarga.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const fecha = document.getElementById('fecha').value;
+    const litrosVal = parseFloat(litros.value);
+    const precioVal = parseFloat(precio.value);
+    const totalVal = parseFloat(total.value);
+    const estacion = document.getElementById('estacion').value;
+    const tipo = document.getElementById('tipo').value;
+    const patente = document.getElementById('patente').value;
+
+    try {
+      await addDoc(collection(db, "cargas-combustible"), {
+        fecha: fecha,
+        litros: litrosVal,
+        precioPorLitro: precioVal,
+        totalPagado: totalVal,
+        estacionServicio: estacion,
+        tipoCombustible: tipo,
+        patenteCamion: patente,
+        timestamp: new Date().toISOString()
+      });
+
       const modal = document.getElementById('modal-confirmacion');
       modal.style.display = 'flex';
       setTimeout(() => {
         modal.style.display = 'none';
         window.location.href = 'index.html';
       }, 5000);
-    });
-    <script type="module">
-  // Tu configuración de Firebase
-  // Importa y usa las funciones de los SDK que necesites
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
-      authDomain: "transporte-mario-guizzo.firebaseapp.com",
-      projectId: "transporte-mario-guizzo",
-      storageBucket: "transporte-mario-guizzo.firebasestorage.app",
-      messagingSenderId: "465536166890",
-      appId: "1:465536166890:web:f658690629b09eca8fa093",
-      measurementId: "G-187MCQ2XPW"
-    };
-  // Inicializar Firebase
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  // ... el resto de tu código JavaScript
+    } catch (error) {
+      console.error("Error al guardar el documento: ", error);
+      alert("Hubo un error al guardar la carga. Por favor, inténtalo de nuevo.");
+    }
+  });
 </script>
-  </script>
+ 
 </body>
 </html>
