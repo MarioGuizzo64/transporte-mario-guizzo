@@ -3,157 +3,174 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Agregar Carga de Combustible</title>
+  <title>Agregar carga de combustible</title>
   <style>
     body {
-      background-color: #FFD700;
+      background-color: #000;
+      color: white;
       font-family: Arial, sans-serif;
       margin: 0;
-      padding: 0;
-    }
-
-    .container {
-      max-width: 600px;
-      margin: 50px auto;
-      background-color: black;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #333;
+      padding: 20px;
     }
 
     h1 {
       text-align: center;
-      color: white;
-      text-transform: uppercase;
-      text-decoration: underline;
+      color: yellow;
+      margin-bottom: 30px;
+    }
+
+    form {
+      max-width: 500px;
+      margin: auto;
     }
 
     label {
-      color: white;
-      font-weight: bold;
-      text-transform: uppercase;
       display: block;
+      text-align: center;
+      font-weight: bold;
+      color: black;
       margin-bottom: 5px;
+      background-color: white;
+      border: 1px solid black;
+      padding: 5px;
     }
 
     input, select {
       width: 100%;
       padding: 10px;
       margin-bottom: 15px;
+      box-sizing: border-box;
       background-color: white;
       border: 1px solid black;
-      border-radius: 5px;
+      font-size: 16px;
     }
 
-    .button-container {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    button {
-      flex: 1;
-      padding: 12px;
-      border: 1px solid black;
+    .boton {
+      width: 100%;
+      padding: 10px;
+      font-size: 18px;
+      margin-top: 10px;
       border-radius: 5px;
-      font-weight: bold;
+      border: none;
       cursor: pointer;
+    }
+
+    .boton-verde {
+      background-color: green;
       color: white;
+    }
+
+    .boton-naranja {
       background-color: orange;
-      transition: background-color 0.3s ease;
+      color: white;
     }
 
-    button:hover {
-      background-color: #ff8c00;
-    }
-
-    #successModal {
+    #modalConfirmacion {
       display: none;
       position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
       z-index: 9999;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.7);
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 1.5em;
     }
 
-    #successModalContent {
-      background-color: white;
-      margin: 20% auto;
+    #modalConfirmacion > div {
+      background-color: green;
       padding: 20px;
-      border: 3px solid green;
-      width: 80%;
-      max-width: 400px;
-      text-align: center;
       border-radius: 10px;
-      font-size: 20px;
-    }
-
-    #successModalContent span {
-      font-size: 40px;
-      color: green;
     }
   </style>
 </head>
 <body>
-  <div id="modalConfirmacion" style="
-  display: none;
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background-color: rgba(0, 0, 0, 0.8);
-  z-index: 9999;
-  justify-content: center;
-  align-items: center;
-  color: white;
-  font-size: 1.5em;
-">
-  <div style="background-color: green; padding: 20px; border-radius: 10px;">
-    Carga guardada correctamente
-  </div>
-</div>
+  <h1>AGREGAR CARGA DE COMBUSTIBLE</h1>
 
-  <div class="container">
-    <h1>Agregar Carga de Combustible</h1>
-    <form id="combustibleForm">
-      <label for="fecha">FECHA DE CARGA</label>
-      <input type="date" id="fecha" required />
+  <form id="formCarga">
+    <label for="fecha">FECHA DE CARGA</label>
+    <input type="date" id="fecha" required />
 
-      <label for="patente">PATENTE DEL CAMIÓN</label>
-      <input type="text" id="patente" required />
+    <label for="litros">CANTIDAD DE LITROS</label>
+    <input type="number" id="litros" required />
 
-      <label for="localidad">LOCALIDAD DEL LUGAR DE CARGA</label>
-      <input type="text" id="localidad" required />
+    <label for="precio">PRECIO POR LITRO</label>
+    <input type="number" id="precio" required />
 
-      <label for="litros">LITROS CARGADOS</label>
-      <input type="number" id="litros" step="any" required />
+    <label for="total">TOTAL PAGADO</label>
+    <input type="number" id="total" readonly />
 
-      <label for="importe">IMPORTE TOTAL</label>
-      <input type="number" id="importe" step="any" required />
+    <label for="estacion">ESTACIÓN DE SERVICIO</label>
+    <input type="text" id="estacion" required />
 
-      <label for="metodo">MÉTODO DE PAGO</label>
-      <select id="metodo" required>
-        <option value="">Seleccione...</option>
-        <option value="Efectivo">Efectivo</option>
-        <option value="Débito">Débito</option>
-        <option value="Crédito">Crédito</option>
-        <option value="Cuenta Corriente">Cuenta Corriente</option>
-      </select>
+    <label for="tipo">TIPO DE COMBUSTIBLE</label>
+    <select id="tipo" required>
+      <option value="">Seleccionar...</option>
+      <option value="Nafta">Nafta</option>
+      <option value="Diesel">Diesel</option>
+      <option value="GNC">GNC</option>
+    </select>
 
-      <div class="button-container">
-        <button type="button" onclick="window.location.href='index.html'">Volver</button>
-        <button type="submit">Guardar Carga</button>
-      </div>
-    </form>
+    <label for="patente">PATENTE DEL CAMIÓN</label>
+    <input type="text" id="patente" required />
+
+    <label for="chofer">CHOFER</label>
+    <input type="text" id="chofer" readonly />
+
+    <button type="submit" class="boton boton-verde" id="btnGuardarCarga">Guardar Carga</button>
+    <button type="button" class="boton boton-naranja" onclick="window.location.href='index.html'">Volver</button>
+  </form>
+
+  <div id="modalConfirmacion">
+    <div>Carga guardada correctamente</div>
   </div>
 
-  <div id="successModal">
-    <div id="successModalContent">
-      <span>✔</span>
-      <p>Guardado correctamente</p>
-    </div>
-  </div>
+  <script>
+    // Simular nombre de usuario logueado (reemplazar luego con Firebase Auth)
+    const usuarioLogueado = "chofer1@marioguizzo.com";
+    document.getElementById("chofer").value = usuarioLogueado;
+
+    // Calcular automáticamente el total
+    document.getElementById("litros").addEventListener("input", calcularTotal);
+    document.getElementById("precio").addEventListener("input", calcularTotal);
+
+    function calcularTotal() {
+      const litros = parseFloat(document.getElementById("litros").value) || 0;
+      const precio = parseFloat(document.getElementById("precio").value) || 0;
+      document.getElementById("total").value = (litros * precio).toFixed(2);
+    }
+
+    document.getElementById("formCarga").addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      // Acá se puede guardar en Firebase si se quiere
+      // Por ahora solo mostramos el modal
+ <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
+      authDomain: "transporte-mario-guizzo.firebaseapp.com",
+      projectId: "transporte-mario-guizzo",
+      storageBucket: "transporte-mario-guizzo.appspot.com",
+      messagingSenderId: "465536166890",
+      appId: "1:465536166890:web:f658690629b09eca8fa093",
+      measurementId: "G-187MCQ2XPW"
+    };
+      const modal = document.getElementById("modalConfirmacion");
+      modal.style.display = "flex";
+
+      setTimeout(() => {
+        modal.style.display = "none";
+        window.location.href = "index.html"; // Cambiar por tu pantalla principal si tiene otro nombre
+      }, 5000);
+    });
+  </script>
+</body>
+</html>
+
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -168,20 +185,4 @@
       appId: "1:465536166890:web:f658690629b09eca8fa093",
       measurementId: "G-187MCQ2XPW"
     };
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    const form = document.getElementById("combustibleForm");
-    const modal = document.getElementById("successModal");
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const fecha = document.getElementById("fecha").value;
-      const patente = document.getElementById("patente").value.trim();
-      const localidad = document.getElementById("localidad").value.trim();
-      const litros = document.getElementById("litros").value.trim();
-      const importe = document.getElementById("importe").value.trim();
-      const metodo = document.getElementById("metodo").value;
-
-      if (!fecha || !patente || !localidad || !litros || !importe
+ 
