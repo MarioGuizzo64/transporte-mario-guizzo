@@ -1,16 +1,25 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Agregar carga de combustible</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
     body {
-      background-color: #000;
-      color: white;
-      font-family: Arial, sans-serif;
       margin: 0;
-      padding: 20px;
+      font-family: 'Roboto', sans-serif;
+      background-color: #FFD700; /* Amarillo */
+      color: white;
+    }
+
+    .container {
+      background-color: black;
+      max-width: 500px;
+      margin: 40px auto;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
     }
 
     h1 {
@@ -19,170 +28,130 @@
       margin-bottom: 30px;
     }
 
-    form {
-      max-width: 500px;
-      margin: auto;
-    }
-
     label {
       display: block;
       text-align: center;
       font-weight: bold;
-      color: black;
       margin-bottom: 5px;
-      background-color: white;
-      border: 1px solid black;
-      padding: 5px;
+      margin-top: 20px;
     }
 
     input, select {
       width: 100%;
-      padding: 10px;
-      margin-bottom: 15px;
-      box-sizing: border-box;
-      background-color: white;
-      border: 1px solid black;
+      padding: 12px;
+      border: none;
+      border-radius: 5px;
       font-size: 16px;
     }
 
-    .boton {
-      width: 100%;
-      padding: 10px;
-      font-size: 18px;
-      margin-top: 10px;
-      border-radius: 5px;
-      border: none;
-      cursor: pointer;
+    .buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 30px;
     }
 
-    .boton-verde {
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 0 5px;
+    }
+
+    .btn-volver {
+      background-color: orange;
+      color: black;
+    }
+
+    .btn-guardar {
       background-color: green;
       color: white;
     }
 
-    .boton-naranja {
-      background-color: orange;
-      color: white;
-    }
-
-    #modalConfirmacion {
-      display: none;
+    .modal {
       position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background-color: rgba(0, 0, 0, 0.8);
-      z-index: 9999;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: none;
       justify-content: center;
       align-items: center;
       color: white;
-      font-size: 1.5em;
-    }
-
-    #modalConfirmacion > div {
-      background-color: green;
-      padding: 20px;
-      border-radius: 10px;
+      font-size: 24px;
     }
   </style>
 </head>
 <body>
-  <h1>AGREGAR CARGA DE COMBUSTIBLE</h1>
+  <div class="container">
+    <h1>AGREGAR CARGA DE COMBUSTIBLE</h1>
+    <form id="form-carga">
+      <label for="fecha">FECHA DE CARGA</label>
+      <input type="date" id="fecha" required>
 
-  <form id="formCarga">
-    <label for="fecha">FECHA DE CARGA</label>
-    <input type="date" id="fecha" required />
+      <label for="litros">CANTIDAD DE LITROS</label>
+      <input type="number" id="litros" step="0.01" required>
 
-    <label for="litros">CANTIDAD DE LITROS</label>
-    <input type="number" id="litros" required />
+      <label for="precio">PRECIO POR LITRO</label>
+      <input type="number" id="precio" step="0.01" required>
 
-    <label for="precio">PRECIO POR LITRO</label>
-    <input type="number" id="precio" required />
+      <label for="total">TOTAL PAGADO</label>
+      <input type="number" id="total" step="0.01" readonly>
 
-    <label for="total">TOTAL PAGADO</label>
-    <input type="number" id="total" readonly />
+      <label for="estacion">ESTACIÓN DE SERVICIO</label>
+      <input type="text" id="estacion" required>
 
-    <label for="estacion">ESTACIÓN DE SERVICIO</label>
-    <input type="text" id="estacion" required />
+      <label for="tipo">TIPO DE COMBUSTIBLE</label>
+      <select id="tipo" required>
+        <option value="">Seleccionar...</option>
+        <option value="Nafta">Nafta</option>
+        <option value="Diesel">Diesel</option>
+        <option value="GNC">GNC</option>
+      </select>
 
-    <label for="tipo">TIPO DE COMBUSTIBLE</label>
-    <select id="tipo" required>
-      <option value="">Seleccionar...</option>
-      <option value="Nafta">Nafta</option>
-      <option value="Diesel">Diesel</option>
-      <option value="GNC">GNC</option>
-    </select>
+      <label for="patente">PATENTE DEL CAMIÓN</label>
+      <input type="text" id="patente" required>
 
-    <label for="patente">PATENTE DEL CAMIÓN</label>
-    <input type="text" id="patente" required />
-
-    <label for="chofer">CHOFER</label>
-    <input type="text" id="chofer" readonly />
-
-    <button type="submit" class="boton boton-verde" id="btnGuardarCarga">Guardar Carga</button>
-    <button type="button" class="boton boton-naranja" onclick="window.location.href='index.html'">Volver</button>
-  </form>
-
-  <div id="modalConfirmacion">
-    <div>Carga guardada correctamente</div>
+      <div class="buttons">
+        <button type="button" class="btn btn-volver" onclick="location.href='index.html'">Volver</button>
+        <button type="submit" class="btn btn-guardar">Guardar carga</button>
+      </div>
+    </form>
   </div>
 
-  <script>
-    // Simular nombre de usuario logueado (reemplazar luego con Firebase Auth)
-    const usuarioLogueado = "chofer1@marioguizzo.com";
-    document.getElementById("chofer").value = usuarioLogueado;
+  <div class="modal" id="modal-confirmacion">Carga guardada correctamente</div>
 
-    // Calcular automáticamente el total
-    document.getElementById("litros").addEventListener("input", calcularTotal);
-    document.getElementById("precio").addEventListener("input", calcularTotal);
+  <script>
+    const litros = document.getElementById('litros');
+    const precio = document.getElementById('precio');
+    const total = document.getElementById('total');
+
+    litros.addEventListener('input', calcularTotal);
+    precio.addEventListener('input', calcularTotal);
 
     function calcularTotal() {
-      const litros = parseFloat(document.getElementById("litros").value) || 0;
-      const precio = parseFloat(document.getElementById("precio").value) || 0;
-      document.getElementById("total").value = (litros * precio).toFixed(2);
+      const litrosVal = parseFloat(litros.value);
+      const precioVal = parseFloat(precio.value);
+      if (!isNaN(litrosVal) && !isNaN(precioVal)) {
+        total.value = (litrosVal * precioVal).toFixed(2);
+      } else {
+        total.value = '';
+      }
     }
 
-    document.getElementById("formCarga").addEventListener("submit", function (e) {
+    document.getElementById('form-carga').addEventListener('submit', async (e) => {
       e.preventDefault();
-
-      // Acá se puede guardar en Firebase si se quiere
-      // Por ahora solo mostramos el modal
- <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
-      authDomain: "transporte-mario-guizzo.firebaseapp.com",
-      projectId: "transporte-mario-guizzo",
-      storageBucket: "transporte-mario-guizzo.appspot.com",
-      messagingSenderId: "465536166890",
-      appId: "1:465536166890:web:f658690629b09eca8fa093",
-      measurementId: "G-187MCQ2XPW"
-    };
-      const modal = document.getElementById("modalConfirmacion");
-      modal.style.display = "flex";
-
+      const modal = document.getElementById('modal-confirmacion');
+      modal.style.display = 'flex';
       setTimeout(() => {
-        modal.style.display = "none";
-        window.location.href = "index.html"; // Cambiar por tu pantalla principal si tiene otro nombre
+        modal.style.display = 'none';
+        window.location.href = 'index.html';
       }, 5000);
     });
   </script>
 </body>
 </html>
-
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
-      authDomain: "transporte-mario-guizzo.firebaseapp.com",
-      projectId: "transporte-mario-guizzo",
-      storageBucket: "transporte-mario-guizzo.appspot.com",
-      messagingSenderId: "465536166890",
-      appId: "1:465536166890:web:f658690629b09eca8fa093",
-      measurementId: "G-187MCQ2XPW"
-    };
- 
