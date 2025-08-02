@@ -7,59 +7,66 @@
   <link rel="stylesheet" href="style.css">
   <script src="https://kit.fontawesome.com/a2e0e6ad65.js" crossorigin="anonymous"></script>
   <style>
-    body {
-      background-color: #f5c518;
-      color: white;
-      font-family: sans-serif;
-      padding: 20px;
-    }
+  body {
+    background-color: #f5c518;
+    color: white;
+    font-family: sans-serif;
+    padding: 20px;
+  }
 
-    .formulario {
-      max-width: 600px;
-      margin: 0 auto;
-    }
+  .formulario {
+    max-width: 600px;
+    margin: 0 auto;
+  }
 
-    .formulario label {
-      display: block;
-      margin-top: 15px;
-    }
+  .formulario label {
+    display: block;
+    margin-top: 15px;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: white;
+  }
 
-    .formulario input, .formulario textarea {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-      border-radius: 5px;
-      border: none;
-    }
+  .formulario input, .formulario textarea {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    border-radius: 5px;
+    border: 2px solid black;
+    background-color: #333;
+    color: white;
+    font-size: 16px;
+  }
 
-    .btn-naranja {
-      background-color: orange;
-      color: black;
-      font-weight: bold;
-      padding: 12px 20px;
-      margin-top: 20px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
+  .btn-naranja {
+    background-color: orange;
+    color: black;
+    font-weight: bold;
+    padding: 12px 20px;
+    margin-top: 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
 
-    .btn-naranja:hover {
-      background-color: darkorange;
-    }
+  .btn-naranja:hover {
+    background-color: darkorange;
+  }
 
-    #modalExito {
-      display: none;
-      position: fixed;
-      top: 40%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background-color: green;
-      color: white;
-      padding: 20px;
-      border-radius: 10px;
-      z-index: 1000;
-    }
-  </style>
+  #modalExito {
+    display: none;
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: green;
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    z-index: 1000;
+  }
+</style>
+
 </head>
 <body>
   <h1>Agregar Viaje</h1>
