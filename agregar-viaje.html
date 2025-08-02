@@ -1,174 +1,200 @@
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agregar Viaje</title>
- <link rel="stylesheet" href="style.css">
-  <script src="https://kit.fontawesome.com/a2e0e6ad65.js" crossorigin="anonymous"></script>
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Roboto', sans-serif;
-      background-color: #FFD700; /* Amarillo */
-      color: white;
-    }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agregar Viaje</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Roboto', sans-serif;
+      background-color: #FFD700; /* Amarillo */
+      color: white;
+    }
 
-    .container {
-      background-color: black;
-      max-width: 500px;
-      margin: 40px auto;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-    }
-    h2 {
-      text-align: center;
-      font-size: 24px;
-      text-transform: uppercase;
-      text-decoration: underline;
-      margin-bottom: 20px;
-    }
-    form {
-      display: flex;
-      flex-direction: column;
-      max-width: 600px;
-      margin: 0 auto;
-      gap: 12px;
-    }
-    label {
-      font-weight: bold;
-      text-transform: uppercase;
-    }
-    input, textarea {
-      padding: 8px;
-      border: 1px solid black;
-      background-color: white;
-      color: black;
-      border-radius: 4px;
-    }
-    button {
-      padding: 10px;
-      background-color: orange;
-      color: black;
-      border: 1px solid black;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    #modalExito {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background-color: white;
-      color: green;
-      padding: 20px;
-      border: 2px solid green;
-      border-radius: 10px;
-      z-index: 1000;
-    }
-  </style>
+    .container {
+      background-color: black;
+      max-width: 500px;
+      margin: 40px auto;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+
+    h1 {
+      text-align: center;
+      color: white;
+      text-decoration: underline;
+      margin-bottom: 30px;
+    }
+
+    label {
+      display: block;
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 5px;
+      margin-top: 20px;
+      color: yellow; /* Para que el texto sea visible en fondo oscuro */
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      box-sizing: border-box; /* Para que el padding no desborde el ancho */
+    }
+
+    .buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 30px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 0 5px;
+    }
+
+    .btn-volver {
+      background-color: orange;
+      color: black;
+    }
+
+    .btn-guardar {
+      background-color: green;
+      color: white;
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 24px;
+    }
+  </style>
 </head>
 <body>
-  <h2>Agregar viaje</h2>
-  <form id="formViaje">
-    <label for="fecha">Fecha</label>
-    <input type="date" id="fecha" required>
+  <div class="container">
+    <h1>AGREGAR VIAJE</h1>
+    <form id="formViaje">
+      <label for="fecha">FECHA</label>
+      <input type="date" id="fecha" required>
 
-    <label for="origen">Origen</label>
-    <input type="text" id="origen" required>
+      <label for="origen">ORIGEN</label>
+      <input type="text" id="origen" required>
 
-    <label for="destino">Destino</label>
-    <input type="text" id="destino" required>
+      <label for="destino">DESTINO</label>
+      <input type="text" id="destino" required>
 
-    <label for="patente">Patente</label>
-    <input type="text" id="patente" required>
+      <label for="patente">PATENTE</label>
+      <input type="text" id="patente" required>
 
-    <label for="chofer">Chofer</label>
-    <input type="text" id="chofer" required>
+      <label for="chofer">CHOFER</label>
+      <input type="text" id="chofer" required>
 
-    <label for="tipoCarga">Tipo de carga</label>
-    <input type="text" id="tipoCarga" required>
+      <label for="tipoCarga">TIPO DE CARGA</label>
+      <input type="text" id="tipoCarga" required>
 
-    <label for="peso">Peso (kg)</label>
-    <input type="number" id="peso" required>
+      <label for="peso">PESO (KG)</label>
+      <input type="number" id="peso" required>
 
-    <label for="observaciones">Observaciones</label>
-    <textarea id="observaciones"></textarea>
+      <label for="observaciones">OBSERVACIONES</label>
+      <textarea id="observaciones"></textarea>
 
-    <label for="cuit">CUIT del cliente</label>
-    <input type="text" id="cuit" required>
+      <label for="cuit">CUIT DEL CLIENTE</label>
+      <input type="text" id="cuit" required>
 
-    <label for="adelanto">Adelanto ($)</label>
-    <input type="number" id="adelanto" required>
+      <label for="adelanto">ADELANTO ($)</label>
+      <input type="number" id="adelanto" required>
 
-    <label for="peaje">Gasto en peajes ($)</label>
-    <input type="number" id="peaje" required>
+      <label for="peaje">GASTO EN PEAJES ($)</label>
+      <input type="number" id="peaje" required>
 
-    <label for="entrada">Entrada ($)</label>
-    <input type="number" id="entrada" required>
+      <label for="entrada">ENTRADA ($)</label>
+      <input type="number" id="entrada" required>
 
-    <button type="submit">Guardar viaje</button>
-  </form>
+      <div class="buttons">
+        <button type="button" class="btn btn-volver" onclick="location.href='index.html'">Volver</button>
+        <button type="submit" class="btn btn-guardar">Guardar viaje</button>
+      </div>
+    </form>
+  </div>
 
-  <div id="modalExito">Viaje guardado correctamente.</div>
+  <div class="modal" id="modal-confirmacion">Viaje guardado correctamente</div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
-      authDomain: "transporte-mario-guizzo.firebaseapp.com",
-      projectId: "transporte-mario-guizzo",
-      storageBucket: "transporte-mario-guizzo.appspot.com",
-      messagingSenderId: "465536166890",
-      appId: "1:465536166890:web:f658690629b09eca8fa093"
-    };
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
+      authDomain: "transporte-mario-guizzo.firebaseapp.com",
+      projectId: "transporte-mario-guizzo",
+      storageBucket: "transporte-mario-guizzo.appspot.com",
+      messagingSenderId: "465536166890",
+      appId: "1:465536166890:web:f658690629b09eca8fa093"
+    };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-    const form = document.getElementById("formViaje");
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
+    const form = document.getElementById("formViaje");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-      const campos = ["fecha", "origen", "destino", "patente", "chofer", "tipoCarga", "peso", "cuit", "adelanto", "peaje", "entrada"];
-      for (const id of campos) {
-        if (!document.getElementById(id).value) {
-          alert("Por favor, complete todos los campos obligatorios.");
-          return;
-        }
-      }
+      const campos = ["fecha", "origen", "destino", "patente", "chofer", "tipoCarga", "peso", "cuit", "adelanto", "peaje", "entrada"];
+      for (const id of campos) {
+        if (!document.getElementById(id).value) {
+          alert("Por favor, complete todos los campos obligatorios.");
+          return;
+        }
+      }
 
-      const viaje = {
-        fecha: document.getElementById("fecha").value,
-        origen: document.getElementById("origen").value,
-        destino: document.getElementById("destino").value,
-        patente: document.getElementById("patente").value,
-        chofer: document.getElementById("chofer").value,
-        tipoCarga: document.getElementById("tipoCarga").value,
-        peso: document.getElementById("peso").value,
-        observaciones: document.getElementById("observaciones").value,
-        cuit: document.getElementById("cuit").value,
-        adelanto: document.getElementById("adelanto").value,
-        peaje: document.getElementById("peaje").value,
-        entrada: document.getElementById("entrada").value
-      };
+      const viaje = {
+        fecha: document.getElementById("fecha").value,
+        origen: document.getElementById("origen").value,
+        destino: document.getElementById("destino").value,
+        patente: document.getElementById("patente").value,
+        chofer: document.getElementById("chofer").value,
+        tipoCarga: document.getElementById("tipoCarga").value,
+        peso: parseFloat(document.getElementById("peso").value),
+        observaciones: document.getElementById("observaciones").value,
+        cuit: document.getElementById("cuit").value,
+        adelanto: parseFloat(document.getElementById("adelanto").value),
+        peaje: parseFloat(document.getElementById("peaje").value),
+        entrada: parseFloat(document.getElementById("entrada").value),
+        timestamp: new Date().toISOString()
+      };
 
-      try {
-        await addDoc(collection(db, "viajes"), viaje);
-        const modal = document.getElementById("modalExito");
-        modal.style.display = "block";
-        setTimeout(() => {
-          modal.style.display = "none";
-          window.location.href = "index.html";
-        }, 5000);
-      } catch (e) {
-        alert("Error al guardar: " + e);
-      }
-    });
-  </script>
+      try {
+        await addDoc(collection(db, "viajes"), viaje);
+        const modal = document.getElementById("modal-confirmacion");
+        modal.style.display = "flex";
+        setTimeout(() => {
+          modal.style.display = "none";
+          window.location.href = "index.html";
+        }, 5000);
+      } catch (e) {
+        console.error("Error al guardar: ", e);
+        alert("Error al guardar: " + e);
+      }
+    });
+  </script>
 </body>
 </html>
