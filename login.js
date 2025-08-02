@@ -32,8 +32,12 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
       window.location.href = "chofer.html";
     }
 
-  } catch (error) {
-    alert("Error al iniciar sesión. Verificá tus credenciales.");
-    console.error(error);
-  }
+if (error.code === "auth/user-not-found") {
+  alert("Usuario no encontrado.");
+} else if (error.code === "auth/wrong-password") {
+  alert("Contraseña incorrecta.");
+} else {
+  alert("Error al iniciar sesión: " + error.message);
+}
+
 });
