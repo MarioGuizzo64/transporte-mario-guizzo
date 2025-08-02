@@ -29,7 +29,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     if (email === "admin@guizzo.com") {
       window.location.href = "admin.html";
     } else {
-      window.location.href = "chofer.html";
+      window.location.href = "index.html";
     }
 
 if (error.code === "auth/user-not-found") {
