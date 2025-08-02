@@ -1,86 +1,163 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Agregar viaje</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agregar Viaje</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://kit.fontawesome.com/a2e0e6ad65.js" crossorigin="anonymous"></script>
   <style>
     body {
-      background-color: #fff9cc;
-      font-family: Arial, sans-serif;
-      padding: 20px;
-    }
-    .container {
-      max-width: 400px;
-      margin: 0 auto;
-      background-color: #fff9cc;
-      padding: 20px;
-      border-radius: 15px;
-      text-align: center;
-    }
-    h1 {
+      background-color: #f5c518;
       color: white;
-      background-color: black;
-      padding: 10px;
-      border-radius: 10px;
-      text-decoration: underline;
+      font-family: sans-serif;
+      padding: 20px;
     }
-    label {
+
+    .formulario {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .formulario label {
       display: block;
-      margin-top: 10px;
-      font-weight: bold;
-      text-align: center;
+      margin-top: 15px;
     }
-    input[type="text"],
-    input[type="date"],
-    input[type="number"],
-    textarea {
+
+    .formulario input, .formulario textarea {
       width: 100%;
-      padding: 10px;
+      padding: 8px;
       margin-top: 5px;
-      box-sizing: border-box;
       border-radius: 5px;
-      border: 1px solid #000;
+      border: none;
     }
-    textarea {
-      resize: vertical;
-    }
-    .boton-guardar {
+
+    .btn-naranja {
       background-color: orange;
       color: black;
-      padding: 10px 20px;
-      border: 1px solid #000;
-      border-radius: 5px;
       font-weight: bold;
-      margin-top: 15px;
+      padding: 12px 20px;
+      margin-top: 20px;
+      border: none;
+      border-radius: 8px;
       cursor: pointer;
     }
-    .boton-volver {
-      background-color: orange;
-      color: black;
-      padding: 8px 16px;
-      border-radius: 5px;
-      text-decoration: none;
-      display: inline-block;
-      margin-top: 10px;
+
+    .btn-naranja:hover {
+      background-color: darkorange;
+    }
+
+    #modalExito {
+      display: none;
+      position: fixed;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: green;
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      z-index: 1000;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>AGREGAR VIAJE</h1>
-    
-    <label for="fecha">FECHA</label>
-    <input type="date" id="fecha" />
+  <h1>Agregar Viaje</h1>
 
-    <label for="origen">ORIGEN</label>
-    <input type="text" id="origen" />
+  <div class="formulario">
+    <label for="fecha">Fecha:</label>
+    <input type="date" id="fecha" required>
 
-    <label for="destino">DESTINO</label>
-    <input type="text" id="destino" />
+    <label for="origen">Origen:</label>
+    <input type="text" id="origen">
 
-    <label for="patente">PATENTE</label>
-    <input type="text" id="patente" />
+    <label for="destino">Destino:</label>
+    <input type="text" id="destino">
 
-    <label for="chofer">CHOFER</label>
-    <input type="text
+    <label for="patente">Patente del camión:</label>
+    <input type="text" id="patente">
+
+    <label for="chofer">Chofer:</label>
+    <input type="text" id="chofer">
+
+    <label for="tipoCarga">Tipo de carga:</label>
+    <input type="text" id="tipoCarga">
+
+    <label for="peso">Peso (kg):</label>
+    <input type="number" id="peso">
+
+    <label for="observaciones">Observaciones:</label>
+    <textarea id="observaciones"></textarea>
+
+    <label for="cuit">CUIT cliente:</label>
+    <input type="text" id="cuit">
+
+    <label for="adelanto">Adelanto ($):</label>
+    <input type="number" id="adelanto">
+
+    <label for="peaje">Peaje ($):</label>
+    <input type="number" id="peaje">
+
+    <label for="entrada">Entrada a destino:</label>
+    <input type="text" id="entrada">
+
+    <button class="btn-naranja" onclick="guardarViaje()">
+      <i class="fas fa-save"></i> Guardar viaje
+    </button>
+  </div>
+
+  <div id="modalExito">¡Viaje guardado correctamente!</div>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
+      authDomain: "transporte-mario-guizzo.firebaseapp.com",
+      projectId: "transporte-mario-guizzo",
+      storageBucket: "transporte-mario-guizzo.appspot.com",
+      messagingSenderId: "465536166890",
+      appId: "1:465536166890:web:f658690629b09eca8fa093",
+      measurementId: "G-187MCQ2XPW"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function guardarViaje() {
+      const viaje = {
+        fecha: document.getElementById("fecha").value,
+        origen: document.getElementById("origen").value,
+        destino: document.getElementById("destino").value,
+        patente: document.getElementById("patente").value,
+        chofer: document.getElementById("chofer").value,
+        tipoCarga: document.getElementById("tipoCarga").value,
+        peso: document.getElementById("peso").value,
+        observaciones: document.getElementById("observaciones").value,
+        cuit: document.getElementById("cuit").value,
+        adelanto: document.getElementById("adelanto").value,
+        peaje: document.getElementById("peaje").value,
+        entrada: document.getElementById("entrada").value
+      };
+
+      try {
+        await addDoc(collection(db, "viajes"), viaje);
+        mostrarModalGuardado();
+      } catch (e) {
+        alert("Error al guardar: " + e);
+      }
+    }
+
+    function mostrarModalGuardado() {
+      const modal = document.getElementById("modalExito");
+      modal.style.display = "block";
+      setTimeout(() => {
+        modal.style.display = "none";
+        window.location.href = "index.html";
+      }, 5000);
+    }
+  </script>
+</body>
+</html>
