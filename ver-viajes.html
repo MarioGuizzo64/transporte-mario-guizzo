@@ -116,6 +116,53 @@
     };
 
     cargarViajes();
+onSnapshot(viajesRef, (querySnapshot) => {
+    const listaViajes = document.getElementById('lista-viajes');
+    listaViajes.innerHTML = '';
+
+    querySnapshot.forEach((doc) => {
+        const viaje = doc.data();
+        const item = document.createElement('div');
+        item.classList.add('viaje-item');
+        item.innerHTML = `
+            <p><strong>Destino:</strong> ${viaje.destino}</p>
+            <p><strong>Fecha:</strong> ${viaje.fecha}</p>
+            <p><strong>Patente:</strong> ${viaje.patente}</p>
+            <p><strong>Chofer:</strong> ${viaje.chofer}</p>
+            <button class="btn-verde" onclick="editarViaje('${doc.id}', ${JSON.stringify(viaje).replace(/"/g, '&quot;')})">Editar</button>
+            <button class="btn-rojo" onclick="eliminarViaje('${doc.id}')">Eliminar</button>
+        `;
+        listaViajes.appendChild(item);
+    });
+});
+function editarViaje(id, viajeData) {
+    const nuevoDestino = prompt("Modificar destino:", viajeData.destino);
+    const nuevaFecha = prompt("Modificar fecha (YYYY-MM-DD):", viajeData.fecha);
+    const nuevaPatente = prompt("Modificar patente:", viajeData.patente);
+
+    if (nuevoDestino && nuevaFecha && nuevaPatente) {
+        updateDoc(doc(db, "viajes", id), {
+            destino: nuevoDestino,
+            fecha: nuevaFecha,
+            patente: nuevaPatente,
+            chofer: viajeData.chofer // Mantenemos el chofer original
+        }).then(() => {
+            alert("Viaje actualizado correctamente.");
+        }).catch((error) => {
+            console.error("Error al actualizar viaje:", error);
+        });
+    }
+}
+function eliminarViaje(id) {
+    if (confirm("¿Estás seguro de que querés eliminar este viaje?")) {
+        deleteDoc(doc(db, "viajes", id)).then(() => {
+            alert("Viaje eliminado.");
+        }).catch((error) => {
+            console.error("Error al eliminar viaje:", error);
+        });
+    }
+}
+
   </script>
 </body>
 </html>
