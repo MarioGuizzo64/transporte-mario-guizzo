@@ -7,115 +7,104 @@
   <link rel="stylesheet" href="style.css">
   <script src="https://kit.fontawesome.com/a2e0e6ad65.js" crossorigin="anonymous"></script>
   <style>
-  body {
-    background-color: #f5c518;
-    color: white;
-    font-family: sans-serif;
-    padding: 20px;
-  }
-
-  .formulario {
-    max-width: 600px;
-    margin: 0 auto;
-  }
-
-  .formulario label {
-    display: block;
-    margin-top: 15px;
-    font-weight: bold;
-    text-transform: uppercase;
-    color: white;
-  }
-
-  .formulario input, .formulario textarea {
-    width: 100%;
-    padding: 8px;
-    margin-top: 5px;
-    border-radius: 5px;
-    border: 2px solid black;
-    background-color: #333;
-    color: white;
-    font-size: 16px;
-  }
-
-  .btn-naranja {
-    background-color: orange;
-    color: black;
-    font-weight: bold;
-    padding: 12px 20px;
-    margin-top: 20px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-
-  .btn-naranja:hover {
-    background-color: darkorange;
-  }
-
-  #modalExito {
-    display: none;
-    position: fixed;
-    top: 40%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background-color: green;
-    color: white;
-    padding: 20px;
-    border-radius: 10px;
-    z-index: 1000;
-  }
-</style>
-
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #fffbd6;
+      color: black;
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+      font-size: 24px;
+      text-transform: uppercase;
+      text-decoration: underline;
+      margin-bottom: 20px;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      max-width: 600px;
+      margin: 0 auto;
+      gap: 12px;
+    }
+    label {
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    input, textarea {
+      padding: 8px;
+      border: 1px solid black;
+      background-color: white;
+      color: black;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px;
+      background-color: orange;
+      color: black;
+      border: 1px solid black;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    #modalExito {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      color: green;
+      padding: 20px;
+      border: 2px solid green;
+      border-radius: 10px;
+      z-index: 1000;
+    }
+  </style>
 </head>
 <body>
-  <h1>Agregar Viaje</h1>
-
-  <div class="formulario">
-    <label for="fecha">Fecha:</label>
+  <h2>Agregar viaje</h2>
+  <form id="formViaje">
+    <label for="fecha">Fecha</label>
     <input type="date" id="fecha" required>
 
-    <label for="origen">Origen:</label>
-    <input type="text" id="origen">
+    <label for="origen">Origen</label>
+    <input type="text" id="origen" required>
 
-    <label for="destino">Destino:</label>
-    <input type="text" id="destino">
+    <label for="destino">Destino</label>
+    <input type="text" id="destino" required>
 
-    <label for="patente">Patente del camión:</label>
-    <input type="text" id="patente">
+    <label for="patente">Patente</label>
+    <input type="text" id="patente" required>
 
-    <label for="chofer">Chofer:</label>
-    <input type="text" id="chofer">
+    <label for="chofer">Chofer</label>
+    <input type="text" id="chofer" required>
 
-    <label for="tipoCarga">Tipo de carga:</label>
-    <input type="text" id="tipoCarga">
+    <label for="tipoCarga">Tipo de carga</label>
+    <input type="text" id="tipoCarga" required>
 
-    <label for="peso">Peso (kg):</label>
-    <input type="number" id="peso">
+    <label for="peso">Peso (kg)</label>
+    <input type="number" id="peso" required>
 
-    <label for="observaciones">Observaciones:</label>
+    <label for="observaciones">Observaciones</label>
     <textarea id="observaciones"></textarea>
 
-    <label for="cuit">CUIT cliente:</label>
-    <input type="text" id="cuit">
+    <label for="cuit">CUIT del cliente</label>
+    <input type="text" id="cuit" required>
 
-    <label for="adelanto">Adelanto ($):</label>
-    <input type="number" id="adelanto">
+    <label for="adelanto">Adelanto ($)</label>
+    <input type="number" id="adelanto" required>
 
-    <label for="peaje">Peaje ($):</label>
-    <input type="number" id="peaje">
+    <label for="peaje">Gasto en peajes ($)</label>
+    <input type="number" id="peaje" required>
 
-    <label for="entrada">Entrada a destino:</label>
-    <input type="text" id="entrada">
+    <label for="entrada">Entrada ($)</label>
+    <input type="number" id="entrada" required>
 
-    <button class="btn-naranja" onclick="guardarViaje()">
-      <i class="fas fa-save"></i> Guardar viaje
-    </button>
-  </div>
+    <button type="submit">Guardar viaje</button>
+  </form>
 
-  <div id="modalExito">¡Viaje guardado correctamente!</div>
+  <div id="modalExito">Viaje guardado correctamente.</div>
 
-  <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -126,14 +115,24 @@
       projectId: "transporte-mario-guizzo",
       storageBucket: "transporte-mario-guizzo.appspot.com",
       messagingSenderId: "465536166890",
-      appId: "1:465536166890:web:f658690629b09eca8fa093",
-      measurementId: "G-187MCQ2XPW"
+      appId: "1:465536166890:web:f658690629b09eca8fa093"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    async function guardarViaje() {
+    const form = document.getElementById("formViaje");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const campos = ["fecha", "origen", "destino", "patente", "chofer", "tipoCarga", "peso", "cuit", "adelanto", "peaje", "entrada"];
+      for (const id of campos) {
+        if (!document.getElementById(id).value) {
+          alert("Por favor, complete todos los campos obligatorios.");
+          return;
+        }
+      }
+
       const viaje = {
         fecha: document.getElementById("fecha").value,
         origen: document.getElementById("origen").value,
@@ -151,20 +150,16 @@
 
       try {
         await addDoc(collection(db, "viajes"), viaje);
-        mostrarModalGuardado();
+        const modal = document.getElementById("modalExito");
+        modal.style.display = "block";
+        setTimeout(() => {
+          modal.style.display = "none";
+          window.location.href = "index.html";
+        }, 5000);
       } catch (e) {
         alert("Error al guardar: " + e);
       }
-    }
-
-    function mostrarModalGuardado() {
-      const modal = document.getElementById("modalExito");
-      modal.style.display = "block";
-      setTimeout(() => {
-        modal.style.display = "none";
-        window.location.href = "index.html";
-      }, 5000);
-    }
+    });
   </script>
 </body>
 </html>
