@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ver Viajes</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script type="module" src="/firebaseConfig.js"></script>
+  <style>
+    body {
+      background-color: #FFF6BF;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: white;
+    }
+
+    .container {
+      background-color: #222;
+      margin: 2rem auto;
+      padding: 2rem;
+      border-radius: 15px;
+      max-width: 95%;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      text-decoration: underline;
+      color: white;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1rem;
+    }
+
+    th, td {
+      border: 1px solid white;
+      padding: 0.5rem;
+      text-align: center;
+    }
+
+    th {
+      background-color: #333;
+    }
+
+    .btn {
+      padding: 0.4rem 0.8rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 0 0.2rem;
+    }
+
+    .btn-edit {
+      background-color: green;
+      color: white;
+    }
+
+    .btn-delete {
+      background-color: red;
+      color: white;
+    }
+
+    .btn-volver {
+      background-color: orange;
+      color: white;
+      display: block;
+      margin: 1rem auto 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>LISTADO DE VIAJES</h1>
+    <table id="tablaViajes">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Origen</th>
+          <th>Destino</th>
+          <th>Patente</th>
+          <th>Chofer</th>
+          <th>Carga</th>
+          <th>CUIT</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Aquí se llenan los viajes -->
+      </tbody>
+    </table>
+    <button class="btn btn-volver" onclick="window.location.href='inicio.html'">Volver al menú</button>
+  </div>
+
+  <script type="module">
+    import { db } from "./firebaseConfig.js";
+    import { collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-lite.js";
+
+    const tabla = document.querySelector("#tablaViajes tbody");
+    const viajesRef = collection(db, "viajes");
+
+    const mostrarViajes = async () => {
+      const snapshot = await getDocs(viajesRef);
+      tabla.innerHTML = "";
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const fila = document.createElement("tr");
+
+        fila.innerHTML = `
+          <td>${data.fecha || "-"}</td>
+          <td>${data.origen || "-"}</td>
+          <td>${data.destino || "-"}</td>
+          <td>${data.patente || "-"}</td>
+          <td>${data.chofer || "-"}</td>
+          <td>${data.tipoCarga || "-"}</td>
+          <td>${data.cuitCliente || "-"}</td>
+          <td>
+            <button class="btn btn-edit" onclick="editarViaje('${docSnap.id}')">Editar</button>
+            <button class="btn btn-delete" onclick="eliminarViaje('${docSnap.id}')">Eliminar</button>
+          </td>
+        `;
+        tabla.appendChild(fila);
+      });
+    };
+
+    window.eliminarViaje = async (id) => {
+      if (confirm("¿Estás seguro de que querés eliminar este viaje?")) {
+        await deleteDoc(doc(db, "viajes", id));
+        mostrarViajes();
+      }
+    };
+
+    window.editarViaje = (id) => {
+      alert("Función de edición aún no implementada. ID del viaje: " + id);
+      // Redirigir a otra pantalla si querés implementar edición avanzada
+    };
+
+    mostrarViajes();
+  </script>
+</body>
+
+</html>
