@@ -1,19 +1,37 @@
-function login() {
-  const email = document.getElementById("email").value;
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+// Tu configuración de Firebase
+const firebaseConfig = {
+  apiKey: "...",
+  authDomain: "...",
+  projectId: "...",
+  storageBucket: "...",
+  messagingSenderId: "...",
+  appId: "..."
+};
+
+// Inicializar Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
 
-  firebase.auth().signInWithEmailAndPassword(email, password)
-    .then((userCredential) => {
-      const user = userCredential.user;
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
 
-      // Verificamos si es admin (según el email)
-      if (user.email === "admin@guizzo.com") {
-        window.location.href = "admin.html";
-      } else {
-        window.location.href = "index.html"; // interfaz del chofer
-      }
-    })
-    .catch((error) => {
-      document.getElementById("error").innerText = "Email o contraseña incorrectos";
-    });
-}
+    // Lógica de redirección según correo
+    if (email === "admin@guizzo.com") {
+      window.location.href = "admin.html";
+    } else {
+      window.location.href = "chofer.html";
+    }
+
+  } catch (error) {
+    alert("Error al iniciar sesión. Verificá tus credenciales.");
+    console.error(error);
+  }
+});
