@@ -1,149 +1,121 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ver Viajes</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <script type="module" src="/firebaseConfig.js"></script>
+  <title>Ver viajes</title>
   <style>
     body {
-      background-color: #FFF6BF;
-      font-family: Arial, sans-serif;
       margin: 0;
-      padding: 0;
+      background-color: #FFD700; /* amarillo oscuro */
+      font-family: Arial, sans-serif;
       color: white;
     }
 
-    .container {
-      background-color: #222;
-      margin: 2rem auto;
-      padding: 2rem;
-      border-radius: 15px;
-      max-width: 95%;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    .contenedor {
+      background-color: #111;
+      margin: 50px auto;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 800px;
     }
 
     h1 {
       text-align: center;
-      margin-bottom: 20px;
       text-decoration: underline;
       color: white;
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 1rem;
+    .viaje {
+      background-color: #222;
+      margin: 10px 0;
+      padding: 15px;
+      border-radius: 10px;
     }
 
-    th, td {
-      border: 1px solid white;
-      padding: 0.5rem;
-      text-align: center;
+    .viaje p {
+      margin: 5px 0;
     }
 
-    th {
-      background-color: #333;
-    }
-
-    .btn {
-      padding: 0.4rem 0.8rem;
+    .boton {
+      padding: 8px 15px;
+      margin: 5px;
       border: none;
-      border-radius: 8px;
-      font-weight: bold;
+      border-radius: 5px;
       cursor: pointer;
-      margin: 0 0.2rem;
+      font-weight: bold;
     }
 
-    .btn-edit {
+    .editar {
       background-color: green;
       color: white;
     }
 
-    .btn-delete {
+    .eliminar {
       background-color: red;
       color: white;
     }
-
-    .btn-volver {
-      background-color: orange;
-      color: white;
-      display: block;
-      margin: 1rem auto 0;
-    }
   </style>
 </head>
-
 <body>
-  <div class="container">
-    <h1>LISTADO DE VIAJES</h1>
-    <table id="tablaViajes">
-      <thead>
-        <tr>
-          <th>Fecha</th>
-          <th>Origen</th>
-          <th>Destino</th>
-          <th>Patente</th>
-          <th>Chofer</th>
-          <th>Carga</th>
-          <th>CUIT</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Aquí se llenan los viajes -->
-      </tbody>
-    </table>
-    <button class="btn btn-volver" onclick="window.location.href='inicio.html'">Volver al menú</button>
+  <div class="contenedor">
+    <h1>Viajes cargados</h1>
+    <div id="lista-viajes"></div>
   </div>
 
+  <!-- Firebase SDK -->
   <script type="module">
-    import { db } from "./firebaseConfig.js";
-    import { collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-lite.js";
+    // Importar Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    const tabla = document.querySelector("#tablaViajes tbody");
-    const viajesRef = collection(db, "viajes");
+    const firebaseConfig = {
+  apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
+  authDomain: "transporte-mario-guizzo.firebaseapp.com",
+  projectId: "transporte-mario-guizzo",
+  storageBucket: "transporte-mario-guizzo.firebasestorage.app",
+  messagingSenderId: "465536166890",
+  appId: "1:465536166890:web:f658690629b09eca8fa093",
+  measurementId: "G-187MCQ2XPW"
+};
 
-    const mostrarViajes = async () => {
-      const snapshot = await getDocs(viajesRef);
-      tabla.innerHTML = "";
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        const fila = document.createElement("tr");
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-        fila.innerHTML = `
-          <td>${data.fecha || "-"}</td>
-          <td>${data.origen || "-"}</td>
-          <td>${data.destino || "-"}</td>
-          <td>${data.patente || "-"}</td>
-          <td>${data.chofer || "-"}</td>
-          <td>${data.tipoCarga || "-"}</td>
-          <td>${data.cuitCliente || "-"}</td>
-          <td>
-            <button class="btn btn-edit" onclick="editarViaje('${docSnap.id}')">Editar</button>
-            <button class="btn btn-delete" onclick="eliminarViaje('${docSnap.id}')">Eliminar</button>
-          </td>
+    const listaViajes = document.getElementById("lista-viajes");
+
+    async function cargarViajes() {
+      const querySnapshot = await getDocs(collection(db, "viajes"));
+      listaViajes.innerHTML = ""; // Limpiar antes de cargar
+      querySnapshot.forEach((docu) => {
+        const viaje = docu.data();
+        const div = document.createElement("div");
+        div.classList.add("viaje");
+        div.innerHTML = `
+          <p><strong>Origen:</strong> ${viaje.origen}</p>
+          <p><strong>Destino:</strong> ${viaje.destino}</p>
+          <p><strong>Fecha:</strong> ${viaje.fecha}</p>
+          <p><strong>Camión:</strong> ${viaje.patente}</p>
+          <p><strong>Chofer:</strong> ${viaje.chofer}</p>
+          <button class="boton editar" onclick="editarViaje('${docu.id}')">Editar</button>
+          <button class="boton eliminar" onclick="eliminarViaje('${docu.id}')">Eliminar</button>
         `;
-        tabla.appendChild(fila);
+        listaViajes.appendChild(div);
       });
-    };
+    }
 
-    window.eliminarViaje = async (id) => {
-      if (confirm("¿Estás seguro de que querés eliminar este viaje?")) {
+    window.eliminarViaje = async function (id) {
+      if (confirm("¿Estás seguro de eliminar este viaje?")) {
         await deleteDoc(doc(db, "viajes", id));
-        mostrarViajes();
+        cargarViajes(); // Refrescar
       }
     };
 
-    window.editarViaje = (id) => {
-      alert("Función de edición aún no implementada. ID del viaje: " + id);
-      // Redirigir a otra pantalla si querés implementar edición avanzada
+    window.editarViaje = function (id) {
+      // Redireccionar a una futura pantalla de edición
+      alert("Funcionalidad de edición en desarrollo. ID del viaje: " + id);
     };
 
-    mostrarViajes();
+    cargarViajes();
   </script>
 </body>
-
 </html>
