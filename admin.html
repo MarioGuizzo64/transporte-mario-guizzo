@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Administrador - Transporte Mario Güizzo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Roboto', sans-serif;
+      background-color: #FFD700; /* Fondo amarillo */
+      color: white;
+    }
+
+    .container {
+      background-color: black;
+      max-width: 500px;
+      margin: 60px auto;
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    h1 {
+      text-transform: uppercase;
+      text-decoration: underline;
+      color: white;
+      margin-bottom: 20px;
+    }
+
+    .logo {
+      width: 250px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      display: block;
+      width: 100%;
+      margin: 10px auto;
+      padding: 12px;
+      font-size: 16px;
+      border: 1px solid black;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .btn-naranja {
+      background-color: orange;
+      color: black;
+    }
+
+    .btn-rojo {
+      background-color: red;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Administrador</h1>
+    <img src="logo.png" alt="Logo Transporte Mario Güizzo" class="logo">
+
+    <button class="btn-naranja" onclick="window.location.href='usuarios.html'">
+      Usuarios
+    </button>
+
+    <button class="btn-naranja" onclick="window.location.href='ver-viajes.html'">
+      Viajes
+    </button>
+
+    <button class="btn-naranja" onclick="window.location.href='combustible.html'">
+      Combustible
+    </button>
+
+    <button class="btn-naranja" onclick="window.location.href='mantenimiento.html'">
+      Mantenimiento
+    </button>
+
+    <button class="btn-naranja" onclick="window.location.href='finanzas.html'">
+      Finanzas
+    </button>
+
+    <button class="btn-naranja" onclick="window.location.href='documentos.html'">
+      Documentos de choferes y camiones
+    </button>
+
+    <button class="btn-rojo" onclick="cerrarSesion()">
+      Cerrar sesión
+    </button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
+      authDomain: "transporte-mario-guizzo.firebaseapp.com",
+      projectId: "transporte-mario-guizzo",
+      storageBucket: "transporte-mario-guizzo.appspot.com",
+      messagingSenderId: "465536166890",
+      appId: "1:465536166890:web:f658690629b09eca8fa093"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    window.cerrarSesion = async function () {
+      try {
+        await signOut(auth);
+        window.location.href = "login.html";
+      } catch (error) {
+        alert("Error al cerrar sesión: " + error.message);
+      }
+    };
+  </script>
+
+</body>
+</html>
