@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VER VIAJES – ADMIN</title>
+  <style>
+    body{margin:0;background:#FFD700;font-family:Arial,sans-serif;color:#fff;}
+    .container{background:#000;max-width:900px;margin:40px auto;padding:24px;border-radius:12px;}
+    h1{text-align:center;text-transform:uppercase;text-decoration:underline;margin:0 0 16px}
+    .filtros{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:16px}
+    .filtros input,.filtros select{padding:8px;border:1px solid #000;border-radius:4px;color:#000;background:#fff}
+    .btn{padding:10px;border:1px solid #000;border-radius:6px;font-weight:bold;cursor:pointer;text-transform:uppercase}
+    .btn-verde{background:green;color:#fff}
+    .btn-naranja{background:orange;color:#000}
+    .btn-rojo{background:red;color:#fff}
+    .lista{display:grid;gap:10px}
+    .item{background:#191919;border-radius:10px;padding:12px}
+    .item p{margin:3px 0}
+    .acciones{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+    .btn-volver{margin-top:16px}
+
+    /* Modal */
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);justify-content:center;align-items:center}
+    .modal-content{background:#000;border-radius:12px;padding:16px;width:95%;max-width:600px}
+    .edit-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .edit-form label{grid-column:span 2;font-weight:bold;text-transform:uppercase}
+    .edit-form input,.edit-form textarea{padding:8px;border:1px solid #000;border-radius:4px;background:#fff;color:#000}
+    .edit-form textarea{grid-column:span 2;height:70px;resize:vertical}
+    .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+    @media (max-width:700px){
+      .filtros{grid-template-columns:1fr 1fr}
+      .edit-form{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Ver Viajes</h1>
+
+    <!-- FILTROS -->
+    <form class="filtros" id="formFiltros">
+      <input type="date" id="desde" />
+      <input type="date" id="hasta" />
+      <select id="fChofer"><option value="">Todos los choferes</option></select>
+      <select id="fPatente"><option value="">Todas las patentes</option></select>
+      <input type="text" id="buscar" placeholder="Buscar (origen, destino, cuit, obs)"/>
+      <button type="button" class="btn btn-naranja" id="btnLimpiar">Limpiar</button>
+    </form>
+
+    <!-- LISTA -->
+    <div id="lista" class="lista"></div>
+
+    <button class="btn btn-naranja btn-volver" onclick="location.href='admin.html'">Volver</button>
+  </div>
+
+  <!-- MODAL DETALLE/EDICIÓN -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <h2 style="text-transform:uppercase;text-decoration:underline;margin-top:0">Detalle / Editar Viaje</h2>
+      <form id="formEdit" class="edit-form">
+        <label>Fecha</label>
+        <input type="date" id="e_fecha"/>
+
+        <label>Origen</label>
+        <input type="text" id="e_origen"/>
+
+        <label>Destino</label>
+        <input type="text" id="e_destino"/>
+
+        <label>Patente del camión</label>
+        <input type="text" id="e_patente"/>
+
+        <label>Chofer</label>
+        <input type="text" id="e_chofer"/>
+
+        <label>Tipo de carga</label>
+        <input type="text" id="e_tipoCarga"/>
+
+        <label>Peso (kg)</label>
+        <input type="number" id="e_peso"/>
+
+        <label>CUIT del cliente</label>
+        <input type="text" id="e_cuit"/>
+
+        <label>Adelanto ($)</label>
+        <input type="number" id="e_adelanto"/>
+
+        <label>Peaje ($)</label>
+        <input type="number" id="e_peaje"/>
+
+        <label>Entrada ($)</label>
+        <input type="number" id="e_entrada"/>
+
+        <label>Observaciones</label>
+        <textarea id="e_observaciones"></textarea>
+      </form>
+
+      <div class="modal-actions">
+        <button id="btnCombustible" class="btn btn-verde" type="button">Registrar combustible</button>
+        <button id="btnGuardar" class="btn btn-verde" type="button">Guardar</button>
+        <button id="btnEliminar" class="btn btn-rojo" type="button">Eliminar</button>
+        <button id="btnCerrar" class="btn btn-naranja" type="button">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
+      authDomain: "transporte-mario-guizzo.firebaseapp.com",
+      projectId: "transporte-mario-guizzo",
+      storageBucket: "transporte-mario-guizzo.appspot.com",
+      messagingSenderId: "465536166890",
+      appId: "1:465536166890:web:f658690629b09eca8fa093"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const col = collection(db, "viajes");
+    const lista = document.getElementById("lista");
+
+    const fDesde = document.getElementById("desde");
+    const fHasta = document.getElementById("hasta");
+    const fChofer = document.getElementById("fChofer");
+    const fPatente = document.getElementById("fPatente");
+    const fBuscar = document.getElementById("buscar");
+    const btnLimpiar = document.getElementById("btnLimpiar");
+
+    let todos = [];     // viajes completos
+    let actualId = null; // id abierto en modal
+    let actual = null;   // datos del viaje en modal
+
+    // suscripción
+    onSnapshot(col, (qs) => {
+      todos = qs.docs.map(d => ({ id: d.id, ...d.data() }));
+      // ordenar por fecha desc (asumiendo YYYY-MM-DD)
+      todos.sort((a,b) => String(b.fecha).localeCompare(String(a.fecha)));
+      poblarSelects();
+      render();
+    });
+
+    function poblarSelects(){
+      const choferes = Array.from(new Set(todos.map(v => v.chofer).filter(Boolean))).sort();
+      const patentes = Array.from(new Set(todos.map(v => v.patente).filter(Boolean))).sort();
+
+      const chSel = fChofer.value, ptSel = fPatente.value;
+      fChofer.innerHTML = '<option value=\"\">Todos los choferes</option>' +
+        choferes.map(c => `<option value=\"${c}\">${c}</option>`).join('');
+      fPatente.innerHTML = '<option value=\"\">Todas las patentes</option>' +
+        patentes.map(p => `<option value=\"${p}\">${p}</option>`).join('');
+      // preservar selección previa si aplica
+      if (chSel) fChofer.value = chSel;
+      if (ptSel) fPatente.value = ptSel;
+    }
+
+    function pasaFiltros(v){
+      // fecha
+      if (fDesde.value && String(v.fecha) < fDesde.value) return false;
+      if (fHasta.value && String(v.fecha) > fHasta.value) return false;
+      // chofer/patente
+      if (fChofer.value && v.chofer !== fChofer.value) return false;
+      if (fPatente.value && v.patente !== fPatente.value) return false;
+      // texto libre
+      const q = fBuscar.value.trim().toLowerCase();
+      if (q){
+        const blob = [
+          v.origen, v.destino, v.cuit, v.observaciones, v.tipoCarga, v.patente, v.chofer
+        ].map(x => (x||'') + '').join(' ').toLowerCase();
+        if (!blob.includes(q)) return false;
+      }
+      return true;
+    }
+
+    function render(){
+      const datos = todos.filter(pasaFiltros);
+      lista.innerHTML = '';
+      if (!datos.length){
+        lista.innerHTML = '<div class=\"item\"><p>No hay viajes para los filtros seleccionados.</p></div>';
+        return;
+      }
+      for (const v of datos){
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `
+          <p><strong>Fecha:</strong> ${v.fecha || '-'}</p>
+          <p><strong>Chofer:</strong> ${v.chofer || '-'}</p>
+          <p><strong>Patente:</strong> ${v.patente || '-'}</p>
+          <p><strong>Origen → Destino:</strong> ${v.origen || '-'} → ${v.destino || '-'}</p>
+          <div class=\"acciones\">
+            <button class=\"btn btn-verde\" onclick=\"window._abrir('${v.id}')\">Ver / Editar</button>
+          </div>
+        `;
+        lista.appendChild(div);
+      }
+    }
+
+    // eventos filtros
+    [fDesde,fHasta,fChofer,fPatente,fBuscar].forEach(el => el.addEventListener('input', render));
+    btnLimpiar.addEventListener('click', () => {
+      fDesde.value = ''; fHasta.value = ''; fChofer.value = ''; fPatente.value=''; fBuscar.value='';
+      render();
+    });
+
+    // ------- MODAL -------
+    const modal = document.getElementById('modal');
+    const get = id => document.getElementById(id);
+
+    window._abrir = (id) => {
+      const v = todos.find(x => x.id === id);
+      if (!v) return;
+      actualId = id; actual = v;
+
+      get('e_fecha').value = v.fecha || '';
+      get('e_origen').value = v.origen || '';
+      get('e_destino').value = v.destino || '';
+      get('e_patente').value = v.patente || '';
+      get('e_chofer').value = v.chofer || '';
+      get('e_tipoCarga').value = v.tipoCarga || '';
+      get('e_peso').value = v.peso || '';
+      get('e_cuit').value = v.cuit || '';
+      get('e_adelanto').value = v.adelanto || '';
+      get('e_peaje').value = v.peaje || '';
+      get('e_entrada').value = v.entrada || '';
+      get('e_observaciones').value = v.observaciones || '';
+
+      modal.style.display = 'flex';
+    };
+
+    get('btnCerrar').onclick = () => modal.style.display = 'none';
+
+    get('btnGuardar').onclick = async () => {
+      const data = {
+        fecha: get('e_fecha').value || null,
+        origen: get('e_origen').value.trim(),
+        destino: get('e_destino').value.trim(),
+        patente: get('e_patente').value.trim(),
+        chofer: get('e_chofer').value.trim(),
+        tipoCarga: get('e_tipoCarga').value.trim(),
+        peso: Number(get('e_peso').value || 0),
+        cuit: get('e_cuit').value.trim(),
+        adelanto: Number(get('e_adelanto').value || 0),
+        peaje: Number(get('e_peaje').value || 0),
+        entrada: Number(get('e_entrada').value || 0),
+        observaciones: get('e_observaciones').value.trim(),
+      };
+      try{
+        await updateDoc(doc(db,'viajes', actualId), data);
+        alert('Viaje actualizado');
+        modal.style.display = 'none';
+      }catch(err){
+        alert('Error al guardar: ' + err.message);
+      }
+    };
+
+    get('btnEliminar').onclick = async () => {
+      if (!confirm('¿Eliminar este viaje?')) return;
+      try{
+        await deleteDoc(doc(db,'viajes', actualId));
+        modal.style.display = 'none';
+      }catch(err){
+        alert('Error al eliminar: ' + err.message);
+      }
+    };
+
+    // Ir a registrar combustible con prefill
+    get('btnCombustible').onclick = () => {
+      const q = new URLSearchParams({ patente: get('e_patente').value, fecha: get('e_fecha').value });
+      window.location.href = 'agregar-combustible.html?' + q.toString();
+    };
+  </script>
+</body>
+</html>
