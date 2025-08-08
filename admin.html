@@ -10,7 +10,7 @@
     body {
       margin: 0;
       font-family: 'Roboto', sans-serif;
-      background-color: #FFD700; /* Amarillo igual al de la pantalla del chofer */
+      background-color: #111; /* FONDO NEGRO */
       color: white;
       text-align: center;
     }
@@ -32,7 +32,7 @@
     }
 
     main {
-      background-color: #111;
+      background-color: #111; /* También negro */
       max-width: 600px;
       margin: 30px auto;
       padding: 30px;
@@ -48,7 +48,7 @@
       font-size: 16px;
       border: 2px solid orange;
       border-radius: 5px;
-      background-color: yellow;
+      background-color: #FFD700; /* AMARILLO SUAVE */
       color: black;
       font-weight: bold;
       text-transform: uppercase;
@@ -72,33 +72,14 @@
   <main>
     <h2>¿Qué desea hacer?</h2>
 
-    <button onclick="window.location.href='usuarios.html'">
-      Usuarios
-    </button>
+    <button onclick="window.location.href='usuarios.html'">Usuarios</button>
+    <button onclick="window.location.href='ver-viajes.html'">Viajes</button>
+    <button onclick="window.location.href='combustible.html'">Combustible</button>
+    <button onclick="window.location.href='mantenimiento.html'">Mantenimiento</button>
+    <button onclick="window.location.href='finanzas.html'">Finanzas</button>
+    <button onclick="window.location.href='documentos.html'">Documentos de choferes y camiones</button>
 
-    <button onclick="window.location.href='ver-viajes.html'">
-      Viajes
-    </button>
-
-    <button onclick="window.location.href='combustible.html'">
-      Combustible
-    </button>
-
-    <button onclick="window.location.href='mantenimiento.html'">
-      Mantenimiento
-    </button>
-
-    <button onclick="window.location.href='finanzas.html'">
-      Finanzas
-    </button>
-
-    <button onclick="window.location.href='documentos.html'">
-      Documentos de choferes y camiones
-    </button>
-
-    <button class="btn-rojo" onclick="cerrarSesion()">
-      Cerrar sesión
-    </button>
+    <button class="btn-rojo" onclick="cerrarSesion()">Cerrar sesión</button>
   </main>
 
   <script type="module">
