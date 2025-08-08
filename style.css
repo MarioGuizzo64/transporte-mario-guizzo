@@ -17,9 +17,13 @@ header h1 {
 }
 
 .logo {
-  height: 400px; /* Aumentamos tamaño del logo */
-  margin-top: 20px;
+  width: 500px;
+  display: block;
+  margin: 20px auto;
+  height: auto;
+  object-fit: contain;
 }
+
 
 main {
   padding: 20px;
