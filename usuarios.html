@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Usuarios - Administración</n’emploi>
+  <title>Usuarios – Administración</title>
   <style>
     body {
       margin: 0;
-      background-color: #FFD700;
+      background-color: #FFD700; /* fondo amarillo */
       font-family: Arial, sans-serif;
       color: white;
     }
@@ -44,9 +44,19 @@
       font-weight: bold;
       cursor: pointer;
     }
-    .btn-guardar { background-color: green; color: white; }
-    .btn-eliminar { background-color: red; color: white; }
-    .btn-volver { background-color: orange; color: black; margin-top: 10px; }
+    .btn-guardar {
+      background-color: green;
+      color: white;
+    }
+    .btn-eliminar {
+      background-color: red;
+      color: white;
+    }
+    .btn-volver {
+      background-color: orange;
+      color: black;
+      margin-top: 10px;
+    }
     .usuario-item {
       background-color: #222;
       padding: 10px;
@@ -54,13 +64,18 @@
       margin-bottom: 10px;
       text-align: left;
     }
-    .usuario-item p { margin: 4px 0; }
-    .acciones { text-align: right; }
+    .usuario-item p {
+      margin: 4px 0;
+    }
+    .acciones {
+      text-align: right;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Gestión de Usuarios</h1>
+
     <form id="formUsuario">
       <input type="email" id="email" placeholder="Correo electrónico" required />
       <input type="password" id="password" placeholder="Contraseña" required />
@@ -83,13 +98,16 @@
     import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
-      apiKey: "TU_API_KEY",
-      authDomain: "TU_AUTH_DOMAIN",
-      projectId: "TU_PROJECT_ID",
-      storageBucket: "TU_STORAGE_BUCKET",
-      messagingSenderId: "TU_SENDER_ID",
-      appId: "TU_APP_ID"
+      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
+      authDomain: "transporte-mario-guizzo.firebaseapp.com",
+      projectId: "transporte-mario-guizzo",
+      storageBucket: "transporte-mario-guizzo.firebasestorage.app",
+      messagingSenderId: "465536166890",
+      appId: "1:465536166890:web:f658690629b09eca8fa093",
+      measurementId: "G-187MCQ2XPW"
     };
+
+    // Inicializar Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
@@ -97,6 +115,7 @@
     const listaDiv = document.getElementById('listaUsuarios');
     const form = document.getElementById('formUsuario');
 
+    // Cargar y mostrar todos los usuarios
     async function cargarUsuarios() {
       listaDiv.innerHTML = '';
       const snapshot = await getDocs(collection(db, 'usuarios'));
@@ -115,6 +134,7 @@
       });
     }
 
+    // Eliminar usuario de Firestore
     window.eliminarUsuario = async (id) => {
       if (confirm('¿Eliminar este usuario?')) {
         await deleteDoc(doc(db, 'usuarios', id));
@@ -122,6 +142,7 @@
       }
     };
 
+    // Crear nuevo usuario en Auth y Firestore
     form.addEventListener('submit', async e => {
       e.preventDefault();
       const email = form.email.value.trim();
@@ -129,7 +150,11 @@
       const rol = form.rol.value;
       try {
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
-        await addDoc(collection(db, 'usuarios'), { uid: userCred.user.uid, email, rol });
+        await addDoc(collection(db, 'usuarios'), {
+          uid: userCred.user.uid,
+          email,
+          rol
+        });
         form.reset();
         cargarUsuarios();
       } catch (err) {
@@ -137,6 +162,7 @@
       }
     });
 
+    // Inicial carga
     cargarUsuarios();
   </script>
 </body>
