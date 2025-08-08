@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5,93 +6,85 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>USUARIOS – ADMINISTRACIÓN</title>
   <style>
-    body {
-      margin: 0;
-      background-color: #FFD700;
-      font-family: Arial, sans-serif;
-      color: white;
-      text-transform: uppercase;
+    body{
+      margin:0;
+      background:#FFD700;
+      font-family:Arial,sans-serif;
+      color:white;
+      text-transform:uppercase;
     }
-    .container {
-      background-color: black;
-      max-width: 600px;
-      margin: 40px auto;
-      padding: 30px;
-      border-radius: 10px;
-      text-align: center;
+    .container{
+      background:#000;
+      max-width:600px;
+      margin:40px auto;
+      padding:30px;
+      border-radius:10px;
+      text-align:center;
     }
-    h1 {
-      text-decoration: underline;
-      margin-bottom: 20px;
+    h1{text-decoration:underline;margin-bottom:20px;}
+    form, .edit-form{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      margin-bottom:20px;
+      text-transform:none;
     }
-    form,
-    .edit-form {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 20px;
-      text-transform: none;
+    input, select{
+      padding:8px;
+      border-radius:4px;
+      border:1px solid #000;
+      font-size:16px;
+      width:100%;
+      box-sizing:border-box;
     }
-    input, select {
-      padding: 8px;
-      border-radius: 4px;
-      border: 1px solid black;
-      font-size: 16px;
-      width: 100%;
-      box-sizing: border-box;
+    button{
+      padding:10px;
+      border:none;
+      border-radius:5px;
+      font-size:16px;
+      font-weight:bold;
+      cursor:pointer;
+      text-transform:uppercase;
     }
-    button {
-      padding: 10px;
-      border: none;
-      border-radius: 5px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      text-transform: uppercase;
+    .btn-guardar{background:green;color:white;}
+    .btn-eliminar{background:red;color:white;}
+    .btn-volver{background:orange;color:black;margin-top:10px;}
+    .usuario-item{
+      background:#222;
+      padding:10px;
+      border-radius:6px;
+      margin-bottom:10px;
+      text-align:left;
     }
-    .btn-guardar { background-color: green; color: white; }
-    .btn-eliminar { background-color: red; color: white; }
-    .btn-volver { background-color: orange; color: black; margin-top: 10px; }
-    .usuario-item {
-      background-color: #222;
-      padding: 10px;
-      border-radius: 6px;
-      margin-bottom: 10px;
-      text-align: left;
+    .acciones{text-align:right;}
+    .modal{
+      display:none;
+      position:fixed;
+      top:0;left:0;
+      width:100%;height:100%;
+      background:rgba(0,0,0,0.6);
+      justify-content:center;
+      align-items:center;
     }
-    .usuario-item p {
-      margin: 4px 0;
-    }
-    .acciones {
-      text-align: right;
-    }
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.6);
-      justify-content: center;
-      align-items: center;
-    }
-    .modal-content {
-      background-color: black;
-      padding: 20px;
-      border-radius: 10px;
-      width: 90%;
-      max-width: 400px;
-      text-align: left;
+    .modal-content{
+      background:#000;
+      padding:20px;
+      border-radius:10px;
+      width:90%;max-width:400px;
+      text-align:left;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Gestión de Usuarios</h1>
+    <h1>GESTIÓN DE USUARIOS</h1>
 
-    <!-- Formulario creación -->
+    <!-- Formulario creación con campos extra -->
     <form id="formUsuario">
+      <input type="text" id="nombre" placeholder="Nombre" required />
+      <input type="text" id="apellido" placeholder="Apellido" required />
+      <input type="date" id="fechaIngreso" placeholder="Fecha de ingreso" required />
+      <input type="text" id="cuil" placeholder="CUIL" required />
       <input type="email" id="email" placeholder="Correo electrónico" required />
       <input type="password" id="password" placeholder="Contraseña" required />
       <select id="rol" required>
@@ -136,10 +129,9 @@
       apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
       authDomain: "transporte-mario-guizzo.firebaseapp.com",
       projectId: "transporte-mario-guizzo",
-      storageBucket: "transporte-mario-guizzo.firebasestorage.app",
+      storageBucket: "transporte-mario-guizzo.appspot.com",
       messagingSenderId: "465536166890",
-      appId: "1:465536166890:web:f658690629b09eca8fa093",
-      measurementId: "G-187MCQ2XPW"
+      appId: "1:465536166890:web:f658690629b09eca8fa093"
     };
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -149,57 +141,67 @@
     const form = document.getElementById('formUsuario');
     const modal = document.getElementById('modalEdit');
     const formEdit = document.getElementById('formEdit');
-
     let editId = null;
 
+    // Cargar usuarios
     async function cargarUsuarios() {
       listaDiv.innerHTML = '';
-      const snapshot = await getDocs(collection(db, 'usuarios'));
-      snapshot.forEach(docSnap => {
-        const u = docSnap.data();
+      const snap = await getDocs(collection(db, 'usuarios'));
+      snap.forEach(d => {
+        const u = d.data();
         const item = document.createElement('div');
         item.className = 'usuario-item';
         item.innerHTML = `
+          <p><strong>Nombre:</strong> ${u.nombre}</p>
+          <p><strong>Apellido:</strong> ${u.apellido}</p>
+          <p><strong>Ingreso:</strong> ${u.fechaIngreso}</p>
+          <p><strong>CUIL:</strong> ${u.cuil}</p>
           <p><strong>Correo:</strong> ${u.email}</p>
           <p><strong>Rol:</strong> ${u.rol}</p>
           <div class="acciones">
-            <button class="btn-guardar" onclick="abrirModal('${docSnap.id}', ${JSON.stringify(u).replace(/"/g, '&quot;')})">Editar</button>
-            <button class="btn-eliminar" onclick="eliminarUsuario('${docSnap.id}')">Eliminar</button>
-          </div>
-        `;
+            <button class="btn-guardar" onclick="abrirModal('${d.id}', ${JSON.stringify(u).replace(/\"/g,'&quot;')})">Editar</button>
+            <button class="btn-eliminar" onclick="eliminarUsuario('${d.id}')">Eliminar</button>
+          </div>`;
         listaDiv.appendChild(item);
       });
     }
 
-    window.eliminarUsuario = async (id) => {
-      if (confirm('Eliminar este usuario?')) {
-        await deleteDoc(doc(db, 'usuarios', id));
+    window.eliminarUsuario = async id => {
+      if (confirm('Eliminar usuario?')) {
+        await deleteDoc(doc(db,'usuarios',id));
         cargarUsuarios();
       }
     };
 
+    // Crear usuario
     form.addEventListener('submit', async e => {
       e.preventDefault();
-      const email = form.email.value.trim();
-      const password = form.password.value;
-      const rol = form.rol.value;
+      const data = {
+        nombre: form.nombre.value.trim(),
+        apellido: form.apellido.value.trim(),
+        fechaIngreso: form.fechaIngreso.value,
+        cuil: form.cuil.value.trim(),
+        email: form.email.value.trim(),
+        rol: form.rol.value
+      };
       try {
-        const userCred = await createUserWithEmailAndPassword(auth, email, password);
-        await addDoc(collection(db, 'usuarios'), { uid: userCred.user.uid, email, rol });
+        const cred = await createUserWithEmailAndPassword(auth, data.email, form.password.value);
+        await addDoc(collection(db,'usuarios'), { uid: cred.user.uid, ...data });
         form.reset();
         cargarUsuarios();
-      } catch (err) {
-        alert('Error: ' + err.message);
+      } catch(err) {
+        alert('Error: '+err.message);
       }
     });
 
+    // Abrir modal con datos
     window.abrirModal = (id, u) => {
       editId = id;
-      document.getElementById('editNombre').value = u.nombre || '';
-      document.getElementById('editApellido').value = u.apellido || '';
-      document.getElementById('editFechaIngreso').value = u.fechaIngreso || '';
-      document.getElementById('editCuil').value = u.cuil || '';
-      document.getElementById('editEmail').value = u.email;
+      formEdit.editNombre.value = u.nombre;
+      formEdit.editApellido.value = u.apellido;
+      formEdit.editFechaIngreso.value = u.fechaIngreso;
+      formEdit.editCuil.value = u.cuil;
+      formEdit.editEmail.value = u.email;
       modal.style.display = 'flex';
     };
 
@@ -208,21 +210,22 @@
       editId = null;
     };
 
+    // Guardar cambios
     formEdit.addEventListener('submit', async e => {
       e.preventDefault();
-      const data = {
-        nombre: document.getElementById('editNombre').value.trim(),
-        apellido: document.getElementById('editApellido').value.trim(),
-        fechaIngreso: document.getElementById('editFechaIngreso').value,
-        cuil: document.getElementById('editCuil').value.trim(),
-        email: document.getElementById('editEmail').value.trim()
+      const updated = {
+        nombre: formEdit.editNombre.value.trim(),
+        apellido: formEdit.editApellido.value.trim(),
+        fechaIngreso: formEdit.editFechaIngreso.value,
+        cuil: formEdit.editCuil.value.trim(),
+        email: formEdit.editEmail.value.trim()
       };
       try {
-        await updateDoc(doc(db, 'usuarios', editId), data);
+        await updateDoc(doc(db,'usuarios',editId), updated);
         cerrarModal();
         cargarUsuarios();
-      } catch (err) {
-        alert('Error actualizando: ' + err.message);
+      } catch(err) {
+        alert('Error actualizando: '+err.message);
       }
     });
 
