@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Usuarios - Administración</n’emploi>
+  <style>
+    body {
+      margin: 0;
+      background-color: #FFD700;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+    .container {
+      background-color: black;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    h1 {
+      text-transform: uppercase;
+      text-decoration: underline;
+      margin-bottom: 20px;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    input, select {
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid black;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn-guardar { background-color: green; color: white; }
+    .btn-eliminar { background-color: red; color: white; }
+    .btn-volver { background-color: orange; color: black; margin-top: 10px; }
+    .usuario-item {
+      background-color: #222;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      text-align: left;
+    }
+    .usuario-item p { margin: 4px 0; }
+    .acciones { text-align: right; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Gestión de Usuarios</h1>
+    <form id="formUsuario">
+      <input type="email" id="email" placeholder="Correo electrónico" required />
+      <input type="password" id="password" placeholder="Contraseña" required />
+      <select id="rol" required>
+        <option value="">Seleccionar rol</option>
+        <option value="admin">Administrador</option>
+        <option value="chofer">Chofer</option>
+      </select>
+      <button type="submit" class="btn-guardar">Crear Usuario</button>
+    </form>
+
+    <div id="listaUsuarios"></div>
+
+    <button onclick="window.location.href='admin.html'" class="btn-volver">Volver</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "TU_API_KEY",
+      authDomain: "TU_AUTH_DOMAIN",
+      projectId: "TU_PROJECT_ID",
+      storageBucket: "TU_STORAGE_BUCKET",
+      messagingSenderId: "TU_SENDER_ID",
+      appId: "TU_APP_ID"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const listaDiv = document.getElementById('listaUsuarios');
+    const form = document.getElementById('formUsuario');
+
+    async function cargarUsuarios() {
+      listaDiv.innerHTML = '';
+      const snapshot = await getDocs(collection(db, 'usuarios'));
+      snapshot.forEach(docSnap => {
+        const u = docSnap.data();
+        const item = document.createElement('div');
+        item.className = 'usuario-item';
+        item.innerHTML = `
+          <p><strong>Email:</strong> ${u.email}</p>
+          <p><strong>Rol:</strong> ${u.rol}</p>
+          <div class="acciones">
+            <button class="btn-eliminar" onclick="eliminarUsuario('${docSnap.id}')">Eliminar</button>
+          </div>
+        `;
+        listaDiv.appendChild(item);
+      });
+    }
+
+    window.eliminarUsuario = async (id) => {
+      if (confirm('¿Eliminar este usuario?')) {
+        await deleteDoc(doc(db, 'usuarios', id));
+        cargarUsuarios();
+      }
+    };
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const email = form.email.value.trim();
+      const password = form.password.value;
+      const rol = form.rol.value;
+      try {
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        await addDoc(collection(db, 'usuarios'), { uid: userCred.user.uid, email, rol });
+        form.reset();
+        cargarUsuarios();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    });
+
+    cargarUsuarios();
+  </script>
+</body>
+</html>
