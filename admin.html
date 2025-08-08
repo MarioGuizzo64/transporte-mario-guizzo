@@ -1,91 +1,114 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Administrador - Transporte Mario Güizzo</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
-  <script src="https://kit.fontawesome.com/a2e0e6ad65.js" crossorigin="anonymous"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Transporte Mario Güizzo — Admin</title>
   <style>
+    :root {
+      --amarillo: #FFD700;
+      --negro: #0d0d0d;
+      --naranja: #ffa500;
+      --rojo: #e53935;
+      --blanco: #ffffff;
+    }
     body {
       margin: 0;
-      font-family: 'Roboto', sans-serif;
-      background-color: #111; /* FONDO NEGRO */
-      color: white;
+      background: var(--negro);
+      color: var(--blanco);
+      font-family: Arial, Helvetica, sans-serif;
+      display: flex;
+      min-height: 100vh;
+      flex-direction: column;
+      align-items: center;
+    }
+    header {
       text-align: center;
+      padding: 24px 12px 0;
     }
-
-    h1 {
+    header h1 {
+      margin: 0 0 16px;
       text-transform: uppercase;
-      margin-top: 20px;
+      letter-spacing: .5px;
     }
-
     .logo {
-      width: 300px;
-      margin: 20px auto;
-    }
-
-    h2 {
-      text-transform: uppercase;
-      margin-top: -10px;
-      margin-bottom: 30px;
-    }
-
-    main {
-      background-color: #111; /* También negro */
-      max-width: 600px;
-      margin: 30px auto;
-      padding: 30px;
-      border-radius: 10px;
-    }
-
-    button {
+      width: 260px;
+      max-width: 80vw;
       display: block;
-      width: 80%;
-      max-width: 350px;
-      margin: 10px auto;
-      padding: 12px 24px;
-      font-size: 16px;
-      border: 2px solid orange;
-      border-radius: 5px;
-      background-color: #FFD700; /* AMARILLO SUAVE */
-      color: black;
-      font-weight: bold;
+      margin: 0 auto 12px;
+    }
+    .panel {
+      width: 100%;
+      max-width: 520px;
+      margin: 24px auto 48px;
+      background: #111;
+      border-radius: 12px;
+      padding: 24px 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    .panel h2 {
+      text-align: center;
+      margin: 0 0 16px;
+      text-transform: uppercase;
+      text-decoration: underline;
+      font-size: 18px;
+    }
+    .btn {
+      width: 100%;
+      display: block;
+      border: 1px solid #000;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 10px 0;
+      font-weight: 700;
       text-transform: uppercase;
       cursor: pointer;
+      transition: transform .05s ease;
     }
-
+    .btn:active { transform: translateY(1px); }
+    .btn-naranja {
+      background: var(--amarillo);
+      color: #000;
+    }
     .btn-rojo {
-      background-color: red;
-      border-color: darkred;
-      color: white;
+      background: var(--rojo);
+      color: #fff;
+      margin-top: 8px;
+    }
+    .footer {
+      color: #888; font-size: 12px; margin-bottom: 20px;
     }
   </style>
 </head>
 <body>
-
   <header>
     <h1>Transporte Mario Güizzo</h1>
-    <img src="logo.png" alt="Logo" class="logo" />
+    <img src="logo.png" alt="Logo Transporte Mario Güizzo" class="logo" />
   </header>
-  
-  <main>
+
+  <div class="panel">
     <h2>¿Qué desea hacer?</h2>
 
-    <button onclick="window.location.href='usuarios.html'">Usuarios</button>
-    <button onclick="window.location.href='ver-viajes-admin.html'">Viajes</button>
-    <button onclick="window.location.href='combustible.html'">Combustible</button>
-    <button onclick="window.location.href='mantenimiento.html'">Mantenimiento</button>
-    <button onclick="window.location.href='finanzas.html'">Finanzas</button>
-    <button onclick="window.location.href='documentos.html'">Documentos de choferes y camiones</button>
+    <!-- ENLACES DEL PANEL ADMIN -->
+    <button class="btn btn-naranja" id="btnUsuarios">Usuarios</button>
+    <button class="btn btn-naranja" id="btnViajes">Viajes</button>
+    <button class="btn btn-naranja" id="btnCombustible">Combustible</button>
+    <button class="btn btn-naranja" id="btnMantenimiento">Mantenimiento</button>
+    <button class="btn btn-naranja" id="btnFinanzas">Finanzas</button>
+    <button class="btn btn-naranja" id="btnDocumentos">Documentos de choferes y camiones</button>
 
-    <button class="btn-rojo" onclick="cerrarSesion()">Cerrar sesión</button>
-  </main>
+    <button class="btn btn-rojo" id="btnLogout">Cerrar sesión</button>
+  </div>
 
+  <div class="footer">Panel de administración</div>
+
+  <!-- Firebase (auth + firestore) y guard de rol -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+    // CONFIG TUYA
     const firebaseConfig = {
       apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
       authDomain: "transporte-mario-guizzo.firebaseapp.com",
@@ -97,16 +120,57 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    window.cerrarSesion = async function () {
+    // Protege la página: requiere login y rol=admin
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        // No está logueado -> al login
+        window.location.href = "login.html";
+        return;
+      }
+
+      // Busca rol en colección 'usuarios' por UID
+      try {
+        const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
+        const snap = await getDocs(q);
+
+        if (snap.empty) {
+          // Si no hay doc, por seguridad, lo mando a inicio chofer
+          window.location.href = "index.html";
+          return;
+        }
+
+        const datos = snap.docs[0].data();
+        if ((datos.rol || "").toLowerCase() !== "admin") {
+          // No es admin -> a la pantalla de chofer
+          window.location.href = "index.html";
+        }
+      } catch (err) {
+        alert("Error verificando permisos: " + err.message);
+        // Por seguridad, saca al usuario
+        await signOut(auth);
+        window.location.href = "login.html";
+      }
+    });
+
+    // Navegación de botones (ajustá los nombres si usás otros archivos)
+    document.getElementById("btnUsuarios").onclick     = () => window.location.href = "usuarios.html";
+    document.getElementById("btnViajes").onclick       = () => window.location.href = "ver-viajes-admin.html";
+    document.getElementById("btnCombustible").onclick  = () => window.location.href = "ver-combustible-admin.html";
+    document.getElementById("btnMantenimiento").onclick= () => window.location.href = "mantenimiento.html";
+    document.getElementById("btnFinanzas").onclick     = () => window.location.href = "finanzas.html";
+    document.getElementById("btnDocumentos").onclick   = () => window.location.href = "documentos.html";
+
+    // Cerrar sesión
+    document.getElementById("btnLogout").onclick = async () => {
       try {
         await signOut(auth);
         window.location.href = "login.html";
-      } catch (error) {
-        alert("Error al cerrar sesión: " + error.message);
+      } catch (e) {
+        alert("No se pudo cerrar sesión: " + e.message);
       }
     };
   </script>
-
 </body>
 </html>
