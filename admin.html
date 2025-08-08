@@ -5,91 +5,92 @@
   <title>Administrador - Transporte Mario Güizzo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css">
+  <script src="https://kit.fontawesome.com/a2e0e6ad65.js" crossorigin="anonymous"></script>
   <style>
     body {
       margin: 0;
       font-family: 'Roboto', sans-serif;
-      background-color: #FFD700; /* Fondo amarillo */
+      background-color: #111; /* fondo negro suave */
       color: white;
-    }
-
-    .container {
-      background-color: black;
-      max-width: 500px;
-      margin: 60px auto;
-      padding: 30px;
-      border-radius: 10px;
       text-align: center;
     }
 
     h1 {
       text-transform: uppercase;
-      text-decoration: underline;
-      color: white;
-      margin-bottom: 20px;
+      margin-top: 20px;
     }
 
     .logo {
-      width: 250px;
-      margin-bottom: 20px;
+      width: 300px;
+      margin: 20px auto;
+    }
+
+    h2 {
+      text-transform: uppercase;
+      margin-top: -10px;
+      margin-bottom: 30px;
     }
 
     button {
-      display: block;
-      width: 100%;
-      margin: 10px auto;
-      padding: 12px;
+      display: inline-block;
+      margin: 10px;
+      padding: 12px 24px;
       font-size: 16px;
-      border: 1px solid black;
+      border: 2px solid orange;
       border-radius: 5px;
-      cursor: pointer;
-    }
-
-    .btn-naranja {
-      background-color: orange;
+      background-color: yellow;
       color: black;
+      font-weight: bold;
+      text-transform: uppercase;
+      cursor: pointer;
+      min-width: 260px;
     }
 
     .btn-rojo {
       background-color: red;
+      border-color: darkred;
       color: white;
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <h1>Administrador</h1>
+  <header>
+    <h1>Transporte Mario Güizzo</h1>
     <img src="logo.png" alt="Logo Transporte Mario Güizzo" class="logo">
+  </header>
 
-    <button class="btn-naranja" onclick="window.location.href='usuarios.html'">
+  <main>
+    <h2>¿Qué desea hacer?</h2>
+
+    <button onclick="window.location.href='usuarios.html'">
       Usuarios
     </button>
 
-    <button class="btn-naranja" onclick="window.location.href='ver-viajes.html'">
+    <button onclick="window.location.href='ver-viajes.html'">
       Viajes
     </button>
 
-    <button class="btn-naranja" onclick="window.location.href='combustible.html'">
+    <button onclick="window.location.href='combustible.html'">
       Combustible
     </button>
 
-    <button class="btn-naranja" onclick="window.location.href='mantenimiento.html'">
+    <button onclick="window.location.href='mantenimiento.html'">
       Mantenimiento
     </button>
 
-    <button class="btn-naranja" onclick="window.location.href='finanzas.html'">
+    <button onclick="window.location.href='finanzas.html'">
       Finanzas
     </button>
 
-    <button class="btn-naranja" onclick="window.location.href='documentos.html'">
+    <button onclick="window.location.href='documentos.html'">
       Documentos de choferes y camiones
     </button>
 
     <button class="btn-rojo" onclick="cerrarSesion()">
       Cerrar sesión
     </button>
-  </div>
+  </main>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
