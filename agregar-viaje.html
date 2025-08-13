@@ -9,88 +9,77 @@
   <style>
     body {
       margin: 0;
-      font-family: 'Roboto', sans-serif;
-      background-color: #FFD700; /* Fondo amarillo */
+      font-family: 'Roboto', Arial, sans-serif;
+      background-color: #FFD700; /* Amarillo */
       color: white;
     }
-
     .container {
-      background-color: black;
-      max-width: 500px;
+      background-color: #000;
+      max-width: 520px;
       margin: 40px auto;
-      padding: 30px;
+      padding: 28px;
       border-radius: 10px;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 0 20px rgba(0,0,0,.5);
     }
-
     h2 {
       text-align: center;
-      font-size: 24px;
+      font-size: 22px;
       text-transform: uppercase;
       text-decoration: underline;
       font-weight: bold;
       color: white;
-      margin-bottom: 20px;
+      margin: 0 0 20px;
     }
-
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    label {
-      font-weight: bold;
-      text-transform: uppercase;
-    }
-
-    input, textarea {
+    form { display: flex; flex-direction: column; gap: 12px; }
+    label { font-weight: bold; text-transform: uppercase; }
+    input, textarea, select {
       padding: 8px;
-      border: 1px solid black;
-      background-color: white;
-      color: black;
+      border: 1px solid #000;
+      background-color: #fff;
+      color: #000;
       border-radius: 4px;
+      width: 100%;
+      box-sizing: border-box;
     }
-
+    textarea { min-height: 80px; resize: vertical; }
+    .fila {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .grupo-monto { display: none; }
     .botones {
       display: flex;
       justify-content: space-between;
       gap: 10px;
-      margin-top: 20px;
+      margin-top: 12px;
     }
-
-    .btn-volver {
+    .btn-volver, .btn-guardar {
       flex: 1;
       padding: 10px;
-      background-color: orange;
-      color: black;
-      border: 1px solid black;
+      border: 1px solid #000;
       border-radius: 4px;
       cursor: pointer;
+      font-weight: bold;
+      text-transform: uppercase;
     }
-
-    .btn-guardar {
-      flex: 1;
-      padding: 10px;
-      background-color: green;
-      color: white;
-      border: 1px solid black;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
+    .btn-volver  { background: orange; color: #000; }
+    .btn-guardar { background: green;  color: #fff; }
     #modalExito {
       display: none;
       position: fixed;
-      top: 50%;
-      left: 50%;
+      top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      background-color: white;
-      color: green;
-      padding: 20px;
-      border: 2px solid green;
-      border-radius: 10px;
+      background: #fff; color: green;
+      padding: 18px 22px;
+      border: 2px solid green; border-radius: 10px;
       z-index: 1000;
+      text-align: center;
+      font-weight: bold;
+    }
+    .ayuda {
+      font-size: 12px; color:#bbb; margin-top:-4px;
+      text-transform: none;
     }
   </style>
 </head>
@@ -98,55 +87,89 @@
 <body>
   <div class="container">
     <h2>Agregar viaje</h2>
+
     <form id="formViaje">
       <label for="fecha">Fecha</label>
       <input type="date" id="fecha" required>
 
-      <label for="origen">Origen</label>
-      <input type="text" id="origen" required>
+      <label for="cuitOrigen">CUIT Origen</label>
+      <input type="text" id="cuitOrigen" placeholder="Ej: 20-12345678-9" required>
 
       <label for="destino">Destino</label>
       <input type="text" id="destino" required>
 
       <label for="patente">Patente</label>
-      <input type="text" id="patente" required>
+      <input type="text" id="patente" placeholder="ABC123 / AB123CD" required>
 
-      <label for="chofer">Chofer</label>
-      <input type="text" id="chofer" required>
+      <label for="tipoCereal">Tipo de cereal</label>
+      <input type="text" id="tipoCereal" placeholder="Soja, Maíz, Trigo..." required>
 
-      <label for="tipoCarga">Tipo de carga</label>
-      <input type="text" id="tipoCarga" required>
+      <div class="fila">
+        <div>
+          <label for="kgLlevados">Kg llevados</label>
+          <input type="number" id="kgLlevados" step="0.01" min="0" required>
+        </div>
+        <div>
+          <label for="kgDescargados">Kg descargados</label>
+          <input type="number" id="kgDescargados" step="0.01" min="0" required>
+        </div>
+      </div>
 
-      <label for="peso">Peso (kg)</label>
-      <input type="number" id="peso" required>
+      <label for="cargoCombustible">¿Cargó combustible?</label>
+      <select id="cargoCombustible">
+        <option value="no" selected>No</option>
+        <option value="si">Sí</option>
+      </select>
+
+      <!-- Adelanto -->
+      <label for="adelantoAplica">Adelanto</label>
+      <select id="adelantoAplica">
+        <option value="no" selected>No</option>
+        <option value="si">Sí</option>
+      </select>
+      <div id="adelantoMontoGrupo" class="grupo-monto">
+        <label for="adelantoMonto">Monto adelanto ($)</label>
+        <input type="number" id="adelantoMonto" step="0.01" min="0">
+      </div>
+
+      <!-- Peajes -->
+      <label for="peajeAplica">Gastos en peajes</label>
+      <select id="peajeAplica">
+        <option value="no" selected>No</option>
+        <option value="si">Sí</option>
+      </select>
+      <div id="peajeMontoGrupo" class="grupo-monto">
+        <label for="peajeMonto">Monto peajes ($)</label>
+        <input type="number" id="peajeMonto" step="0.01" min="0">
+      </div>
+
+      <!-- Entrada -->
+      <label for="entradaAplica">Entrada</label>
+      <select id="entradaAplica">
+        <option value="no" selected>No</option>
+        <option value="si">Sí</option>
+      </select>
+      <div id="entradaMontoGrupo" class="grupo-monto">
+        <label for="entradaMonto">Monto entrada ($)</label>
+        <input type="number" id="entradaMonto" step="0.01" min="0">
+      </div>
 
       <label for="observaciones">Observaciones</label>
-      <textarea id="observaciones"></textarea>
-
-      <label for="cuit">CUIT del cliente</label>
-      <input type="text" id="cuit" required>
-
-      <label for="adelanto">Adelanto ($)</label>
-      <input type="number" id="adelanto" required>
-
-      <label for="peaje">Gasto en peajes ($)</label>
-      <input type="number" id="peaje" required>
-
-      <label for="entrada">Entrada ($)</label>
-      <input type="number" id="entrada" required>
+      <textarea id="observaciones" placeholder="Notas adicionales..."></textarea>
 
       <div class="botones">
         <button type="button" class="btn-volver" onclick="window.location.href='index.html'">Volver</button>
         <button type="submit" class="btn-guardar">Guardar viaje</button>
       </div>
+      <div class="ayuda">* Los montos sólo son obligatorios si elegís “Sí”.</div>
     </form>
   </div>
 
-  <div id="modalExito">Viaje guardado correctamente.</div>
+  <div id="modalExito">¡Guardado correctamente!</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
@@ -157,45 +180,103 @@
       appId: "1:465536166890:web:f658690629b09eca8fa093"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const app  = initializeApp(firebaseConfig);
+    const db   = getFirestore(app);
 
+    // ----- UI helpers: mostrar/ocultar montos según "Sí/No"
+    const mapToggles = [
+      { sel: 'adelantoAplica', grupo: 'adelantoMontoGrupo', input: 'adelantoMonto' },
+      { sel: 'peajeAplica',    grupo: 'peajeMontoGrupo',    input: 'peajeMonto'    },
+      { sel: 'entradaAplica',  grupo: 'entradaMontoGrupo',  input: 'entradaMonto'  }
+    ];
+    function toggleMonto(selId, grupoId, inputId) {
+      const sel = document.getElementById(selId);
+      const box = document.getElementById(grupoId);
+      const inp = document.getElementById(inputId);
+      const on  = (sel.value === 'si');
+      box.style.display = on ? 'block' : 'none';
+      inp.required = on;
+      if (!on) inp.value = ''; // limpiar si pasa a "No"
+    }
+    mapToggles.forEach(t => {
+      document.getElementById(t.sel).addEventListener('change', () => toggleMonto(t.sel, t.grupo, t.input));
+      toggleMonto(t.sel, t.grupo, t.input); // estado inicial
+    });
+
+    // Patente siempre en mayúsculas
+    const patenteInput = document.getElementById('patente');
+    patenteInput.addEventListener('input', e => e.target.value = e.target.value.toUpperCase());
+
+    // ----- Guardar
     const form = document.getElementById("formViaje");
-
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const campos = ["fecha", "origen", "destino", "patente", "chofer", "tipoCarga", "peso", "cuit", "adelanto", "peaje", "entrada"];
-      for (const id of campos) {
+      // Validación básica de obligatorios
+      const obligatorios = ["fecha","cuitOrigen","destino","patente","tipoCereal","kgLlevados","kgDescargados"];
+      for (const id of obligatorios) {
         if (!document.getElementById(id).value) {
           alert("Por favor, complete todos los campos obligatorios.");
           return;
         }
       }
 
+      // Si aplica, validar montos numéricos
+      for (const t of mapToggles) {
+        const aplica = document.getElementById(t.sel).value === 'si';
+        const val    = document.getElementById(t.input).value;
+        if (aplica && (val === "" || isNaN(parseFloat(val)))) {
+          alert("Complete correctamente el monto en: " + t.input.replace('Monto',''));
+          return;
+        }
+      }
+
+      const cargoCombustible = document.getElementById("cargoCombustible").value === "si";
+
       const viaje = {
         fecha: document.getElementById("fecha").value,
-        origen: document.getElementById("origen").value,
-        destino: document.getElementById("destino").value,
-        patente: document.getElementById("patente").value,
-        chofer: document.getElementById("chofer").value,
-        tipoCarga: document.getElementById("tipoCarga").value,
-        peso: document.getElementById("peso").value,
-        observaciones: document.getElementById("observaciones").value,
-        cuit: document.getElementById("cuit").value,
-        adelanto: document.getElementById("adelanto").value,
-        peaje: document.getElementById("peaje").value,
-        entrada: document.getElementById("entrada").value
+        cuitOrigen: document.getElementById("cuitOrigen").value.trim(),
+        destino: document.getElementById("destino").value.trim(),
+        patente: document.getElementById("patente").value.trim(),
+        tipoCereal: document.getElementById("tipoCereal").value.trim(),
+        kgLlevados: parseFloat(document.getElementById("kgLlevados").value),
+        kgDescargados: parseFloat(document.getElementById("kgDescargados").value),
+        cargoCombustible,
+
+        adelantoAplica: document.getElementById("adelantoAplica").value === "si",
+        adelantoMonto:  parseFloat(document.getElementById("adelantoMonto").value || 0),
+
+        peajeAplica:    document.getElementById("peajeAplica").value === "si",
+        peajeMonto:     parseFloat(document.getElementById("peajeMonto").value || 0),
+
+        entradaAplica:  document.getElementById("entradaAplica").value === "si",
+        entradaMonto:   parseFloat(document.getElementById("entradaMonto").value || 0),
+
+        observaciones: document.getElementById("observaciones").value.trim(),
+        timestamp: serverTimestamp()
       };
 
       try {
         await addDoc(collection(db, "viajes"), viaje);
+
         const modal = document.getElementById("modalExito");
         modal.style.display = "block";
+
+        // Después del aviso, redirige
         setTimeout(() => {
           modal.style.display = "none";
-          window.location.href = "index.html";
-        }, 5000);
+
+          if (cargoCombustible) {
+            // Enlaza a agregar-combustible con prefill de patente y fecha
+            const q = new URLSearchParams({
+              patente: viaje.patente,
+              fecha:   viaje.fecha
+            });
+            window.location.href = "agregar-combustible.html?" + q.toString();
+          } else {
+            window.location.href = "index.html";
+          }
+        }, 5000); // 5s como pediste
       } catch (e) {
         alert("Error al guardar: " + e);
       }
