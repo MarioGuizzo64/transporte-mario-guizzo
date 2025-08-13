@@ -208,4 +208,142 @@
 
     function normalSiNo(val){
       if (typeof val === 'boolean') return val ? 'SI' : 'NO';
-      if (typeof val === 'string') return val.trim().toLowerCase() ===
+      if (typeof val === 'string') return val.trim().toLowerCase() === 'si' ? 'SI' : (val.trim().toLowerCase() === 'no' ? 'NO' : '-');
+      return '-';
+    }
+
+    function pasaFiltros(v){
+      const vf = String(v.fecha || '');
+      if (fDesde.value && vf < fDesde.value) return false;
+      if (fHasta.value && vf > fHasta.value) return false;
+
+      if (fChofer.value && v.chofer !== fChofer.value) return false;
+      if (fPatente.value && v.patente !== fPatente.value) return false;
+
+      const cuitOrigen = (v.cuitOrigen || v.cuit || '').toString();
+      const qCuit = fCuit.value.trim();
+      if (qCuit && !cuitOrigen.includes(qCuit)) return false;
+
+      const q = fBuscar.value.trim().toLowerCase();
+      if (q){
+        const blob = [
+          v.origen, v.destino, v.observaciones, v.tipoCarga, v.tipoCereal, v.patente, v.chofer
+        ].map(x => (x||'') + '').join(' ').toLowerCase();
+        if (!blob.includes(q)) return false;
+      }
+      return true;
+    }
+
+    function render(){
+      const datos = todos.filter(pasaFiltros);
+      lista.innerHTML = '';
+      if (!datos.length){
+        lista.innerHTML = '<div class="item"><p>No hay viajes para los filtros seleccionados.</p></div>';
+        return;
+      }
+      for (const v of datos){
+        const kgCargados = (v.kgLlevados ?? v.peso ?? '-') + (v.kgLlevados || v.peso ? ' kg' : '');
+        const kgDesc = (v.kgDescargados ?? '-') + (v.kgDescargados ? ' kg' : (v.kgDescargados===0?' kg':''));
+        const comb = v.hasOwnProperty('cargoCombustible') ? normalSiNo(v.cargoCombustible) : '-';
+        const hayObs = !!(v.observaciones && String(v.observaciones).trim());
+
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `
+          <div class="topline">
+            <p style="margin:0"><strong>Fecha:</strong> ${v.fecha || '-'}</p>
+            ${hayObs ? '<span class="badge badge-rojo">OBSERVACIONES</span>' : ''}
+          </div>
+          <p><strong>Chofer:</strong> ${v.chofer || '-'}</p>
+          <p><strong>Patente:</strong> ${v.patente || '-'}</p>
+          <p><strong>Origen → Destino:</strong> ${v.origen || '-'} → ${v.destino || '-'}</p>
+          <p><strong>Kg cargados:</strong> ${kgCargados} &nbsp; | &nbsp; <strong>Kg descargados:</strong> ${kgDesc}</p>
+          <p><strong>Cargó combustible:</strong> ${comb}</p>
+          <div class="acciones">
+            <button class="btn btn-verde" onclick="window._abrir('${v.id}')">Ver / Editar</button>
+          </div>
+        `;
+        lista.appendChild(div);
+      }
+    }
+
+    [fDesde,fHasta,fChofer,fPatente,fCuit,fBuscar].forEach(el => el.addEventListener('input', render));
+    btnLimpiar.addEventListener('click', () => {
+      fDesde.value = ''; fHasta.value = ''; fChofer.value = ''; fPatente.value=''; fCuit.value=''; fBuscar.value='';
+      render();
+    });
+
+    // ------- MODAL -------
+    const modal = document.getElementById('modal');
+    const get = id => document.getElementById(id);
+
+    window._abrir = (id) => {
+      const v = todos.find(x => x.id === id);
+      if (!v) return;
+      actualId = id; actual = v;
+
+      get('e_fecha').value = v.fecha || '';
+      get('e_origen').value = v.origen || '';
+      get('e_destino').value = v.destino || '';
+      get('e_patente').value = v.patente || '';
+      get('e_chofer').value = v.chofer || '';
+      get('e_tipoCarga').value = (v.tipoCereal || v.tipoCarga || '');
+      get('e_peso').value = (v.kgLlevados ?? v.peso ?? '');
+      get('e_kgDescargados').value = (v.kgDescargados ?? '');
+      get('e_cuit').value = (v.cuitOrigen || v.cuit || '');
+      get('e_adelanto').value = v.adelanto || '';
+      get('e_peaje').value = v.peaje || '';
+      get('e_entrada').value = v.entrada || '';
+      get('e_observaciones').value = v.observaciones || '';
+
+      modal.style.display = 'flex';
+    };
+
+    get('btnCerrar').onclick = () => modal.style.display = 'none';
+
+    get('btnGuardar').onclick = async () => {
+      const data = {
+        fecha: get('e_fecha').value || null,
+        origen: get('e_origen').value.trim(),
+        destino: get('e_destino').value.trim(),
+        patente: get('e_patente').value.trim(),
+        chofer: get('e_chofer').value.trim(),
+        tipoCereal: get('e_tipoCarga').value.trim(),
+        tipoCarga: get('e_tipoCarga').value.trim(),
+        kgLlevados: Number(get('e_peso').value || 0),
+        peso: Number(get('e_peso').value || 0),
+        kgDescargados: Number(get('e_kgDescargados').value || 0),
+        cuitOrigen: get('e_cuit').value.trim(),
+        cuit: get('e_cuit').value.trim(),
+        adelanto: Number(get('e_adelanto').value || 0),
+        peaje: Number(get('e_peaje').value || 0),
+        entrada: Number(get('e_entrada').value || 0),
+        observaciones: get('e_observaciones').value.trim(),
+      };
+      try{
+        await updateDoc(doc(db,'viajes', actualId), data);
+        alert('Viaje actualizado');
+        modal.style.display = 'none';
+      }catch(err){
+        alert('Error al guardar: ' + err.message);
+      }
+    };
+
+    get('btnEliminar').onclick = async () => {
+      if (!confirm('¿Eliminar este viaje?')) return;
+      try{
+        await deleteDoc(doc(db,'viajes', actualId));
+        modal.style.display = 'none';
+      }catch(err){
+        alert('Error al eliminar: ' + err.message);
+      }
+    };
+
+    // Ir a registrar combustible con prefill
+    get('btnCombustible').onclick = () => {
+      const q = new URLSearchParams({ patente: get('e_patente').value, fecha: get('e_fecha').value });
+      window.location.href = 'agregar-combustible.html?' + q.toString();
+    };
+  </script>
+</body>
+</html>
