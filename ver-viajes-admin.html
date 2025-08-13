@@ -8,15 +8,24 @@
     body{margin:0;background:#FFD700;font-family:Arial,sans-serif;color:#fff;}
     .container{background:#000;max-width:900px;margin:40px auto;padding:24px;border-radius:12px;}
     h1{text-align:center;text-transform:uppercase;text-decoration:underline;margin:0 0 16px}
-    .filtros{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:16px}
+
+    /* filtros */
+    .filtros{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px}
     .filtros input,.filtros select{padding:8px;border:1px solid #000;border-radius:4px;color:#000;background:#fff}
     .btn{padding:10px;border:1px solid #000;border-radius:6px;font-weight:bold;cursor:pointer;text-transform:uppercase}
     .btn-verde{background:green;color:#fff}
     .btn-naranja{background:orange;color:#000}
     .btn-rojo{background:red;color:#fff}
+
+    /* lista */
     .lista{display:grid;gap:10px}
     .item{background:#191919;border-radius:10px;padding:12px}
     .item p{margin:3px 0}
+    .topline{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .badge{display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:bold}
+    .badge-rojo{background:#cc1d1d;color:#fff;border:1px solid #000}
+    .badge-amarillo{background:#ffbf00;color:#000;border:1px solid #000}
+
     .acciones{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
     .btn-volver{margin-top:16px}
 
@@ -28,8 +37,10 @@
     .edit-form input,.edit-form textarea{padding:8px;border:1px solid #000;border-radius:4px;background:#fff;color:#000}
     .edit-form textarea{grid-column:span 2;height:70px;resize:vertical}
     .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
-    @media (max-width:700px){
-      .filtros{grid-template-columns:1fr 1fr}
+
+    @media (max-width:900px){ .filtros{grid-template-columns:repeat(3,1fr)} }
+    @media (max-width:600px){
+      .filtros{grid-template-columns:1fr}
       .edit-form{grid-template-columns:1fr}
     }
   </style>
@@ -44,7 +55,8 @@
       <input type="date" id="hasta" />
       <select id="fChofer"><option value="">Todos los choferes</option></select>
       <select id="fPatente"><option value="">Todas las patentes</option></select>
-      <input type="text" id="buscar" placeholder="Buscar (origen, destino, cuit, obs)"/>
+      <input type="text" id="fCuit" placeholder="CUIT ORIGEN"/>
+      <input type="text" id="buscar" placeholder="Buscar (origen, destino, obs)"/>
       <button type="button" class="btn btn-naranja" id="btnLimpiar">Limpiar</button>
     </form>
 
@@ -77,10 +89,13 @@
         <label>Tipo de carga</label>
         <input type="text" id="e_tipoCarga"/>
 
-        <label>Peso (kg)</label>
+        <label>Peso / Kg cargados</label>
         <input type="number" id="e_peso"/>
 
-        <label>CUIT del cliente</label>
+        <label>Kg descargados</label>
+        <input type="number" id="e_kgDescargados"/>
+
+        <label>CUIT origen</label>
         <input type="text" id="e_cuit"/>
 
         <label>Adelanto ($)</label>
@@ -127,6 +142,7 @@
     const fHasta = document.getElementById("hasta");
     const fChofer = document.getElementById("fChofer");
     const fPatente = document.getElementById("fPatente");
+    const fCuit = document.getElementById("fCuit");
     const fBuscar = document.getElementById("buscar");
     const btnLimpiar = document.getElementById("btnLimpiar");
 
@@ -134,11 +150,18 @@
     let actualId = null; // id abierto en modal
     let actual = null;   // datos del viaje en modal
 
-    // suscripción
+    // Suscripción a cambios
     onSnapshot(col, (qs) => {
       todos = qs.docs.map(d => ({ id: d.id, ...d.data() }));
-      // ordenar por fecha desc (asumiendo YYYY-MM-DD)
-      todos.sort((a,b) => String(b.fecha).localeCompare(String(a.fecha)));
+
+      // Ordenar más reciente -> más viejo.
+      // Prioriza timestamp si existe; si no, usa fecha (YYYY-MM-DD) como string.
+      todos.sort((a,b) => {
+        const ta = a.timestamp?.seconds ? a.timestamp.seconds : Date.parse(a.fecha || 0);
+        const tb = b.timestamp?.seconds ? b.timestamp.seconds : Date.parse(b.fecha || 0);
+        return tb - ta;
+      });
+
       poblarSelects();
       render();
     });
@@ -148,27 +171,41 @@
       const patentes = Array.from(new Set(todos.map(v => v.patente).filter(Boolean))).sort();
 
       const chSel = fChofer.value, ptSel = fPatente.value;
-      fChofer.innerHTML = '<option value=\"\">Todos los choferes</option>' +
-        choferes.map(c => `<option value=\"${c}\">${c}</option>`).join('');
-      fPatente.innerHTML = '<option value=\"\">Todas las patentes</option>' +
-        patentes.map(p => `<option value=\"${p}\">${p}</option>`).join('');
-      // preservar selección previa si aplica
+      fChofer.innerHTML = '<option value="">Todos los choferes</option>' +
+        choferes.map(c => `<option value="${c}">${c}</option>`).join('');
+      fPatente.innerHTML = '<option value="">Todas las patentes</option>' +
+        patentes.map(p => `<option value="${p}">${p}</option>`).join('');
       if (chSel) fChofer.value = chSel;
       if (ptSel) fPatente.value = ptSel;
     }
 
+    function normalSiNo(val){
+      // acepta true/false/"si"/"no"
+      if (typeof val === 'boolean') return val ? 'SI' : 'NO';
+      if (typeof val === 'string') return val.trim().toLowerCase() === 'si' ? 'SI' : (val.trim().toLowerCase() === 'no' ? 'NO' : '-');
+      return '-';
+    }
+
     function pasaFiltros(v){
-      // fecha
-      if (fDesde.value && String(v.fecha) < fDesde.value) return false;
-      if (fHasta.value && String(v.fecha) > fHasta.value) return false;
-      // chofer/patente
+      // fecha (usa v.fecha en formato YYYY-MM-DD si está)
+      const vf = String(v.fecha || '');
+      if (fDesde.value && vf < fDesde.value) return false;
+      if (fHasta.value && vf > fHasta.value) return false;
+
+      // chofer / patente
       if (fChofer.value && v.chofer !== fChofer.value) return false;
       if (fPatente.value && v.patente !== fPatente.value) return false;
+
+      // cuit origen (puede venir como cuitOrigen o cuit)
+      const cuitOrigen = (v.cuitOrigen || v.cuit || '').toString();
+      const qCuit = fCuit.value.trim();
+      if (qCuit && !cuitOrigen.includes(qCuit)) return false;
+
       // texto libre
       const q = fBuscar.value.trim().toLowerCase();
       if (q){
         const blob = [
-          v.origen, v.destino, v.cuit, v.observaciones, v.tipoCarga, v.patente, v.chofer
+          v.origen, v.destino, v.observaciones, v.tipoCarga, v.tipoCereal, v.patente, v.chofer
         ].map(x => (x||'') + '').join(' ').toLowerCase();
         if (!blob.includes(q)) return false;
       }
@@ -179,19 +216,29 @@
       const datos = todos.filter(pasaFiltros);
       lista.innerHTML = '';
       if (!datos.length){
-        lista.innerHTML = '<div class=\"item\"><p>No hay viajes para los filtros seleccionados.</p></div>';
+        lista.innerHTML = '<div class="item"><p>No hay viajes para los filtros seleccionados.</p></div>';
         return;
       }
       for (const v of datos){
+        const kgCargados = (v.kgLlevados ?? v.peso ?? '-') + (v.kgLlevados || v.peso ? ' kg' : '');
+        const kgDesc = (v.kgDescargados ?? '-') + (v.kgDescargados ? ' kg' : (v.kgDescargados===0?' kg':''));
+        const comb = v.hasOwnProperty('cargoCombustible') ? normalSiNo(v.cargoCombustible) : '-';
+        const hayObs = !!(v.observaciones && String(v.observaciones).trim());
+
         const div = document.createElement('div');
         div.className = 'item';
         div.innerHTML = `
-          <p><strong>Fecha:</strong> ${v.fecha || '-'}</p>
+          <div class="topline">
+            <p style="margin:0"><strong>Fecha:</strong> ${v.fecha || '-'}</p>
+            ${hayObs ? '<span class="badge badge-rojo">OBSERVACIONES</span>' : ''}
+          </div>
           <p><strong>Chofer:</strong> ${v.chofer || '-'}</p>
           <p><strong>Patente:</strong> ${v.patente || '-'}</p>
           <p><strong>Origen → Destino:</strong> ${v.origen || '-'} → ${v.destino || '-'}</p>
-          <div class=\"acciones\">
-            <button class=\"btn btn-verde\" onclick=\"window._abrir('${v.id}')\">Ver / Editar</button>
+          <p><strong>Kg cargados:</strong> ${kgCargados} &nbsp; | &nbsp; <strong>Kg descargados:</strong> ${kgDesc}</p>
+          <p><strong>Cargó combustible:</strong> ${comb}</p>
+          <div class="acciones">
+            <button class="btn btn-verde" onclick="window._abrir('${v.id}')">Ver / Editar</button>
           </div>
         `;
         lista.appendChild(div);
@@ -199,9 +246,9 @@
     }
 
     // eventos filtros
-    [fDesde,fHasta,fChofer,fPatente,fBuscar].forEach(el => el.addEventListener('input', render));
+    [fDesde,fHasta,fChofer,fPatente,fCuit,fBuscar].forEach(el => el.addEventListener('input', render));
     btnLimpiar.addEventListener('click', () => {
-      fDesde.value = ''; fHasta.value = ''; fChofer.value = ''; fPatente.value=''; fBuscar.value='';
+      fDesde.value = ''; fHasta.value = ''; fChofer.value = ''; fPatente.value=''; fCuit.value=''; fBuscar.value='';
       render();
     });
 
@@ -219,9 +266,10 @@
       get('e_destino').value = v.destino || '';
       get('e_patente').value = v.patente || '';
       get('e_chofer').value = v.chofer || '';
-      get('e_tipoCarga').value = v.tipoCarga || '';
-      get('e_peso').value = v.peso || '';
-      get('e_cuit').value = v.cuit || '';
+      get('e_tipoCarga').value = (v.tipoCereal || v.tipoCarga || '');
+      get('e_peso').value = (v.kgLlevados ?? v.peso ?? '');
+      get('e_kgDescargados').value = (v.kgDescargados ?? '');
+      get('e_cuit').value = (v.cuitOrigen || v.cuit || '');
       get('e_adelanto').value = v.adelanto || '';
       get('e_peaje').value = v.peaje || '';
       get('e_entrada').value = v.entrada || '';
@@ -239,8 +287,13 @@
         destino: get('e_destino').value.trim(),
         patente: get('e_patente').value.trim(),
         chofer: get('e_chofer').value.trim(),
+        // guardamos en ambos nombres por compatibilidad
+        tipoCereal: get('e_tipoCarga').value.trim(),
         tipoCarga: get('e_tipoCarga').value.trim(),
+        kgLlevados: Number(get('e_peso').value || 0),
         peso: Number(get('e_peso').value || 0),
+        kgDescargados: Number(get('e_kgDescargados').value || 0),
+        cuitOrigen: get('e_cuit').value.trim(),
         cuit: get('e_cuit').value.trim(),
         adelanto: Number(get('e_adelanto').value || 0),
         peaje: Number(get('e_peaje').value || 0),
