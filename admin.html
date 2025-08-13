@@ -5,51 +5,57 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Transporte Mario Güizzo — Admin</title>
   <style>
-    :root {
-      --amarillo: #FFD700;
-      --negro: #0d0d0d;
-      --naranja: #ffa500;
-      --rojo: #e53935;
-      --blanco: #ffffff;
+    :root { --amarillo:#FFD700; --negro:#0d0d0d; --naranja:#ffa500; --rojo:#e53935; --blanco:#ffffff; }
+    body{
+      margin:0;background:var(--negro);color:var(--blanco);
+      font-family:Arial,Helvetica,sans-serif;min-height:100vh;
+      display:flex;flex-direction:column;align-items:center;
     }
-    body {
-      margin: 0;
-      background: var(--negro);
-      color: var(--blanco);
-      font-family: Arial, Helvetica, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+    header{text-align:center;padding:24px 12px 0;}
+    header h1{margin:0 0 16px;text-transform:uppercase;letter-spacing:.5px;}
+    .logo{width:260px;max-width:80vw;display:block;margin:0 auto 12px;}
+    .panel{
+      width:100%;max-width:520px;margin:24px auto 48px;background:#111;border-radius:12px;
+      padding:24px 18px;box-shadow:0 10px 30px rgba(0,0,0,.35);
     }
-    header { text-align: center; padding: 24px 12px 0; }
-    header h1 { margin: 0 0 16px; text-transform: uppercase; letter-spacing: .5px; }
-    .logo { width: 260px; max-width: 80vw; display: block; margin: 0 auto 12px; }
-    .panel {
-      width: 100%; max-width: 520px; margin: 24px auto 48px;
-      background: #111; border-radius: 12px; padding: 24px 18px; box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    .panel h2{ text-align:center;margin:0 0 16px;text-transform:uppercase;text-decoration:underline;font-size:18px; }
+    .btn{
+      width:100%;display:block;border:1px solid #000;border-radius:8px;
+      padding:12px 14px;margin:10px 0;font-weight:700;text-transform:uppercase;
+      cursor:pointer;transition:transform .05s ease;
     }
-    .panel h2 { text-align: center; margin: 0 0 16px; text-transform: uppercase; text-decoration: underline; font-size: 18px; }
-    .btn {
-      width: 100%; display: block; border: 1px solid #000; border-radius: 8px;
-      padding: 12px 14px; margin: 10px 0; font-weight: 700; text-transform: uppercase;
-      cursor: pointer; transition: transform .05s ease;
-    }
-    .btn:active { transform: translateY(1px); }
-    .btn-naranja { background: var(--amarillo); color: #000; }
-    .btn-rojo { background: var(--rojo); color: #fff; margin-top: 8px; }
-    .footer { color: #888; font-size: 12px; margin-bottom: 20px; }
+    .btn:active{ transform:translateY(1px); }
+    .btn-naranja{ background:var(--amarillo);color:#000; }
+    .btn-rojo{ background:var(--rojo);color:#fff;margin-top:8px; }
+    .footer{ color:#888;font-size:12px;margin-bottom:20px; }
 
-    /* Estados de carga/permisos */
-    #loading { margin-top: 40px; color: #bbb; font-size: 14px; }
-    #app { display: none; } /* lo muestro cuando confirmo admin */
+    #loading{ margin-top:40px;color:#bbb;font-size:14px; }
+    #app{ display:none; }       /* contenedor del panel admin */
+    #denied{ display:none; text-align:center; max-width:520px; margin:50px 16px; }
+    #denied .card{ background:#111; border-radius:12px; padding:20px; }
+    .row{ display:flex; gap:10px; margin-top:12px; }
+    .row .btn{ flex:1; }
+    .debug{ color:#bbb; font-size:12px; margin-top:10px; word-break:break-word; }
   </style>
 </head>
 <body>
-  <!-- LOADING / MENSAJE -->
+  <!-- Cargando -->
   <div id="loading">Cargando permisos…</div>
 
-  <!-- CONTENIDO PROTEGIDO -->
+  <!-- Denegado -->
+  <div id="denied">
+    <div class="card">
+      <h2 style="text-transform:uppercase;text-decoration:underline;margin-top:0">Acceso restringido</h2>
+      <p>No tenés permisos de administrador para este panel.</p>
+      <div class="row">
+        <button class="btn btn-naranja" id="goChofer">Ir al panel de chofer</button>
+        <button class="btn btn-rojo" id="doLogout">Cerrar sesión</button>
+      </div>
+      <div class="debug" id="why"></div>
+    </div>
+  </div>
+
+  <!-- Panel admin -->
   <div id="app">
     <header>
       <h1>Transporte Mario Güizzo</h1>
@@ -58,25 +64,22 @@
 
     <div class="panel">
       <h2>¿Qué desea hacer?</h2>
-
       <button class="btn btn-naranja" id="btnUsuarios">Usuarios</button>
       <button class="btn btn-naranja" id="btnViajes">Viajes</button>
       <button class="btn btn-naranja" id="btnCombustible">Combustible</button>
       <button class="btn btn-naranja" id="btnMantenimiento">Mantenimiento</button>
       <button class="btn btn-naranja" id="btnFinanzas">Finanzas</button>
       <button class="btn btn-naranja" id="btnDocumentos">Documentos de choferes y camiones</button>
-
       <button class="btn btn-rojo" id="btnLogout">Cerrar sesión</button>
     </div>
 
     <div class="footer">Panel de administración</div>
   </div>
 
-  <!-- Firebase (auth + firestore) y guard de rol -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
@@ -92,47 +95,64 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const appDiv = document.getElementById('app');
     const loading = document.getElementById('loading');
+    const denied  = document.getElementById('denied');
+    const appDiv  = document.getElementById('app');
+    const why     = document.getElementById('why');
 
-    // Fallback por email (por si el doc de usuarios todavía no está creado)
+    // Cambiá esta lista si tus correos admin son otros:
     const ADMIN_WHITELIST = ["admin@guizzo.com", "admin2@guizzo.com"].map(e => e.toLowerCase());
+
+    function showLoading(v){ loading.style.display = v ? 'block' : 'none'; }
+    function showApp(){ appDiv.style.display = 'block'; denied.style.display = 'none'; showLoading(false); }
+    function showDenied(msg){
+      why.textContent = msg || '';
+      denied.style.display = 'block';
+      appDiv.style.display = 'none';
+      showLoading(false);
+    }
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        location.replace("login.html");
+        // no hay sesión
+        window.location.replace("login.html");
         return;
       }
       try {
-        let isAdmin = false;
+        const email = (user.email || '').toLowerCase();
+        const uid   = user.uid;
 
-        // 1) Intento leer rol desde 'usuarios' por uid
-        const q = query(collection(db, "usuarios"), where("uid", "==", user.uid));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-          const datos = snap.docs[0].data() || {};
-          isAdmin = String(datos.rol || "").toLowerCase() === "admin";
+        // 1) Intento leer doc por UID (usuarios/<uid>)
+        const ref = doc(db, "usuarios", uid);
+        const snap = await getDoc(ref);
+
+        let rol = '';
+        if (snap.exists()) {
+          const d = snap.data() || {};
+          rol = (d.rol || '').toLowerCase();
         }
 
-        // 2) Fallback a whitelist por email
-        if (!isAdmin && ADMIN_WHITELIST.includes((user.email || "").toLowerCase())) {
-          isAdmin = true;
+        // 2) Si no hay rol admin pero el correo está en la whitelist,
+        //    creo/actualizo el doc con rol admin (autocuración).
+        if (rol !== 'admin' && ADMIN_WHITELIST.includes(email)) {
+          await setDoc(ref, {
+            uid,
+            email,
+            rol: 'admin',
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+          rol = 'admin';
         }
 
-        if (!isAdmin) {
-          // No tiene rol admin: a la vista de chofer
-          location.replace("index.html");
-          return;
+        if (rol === 'admin') {
+          showApp();
+        } else {
+          showDenied(`Usuario autenticado: ${email} (uid: ${uid}). Rol actual: "${rol || 'N/D'}".`);
         }
 
-        // OK: muestro contenido
-        loading.style.display = 'none';
-        appDiv.style.display = 'block';
       } catch (err) {
-        console.error("Error verificando permisos:", err);
-        alert("No se pudo verificar tu rol. Iniciá sesión nuevamente.");
-        await signOut(auth);
-        location.replace("login.html");
+        console.error('Error verificando permisos:', err);
+        showDenied('Error verificando permisos: ' + err.message);
       }
     });
 
@@ -144,14 +164,14 @@
     document.getElementById("btnFinanzas").onclick      = () => location.href = "finanzas.html";
     document.getElementById("btnDocumentos").onclick    = () => location.href = "documentos.html";
 
-    // Cerrar sesión
+    // Acciones denegado
+    document.getElementById('goChofer').onclick = () => location.href = "index.html";
+    document.getElementById('doLogout').onclick = async () => { await signOut(auth); location.replace("login.html"); };
+
+    // Cerrar sesión dentro del panel
     document.getElementById("btnLogout").onclick = async () => {
-      try {
-        await signOut(auth);
-        location.replace("login.html");
-      } catch (e) {
-        alert("No se pudo cerrar sesión: " + e.message);
-      }
+      try { await signOut(auth); location.replace("login.html"); }
+      catch(e){ alert("No se pudo cerrar sesión: " + e.message); }
     };
   </script>
 </body>
