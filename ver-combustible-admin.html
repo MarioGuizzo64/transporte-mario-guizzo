@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VER COMBUSTIBLE – ADMIN</title>
+  <style>
+    body{margin:0;background:#FFD700;font-family:Arial,sans-serif;color:#fff;}
+    .container{background:#000;max-width:950px;margin:40px auto;padding:24px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    h1{text-align:center;text-transform:uppercase;text-decoration:underline;margin:0 0 16px}
+
+    .filtros{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:0 auto 16px;max-width:900px}
+    .filtros input,.filtros select{padding:8px;border:1px solid #000;border-radius:4px;color:#000;background:#fff}
+    .btn{padding:10px;border:1px solid #000;border-radius:6px;font-weight:bold;cursor:pointer;text-transform:uppercase}
+    .btn-verde{background:green;color:#fff}
+    .btn-naranja{background:orange;color:#000}
+    .btn-rojo{background:red;color:#fff}
+    .btn-volver{margin-top:16px}
+
+    .lista{display:grid;gap:10px;max-width:900px;margin:0 auto}
+    .item{background:#191919;border-radius:10px;padding:12px}
+    .item p{margin:3px 0}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .pill{display:inline-block;background:#333;border-radius:999px;padding:2px 8px;font-size:12px;margin-left:8px}
+
+    /* Modal */
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);justify-content:center;align-items:center}
+    .modal-content{background:#000;border-radius:12px;padding:16px;width:95%;max-width:650px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+    .modal-content h2{margin:0 0 12px;text-transform:uppercase;text-decoration:underline}
+    .edit-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .edit-form label{grid-column:span 2;font-weight:bold;text-transform:uppercase}
+    .edit-form input,.edit-form select,.edit-form textarea{padding:8px;border:1px solid #000;border-radius:4px;background:#fff;color:#000}
+    .edit-form textarea{grid-column:span 2;height:70px;resize:vertical}
+    .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+
+    @media (max-width:800px){
+      .filtros{grid-template-columns:1fr 1fr}
+      .edit-form{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Ver Combustible</h1>
+
+    <!-- FILTROS -->
+    <form class="filtros" id="formFiltros">
+      <input type="date" id="desde"/>
+      <input type="date" id="hasta"/>
+      <select id="fPatente"><option value="">Todas las patentes</option></select>
+      <select id="fTipo"><option value="">Todos los tipos</option></select>
+      <select id="fMetodo"><option value="">Todos los métodos</option></select>
+      <input type="text" id="buscar" placeholder="Buscar (estación, patente, obs)"/>
+      <input type="text" id="fCuitOrigen" placeholder="CUIT origen (opcional)"/>
+      <button type="button" class="btn btn-naranja" id="btnLimpiar">Limpiar</button>
+    </form>
+
+    <!-- LISTA -->
+    <div id="lista" class="lista"></div>
+
+    <div style="max-width:900px;margin:0 auto;">
+      <button class="btn btn-naranja btn-volver" onclick="location.href='admin.html'">Volver</button>
+    </div>
+  </div>
+
+  <!-- MODAL DETALLE/EDICIÓN -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <h2>Detalle / Editar carga</h2>
+      <form id="formEdit" class="edit-form">
+        <label>Fecha</label>
+        <input type="date" id="e_fecha"/>
+
+        <label>Patente del camión</label>
+        <input type="text" id="e_patente"/>
+
+        <label>Litros cargados</label>
+        <input type="number" step="0.01" id="e_litros"/>
+
+        <label>Precio por litro</label>
+        <input type="number" step="0.01" id="e_precioLitro"/>
+
+        <label>Importe total</label>
+        <input type="number" step="0.01" id="e_total"/>
+
+        <label>Estación de servicio</label>
+        <input type="text" id="e_estacion"/>
+
+        <label>Tipo de combustible</label>
+        <select id="e_tipo">
+          <option value="">Seleccionar…</option>
+          <option>Nafta</option>
+          <option>Gasoil</option>
+          <option>Euro</option>
+          <option>Otro</option>
+        </select>
+
+        <label>Método de pago</label>
+        <select id="e_metodo">
+          <option value="">Seleccionar…</option>
+          <option>Efectivo</option>
+          <option>Tarjeta</option>
+          <option>Cuenta corriente</option>
+          <option>Transferencia</option>
+        </select>
+
+        <label>Observaciones</label>
+        <textarea id="e_obs"></textarea>
+      </form>
+
+      <div class="modal-actions">
+        <button id="btnGuardar" class="btn btn-verde" type="button">Guardar</button>
+        <button id="btnEliminar" class="btn btn-rojo" type="button">Eliminar</button>
+        <button id="btnCerrar" class="btn btn-naranja" type="button">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // TU CONFIG
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
+      authDomain: "transporte-mario-guizzo.firebaseapp.com",
+      projectId: "transporte-mario-guizzo",
+      storageBucket: "transporte-mario-guizzo.appspot.com",
+      messagingSenderId: "465536166890",
+      appId: "1:465536166890:web:f658690629b09eca8fa093"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+
+    // ---------- Helpers ----------
+    const parseFecha = (f) => {
+      if (!f) return null;
+      // Admite "YYYY-MM-DD" o "DD/MM/AAAA"
+      if (f.includes("-")) return new Date(f);
+      if (f.includes("/")) {
+        const [dd,mm,aa] = f.split("/");
+        return new Date(+aa, +mm-1, +dd);
+      }
+      const d = new Date(f);
+      return isNaN(d) ? null : d;
+    };
+    const fmt = (n, suf="") => (n ?? "") === "" ? "-" : `${Number(n).toLocaleString("es-AR",{maximumFractionDigits:2})}${suf}`;
+
+    // ---------- UI refs ----------
+    const lista = document.getElementById("lista");
+    const fDesde = document.getElementById("desde");
+    const fHasta = document.getElementById("hasta");
+    const fPatente = document.getElementById("fPatente");
+    const fTipo = document.getElementById("fTipo");
+    const fMetodo = document.getElementById("fMetodo");
+    const fBuscar = document.getElementById("buscar");
+    const fCuitOrigen = document.getElementById("fCuitOrigen");
+    const btnLimpiar = document.getElementById("btnLimpiar");
+
+    let todas = [];
+    let actualId = null;
+    let actual = null;
+
+    onSnapshot(collection(db, "cargas-combustible"), (qs) => {
+      todas = qs.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Orden por fecha (o timestamp) descendente
+      todas.sort((a,b) => {
+        const da = parseFecha(a.fecha) || (a.timestamp ? new Date(a.timestamp) : new Date(0));
+        const dbb= parseFecha(b.fecha) || (b.timestamp ? new Date(b.timestamp) : new Date(0));
+        return dbb - da;
+      });
+      poblarSelects();
+      render();
+    });
+
+    function poblarSelects(){
+      const patentes = Array.from(new Set(todas.map(x => x.patenteCamion).filter(Boolean))).sort();
+      const tipos    = Array.from(new Set(todas.map(x => x.tipoCombustible).filter(Boolean))).sort();
+      const metodos  = Array.from(new Set(todas.map(x => x.metodoPago).filter(Boolean))).sort();
+
+      const pSel = fPatente.value, tSel = fTipo.value, mSel = fMetodo.value;
+
+      fPatente.innerHTML = '<option value="">Todas las patentes</option>' +
+        patentes.map(p => `<option value="${p}">${p}</option>`).join('');
+      fTipo.innerHTML = '<option value="">Todos los tipos</option>' +
+        tipos.map(t => `<option value="${t}">${t}</option>`).join('');
+      fMetodo.innerHTML = '<option value="">Todos los métodos</option>' +
+        metodos.map(m => `<option value="${m}">${m}</option>`).join('');
+
+      if (pSel) fPatente.value = pSel;
+      if (tSel) fTipo.value = tSel;
+      if (mSel) fMetodo.value = mSel;
+    }
+
+    function pasaFiltros(x){
+      // Fechas
+      if (fDesde.value) {
+        const d = parseFecha(x.fecha); if (!d || d < new Date(fDesde.value)) return false;
+      }
+      if (fHasta.value) {
+        const d = parseFecha(x.fecha); if (!d || d > new Date(fHasta.value)) return false;
+      }
+      // Patente, tipo, método
+      if (fPatente.value && x.patenteCamion !== fPatente.value) return false;
+      if (fTipo.value && x.tipoCombustible !== fTipo.value) return false;
+      if (fMetodo.value && x.metodoPago !== fMetodo.value) return false;
+
+      // Cuit origen (si algún día lo guardás en combustible)
+      if (fCuitOrigen.value) {
+        const co = (x.cuitOrigen || "").toString();
+        if (!co.includes(fCuitOrigen.value.trim())) return false;
+      }
+
+      // Texto libre
+      const q = fBuscar.value.trim().toLowerCase();
+      if (q){
+        const blob = [
+          x.estacionServicio, x.patenteCamion, x.observaciones, x.tipoCombustible, x.metodoPago
+        ].map(s => (s||"")+"").join(" ").toLowerCase();
+        if (!blob.includes(q)) return false;
+      }
+      return true;
+    }
+
+    function render(){
+      const datos = todas.filter(pasaFiltros);
+      lista.innerHTML = "";
+      if (!datos.length){
+        lista.innerHTML = '<div class="item"><p>No hay cargas para los filtros seleccionados.</p></div>';
+        return;
+      }
+      for (const c of datos){
+        const litros = Number(c.litros || 0);
+        const total  = Number(c.totalPagado || 0);
+        const plitro = c.precioPorLitro ?? (litros ? total/litros : null);
+        const obsPill = c.observaciones ? '<span class="pill" style="background:#b71c1c">OBSERVACIONES</span>' : '';
+
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `
+          <div class="row" style="justify-content:space-between;">
+            <div><strong>Fecha:</strong> ${c.fecha || '-' } ${obsPill}</div>
+            <div><strong>Patente:</strong> ${c.patenteCamion || '-'}</div>
+          </div>
+          <p><strong>Estación:</strong> ${c.estacionServicio || '-'}
+             &nbsp;|&nbsp; <strong>Tipo:</strong> ${c.tipoCombustible || '-'}
+             &nbsp;|&nbsp; <strong>Método:</strong> ${c.metodoPago || '-'}</p>
+          <p><strong>Litros:</strong> ${fmt(litros,' l')}
+             &nbsp;|&nbsp; <strong>$/l:</strong> ${plitro!=null?fmt(plitro):'-'}
+             &nbsp;|&nbsp; <strong>Total:</strong> $ ${fmt(total)}</p>
+          <div class="row" style="justify-content:flex-end;">
+            <button class="btn btn-verde" onclick="window._abrir('${c.id}')">Ver / Editar</button>
+          </div>
+        `;
+        lista.appendChild(div);
+      }
+    }
+
+    [fDesde,fHasta,fPatente,fTipo,fMetodo,fBuscar,fCuitOrigen].forEach(el => el.addEventListener('input', render));
+    btnLimpiar.addEventListener('click', () => {
+      [fDesde,fHasta,fPatente,fTipo,fMetodo,fBuscar,fCuitOrigen].forEach(el => el.value = "");
+      render();
+    });
+
+    // ------- MODAL -------
+    const modal = document.getElementById('modal');
+    const get = (id) => document.getElementById(id);
+
+    window._abrir = (id) => {
+      const c = todas.find(x => x.id === id);
+      if (!c) return;
+      actualId = id; actual = c;
+
+      get('e_fecha').value = (c.fecha && c.fecha.includes('/'))
+        ? (()=>{ const [dd,mm,aa] = c.fecha.split('/'); return `${aa}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}` })()
+        : (c.fecha || '');
+
+      get('e_patente').value   = c.patenteCamion || '';
+      get('e_litros').value    = c.litros ?? '';
+      get('e_precioLitro').value = c.precioPorLitro ?? '';
+      get('e_total').value     = c.totalPagado ?? '';
+      get('e_estacion').value  = c.estacionServicio || '';
+      get('e_tipo').value      = c.tipoCombustible || '';
+      get('e_metodo').value    = c.metodoPago || '';
+      get('e_obs').value       = c.observaciones || '';
+
+      modal.style.display = 'flex';
+    };
+
+    get('btnCerrar').onclick = () => modal.style.display = 'none';
+
+    // Recalcular precio/total si edita litros/uno de los dos
+    function saneaNums(){
+      const L  = Number(get('e_litros').value || 0);
+      let P    = get('e_precioLitro').value;
+      let T    = get('e_total').value;
+      P = P==="" ? null : Number(P);
+      T = T==="" ? null : Number(T);
+
+      if (L>0 && P!=null && (T==null || isNaN(T))) get('e_total').value = (L*P).toFixed(2);
+      if (L>0 && T!=null && (P==null || isNaN(P))) get('e_precioLitro').value = (T/L).toFixed(2);
+    }
+    ['e_litros','e_precioLitro','e_total'].forEach(id => get(id).addEventListener('input', saneaNums));
+
+    get('btnGuardar').onclick = async () => {
+      const fISO = get('e_fecha').value;
+      const fecha = fISO ? fISO : ''; // guardamos en YYYY-MM-DD para ordenar mejor
+
+      const data = {
+        fecha,
+        patenteCamion: get('e_patente').value.trim(),
+        litros: Number(get('e_litros').value || 0),
+        precioPorLitro: get('e_precioLitro').value===""? null : Number(get('e_precioLitro').value),
+        totalPagado: get('e_total').value===""? null : Number(get('e_total').value),
+        estacionServicio: get('e_estacion').value.trim(),
+        tipoCombustible: get('e_tipo').value || '',
+        metodoPago: get('e_metodo').value || '',
+        observaciones: get('e_obs').value.trim(),
+      };
+      try{
+        await updateDoc(doc(db,'cargas-combustible', actualId), data);
+        alert('Carga actualizada');
+        modal.style.display = 'none';
+      }catch(err){
+        alert('Error al guardar: ' + err.message);
+      }
+    };
+
+    get('btnEliminar').onclick = async () => {
+      if (!confirm('¿Eliminar esta carga de combustible?')) return;
+      try{
+        await deleteDoc(doc(db,'cargas-combustible', actualId));
+        modal.style.display = 'none';
+      }catch(err){
+        alert('Error al eliminar: ' + err.message);
+      }
+    };
+  </script>
+</body>
+</html>
