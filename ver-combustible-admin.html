@@ -6,22 +6,59 @@
   <title>VER COMBUSTIBLE – ADMIN</title>
   <style>
     body{margin:0;background:#FFD700;font-family:Arial,sans-serif;color:#fff;}
-    .container{background:#000;max-width:950px;margin:40px auto;padding:24px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .container{
+      background:#000;
+      max-width:980px;           /* un poquito más ancho para que todo entre cómodo */
+      margin:40px auto;
+      padding:24px;
+      border-radius:12px;
+      box-shadow:0 10px 30px rgba(0,0,0,.35)
+    }
     h1{text-align:center;text-transform:uppercase;text-decoration:underline;margin:0 0 16px}
 
-    .filtros{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:0 auto 16px;max-width:900px}
-    .filtros input,.filtros select{padding:8px;border:1px solid #000;border-radius:4px;color:#000;background:#fff}
+    /* Filtros responsivos: no se salen del contenedor */
+    .filtros{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(160px,1fr));
+      gap:8px;
+      margin:0 0 16px 0;
+    }
+    .filtros input,.filtros select{
+      padding:8px;border:1px solid #000;border-radius:4px;color:#000;background:#fff
+    }
+
     .btn{padding:10px;border:1px solid #000;border-radius:6px;font-weight:bold;cursor:pointer;text-transform:uppercase}
     .btn-verde{background:green;color:#fff}
     .btn-naranja{background:orange;color:#000}
     .btn-rojo{background:red;color:#fff}
     .btn-volver{margin-top:16px}
 
-    .lista{display:grid;gap:10px;max-width:900px;margin:0 auto}
+    .lista{display:grid;gap:10px}
     .item{background:#191919;border-radius:10px;padding:12px}
     .item p{margin:3px 0}
-    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
     .pill{display:inline-block;background:#333;border-radius:999px;padding:2px 8px;font-size:12px;margin-left:8px}
+
+    /* Resumen */
+    .resumen{
+      background:#111;
+      border:1px solid #222;
+      border-radius:10px;
+      padding:10px 12px;
+      margin:0 0 16px 0;
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(160px,1fr));
+      gap:8px;
+    }
+    .resumen .card{
+      background:#0f1a0f;
+      border:1px solid #1f3d1f;
+      border-radius:8px;
+      padding:10px;
+      text-align:center;
+    }
+    .resumen .card .label{font-size:12px;color:#a0d8a0;text-transform:uppercase}
+    .resumen .card .value{font-weight:bold;font-size:18px}
 
     /* Modal */
     .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);justify-content:center;align-items:center}
@@ -34,7 +71,6 @@
     .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
 
     @media (max-width:800px){
-      .filtros{grid-template-columns:1fr 1fr}
       .edit-form{grid-template-columns:1fr}
     }
   </style>
@@ -47,20 +83,35 @@
     <form class="filtros" id="formFiltros">
       <input type="date" id="desde"/>
       <input type="date" id="hasta"/>
+
+      <select id="rangoRapido">
+        <option value="">Período…</option>
+        <option value="mes-actual">Mes actual</option>
+        <option value="mes-pasado">Mes pasado</option>
+        <option value="ultimos-30">Últimos 30 días</option>
+        <option value="todo">Todo</option>
+      </select>
+
       <select id="fPatente"><option value="">Todas las patentes</option></select>
       <select id="fTipo"><option value="">Todos los tipos</option></select>
       <select id="fMetodo"><option value="">Todos los métodos</option></select>
-      <input type="text" id="buscar" placeholder="Buscar (estación, patente, obs)"/>
       <input type="text" id="fCuitOrigen" placeholder="CUIT origen (opcional)"/>
+      <input type="text" id="buscar" placeholder="Buscar (estación, patente, obs)"/>
       <button type="button" class="btn btn-naranja" id="btnLimpiar">Limpiar</button>
     </form>
+
+    <!-- RESUMEN -->
+    <div id="resumen" class="resumen">
+      <div class="card"><div class="label">Litros</div><div class="value" id="r_litros">-</div></div>
+      <div class="card"><div class="label">Total $</div><div class="value" id="r_total">$ -</div></div>
+      <div class="card"><div class="label">$/Litro prom.</div><div class="value" id="r_promedio">-</div></div>
+      <div class="card"><div class="label">Cargas</div><div class="value" id="r_cargas">-</div></div>
+    </div>
 
     <!-- LISTA -->
     <div id="lista" class="lista"></div>
 
-    <div style="max-width:900px;margin:0 auto;">
-      <button class="btn btn-naranja btn-volver" onclick="location.href='admin.html'">Volver</button>
-    </div>
+    <button class="btn btn-naranja btn-volver" onclick="location.href='admin.html'">Volver</button>
   </div>
 
   <!-- MODAL DETALLE/EDICIÓN -->
@@ -135,27 +186,33 @@
     // ---------- Helpers ----------
     const parseFecha = (f) => {
       if (!f) return null;
-      // Admite "YYYY-MM-DD" o "DD/MM/AAAA"
-      if (f.includes("-")) return new Date(f);
-      if (f.includes("/")) {
+      if (f.includes("-")) return new Date(f);       // YYYY-MM-DD
+      if (f.includes("/")) {                          // DD/MM/AAAA
         const [dd,mm,aa] = f.split("/");
         return new Date(+aa, +mm-1, +dd);
       }
       const d = new Date(f);
       return isNaN(d) ? null : d;
     };
+    const toISO = (d) => d.toISOString().slice(0,10);
     const fmt = (n, suf="") => (n ?? "") === "" ? "-" : `${Number(n).toLocaleString("es-AR",{maximumFractionDigits:2})}${suf}`;
 
     // ---------- UI refs ----------
     const lista = document.getElementById("lista");
     const fDesde = document.getElementById("desde");
     const fHasta = document.getElementById("hasta");
+    const rangoRapido = document.getElementById("rangoRapido");
     const fPatente = document.getElementById("fPatente");
     const fTipo = document.getElementById("fTipo");
     const fMetodo = document.getElementById("fMetodo");
     const fBuscar = document.getElementById("buscar");
     const fCuitOrigen = document.getElementById("fCuitOrigen");
     const btnLimpiar = document.getElementById("btnLimpiar");
+
+    const rLitros = document.getElementById("r_litros");
+    const rTotal  = document.getElementById("r_total");
+    const rProm   = document.getElementById("r_promedio");
+    const rCargas = document.getElementById("r_cargas");
 
     let todas = [];
     let actualId = null;
@@ -222,8 +279,29 @@
       return true;
     }
 
+    function actualizarResumen(datos){
+      const cargas = datos.length;
+      let totalLitros = 0;
+      let totalGasto  = 0;
+
+      for (const c of datos){
+        const L = Number(c.litros || 0);
+        const T = (c.totalPagado==null || c.totalPagado==="") ? ( (c.precioPorLitro!=null && L>0) ? Number(c.precioPorLitro)*L : 0 ) : Number(c.totalPagado);
+        totalLitros += L;
+        totalGasto  += T;
+      }
+      const prom = (totalLitros>0) ? (totalGasto/totalLitros) : 0;
+
+      rLitros.textContent = fmt(totalLitros, " l");
+      rTotal.textContent  = "$ " + fmt(totalGasto);
+      rProm.textContent   = (totalLitros>0)? fmt(prom) : "-";
+      rCargas.textContent = cargas.toString();
+    }
+
     function render(){
       const datos = todas.filter(pasaFiltros);
+      actualizarResumen(datos);
+
       lista.innerHTML = "";
       if (!datos.length){
         lista.innerHTML = '<div class="item"><p>No hay cargas para los filtros seleccionados.</p></div>';
@@ -231,14 +309,16 @@
       }
       for (const c of datos){
         const litros = Number(c.litros || 0);
-        const total  = Number(c.totalPagado || 0);
-        const plitro = c.precioPorLitro ?? (litros ? total/litros : null);
+        const total  = (c.totalPagado==null || c.totalPagado==="")
+          ? ( (c.precioPorLitro!=null && litros>0) ? Number(c.precioPorLitro)*litros : null )
+          : Number(c.totalPagado);
+        const plitro = c.precioPorLitro ?? (litros ? (total!=null? total/litros : null) : null);
         const obsPill = c.observaciones ? '<span class="pill" style="background:#b71c1c">OBSERVACIONES</span>' : '';
 
         const div = document.createElement('div');
         div.className = 'item';
         div.innerHTML = `
-          <div class="row" style="justify-content:space-between;">
+          <div class="row">
             <div><strong>Fecha:</strong> ${c.fecha || '-' } ${obsPill}</div>
             <div><strong>Patente:</strong> ${c.patenteCamion || '-'}</div>
           </div>
@@ -247,8 +327,8 @@
              &nbsp;|&nbsp; <strong>Método:</strong> ${c.metodoPago || '-'}</p>
           <p><strong>Litros:</strong> ${fmt(litros,' l')}
              &nbsp;|&nbsp; <strong>$/l:</strong> ${plitro!=null?fmt(plitro):'-'}
-             &nbsp;|&nbsp; <strong>Total:</strong> $ ${fmt(total)}</p>
-          <div class="row" style="justify-content:flex-end;">
+             &nbsp;|&nbsp; <strong>Total:</strong> ${total!=null? '$ '+fmt(total) : '-'}</p>
+          <div style="display:flex;justify-content:flex-end;">
             <button class="btn btn-verde" onclick="window._abrir('${c.id}')">Ver / Editar</button>
           </div>
         `;
@@ -256,9 +336,34 @@
       }
     }
 
+    // Períodos rápidos
+    rangoRapido.addEventListener('change', () => {
+      const hoy = new Date();
+      const y = hoy.getFullYear(), m = hoy.getMonth();
+      let d1 = "", d2 = "";
+
+      if (rangoRapido.value === "mes-actual"){
+        d1 = new Date(y, m, 1);
+        d2 = new Date(y, m+1, 0);
+      } else if (rangoRapido.value === "mes-pasado"){
+        d1 = new Date(y, m-1, 1);
+        d2 = new Date(y, m, 0);
+      } else if (rangoRapido.value === "ultimos-30"){
+        d1 = new Date(hoy); d1.setDate(hoy.getDate()-29);
+        d2 = hoy;
+      } else if (rangoRapido.value === "todo"){
+        d1 = ""; d2 = "";
+      }
+
+      fDesde.value = d1? toISO(d1) : "";
+      fHasta.value = d2? toISO(d2) : "";
+      render();
+    });
+
+    // eventos filtros
     [fDesde,fHasta,fPatente,fTipo,fMetodo,fBuscar,fCuitOrigen].forEach(el => el.addEventListener('input', render));
     btnLimpiar.addEventListener('click', () => {
-      [fDesde,fHasta,fPatente,fTipo,fMetodo,fBuscar,fCuitOrigen].forEach(el => el.value = "");
+      [fDesde,fHasta,fPatente,fTipo,fMetodo,fBuscar,fCuitOrigen,rangoRapido].forEach(el => el.value = "");
       render();
     });
 
