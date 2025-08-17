@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Finanzas</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 <style>
   :root{
     --yellow:#FFD700; --black:#0d0d0d; --panel:#111; --white:#fff;
@@ -36,6 +36,12 @@
   .right{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
   .volver{margin-top:14px}
   .note{font-size:12px;opacity:.75}
+
+  /* Chips de patentes */
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
+  .chip{background:#151515;border:1px solid #333;color:#fff;padding:6px 10px;border-radius:20px;cursor:pointer;font-size:12px}
+  .chip.active{background:#1976d2;border-color:#1976d2}
+
   @media (max-width:1000px){.cards{grid-template-columns:1fr 1fr 1fr}.grid2{grid-template-columns:1fr}}
   @media (max-width:640px){.cards{grid-template-columns:1fr 1fr}}
 </style>
@@ -71,7 +77,7 @@
     <div class="right" style="margin-left:auto">
       <button id="btnCSV" class="btn btn-azul">Exportar CSV</button>
       <button id="btnPrintTabla" class="btn btn-verde">Imprimir tabla</button>
-      <button id="btnPrintLiq" class="btn btn-verde">Imprimir liquidación chofer</button>
+      <button id="btnPrintLiq" class="btn btn-verde">Imprimir liquidación</button>
     </div>
   </div>
 
@@ -91,15 +97,18 @@
 
   <!-- RESUMEN -->
   <section id="tab-resumen">
+    <!-- chips de patentes (Total + cada camión del rango) -->
+    <div id="chipsPat" class="chips"></div>
+
     <div class="grid2">
       <div class="panel">
-        <h3 style="margin:6px 0 12px">Ingresos vs Egresos por Camión</h3>
-        <canvas id="chartPatentes" height="160"></canvas>
-        <div class="note">Suma de ingresos y egresos del rango filtrado. Si falta tarifa/importe en un viaje, el ingreso de ese viaje se toma como 0.</div>
+        <h3 style="margin:6px 0 12px">Ingresos vs Egresos <span id="titPatente"></span></h3>
+        <canvas id="chartPatentes" height="180"></canvas>
+        <div class="note">Columna “Ingresos” vs “Egresos” del rango y camión seleccionado.</div>
       </div>
       <div class="panel">
-        <h3 style="margin:6px 0 12px">Composición de egresos</h3>
-        <canvas id="chartEgresos" height="160"></canvas>
+        <h3 style="margin:6px 0 12px">Composición de egresos <span id="titPatente2"></span></h3>
+        <canvas id="chartEgresos" height="180"></canvas>
         <div class="note">Combustible + Mantenimiento + Peajes + Adelantos + Entradas.</div>
       </div>
     </div>
@@ -110,8 +119,8 @@
     <div class="panel">
       <h3 style="margin:6px 0 12px">Liquidación por Chofer</h3>
       <div class="note" style="margin-bottom:8px">
-        Fórmula: <b>Comisión = Ingreso × %</b> · <b>Liquidación</b> = Comisión <b>– Adelantos</b> <b>+ Peajes + Entradas</b>.  
-        % por chofer se toma de <code>usuarios</code> (campo <code>porcentaje</code>). Default: <span id="defPct">20%</span>.
+        Comisión = Ingreso × %  ·  Liquidación = Comisión − Adelantos + Peajes + Entradas.
+        Si en <code>usuarios</code> no hay <code>porcentaje</code>, se usa 20%.
       </div>
       <table class="tabla">
         <thead>
@@ -128,6 +137,27 @@
           </tr>
         </thead>
         <tbody id="tbodyChofer"></tbody>
+      </table>
+    </div>
+
+    <div class="panel" style="margin-top:12px">
+      <h3 style="margin:6px 0 12px">Liquidación por Chofer y Patente</h3>
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th style="width:120px">Chofer</th>
+            <th style="width:120px">Patente</th>
+            <th>Viajes</th>
+            <th class="monto" style="width:140px">Ingreso</th>
+            <th class="monto" style="width:100px">% Comis.</th>
+            <th class="monto" style="width:140px">Comisión</th>
+            <th class="monto" style="width:120px">Peajes</th>
+            <th class="monto" style="width:120px">Entradas</th>
+            <th class="monto" style="width:120px">Adelantos</th>
+            <th class="monto" style="width:140px">Liquidación</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyChoferPat"></tbody>
       </table>
     </div>
   </section>
@@ -157,8 +187,7 @@
 
 <script type="module">
 /* ==================== CONFIG ==================== */
-const DEFAULT_COMMISSION = 0.20; // 20%
-document.getElementById('defPct').textContent = `${Math.round(DEFAULT_COMMISSION*100)}%`;
+const DEFAULT_COMMISSION = 0.20;
 
 /* ==================== Firebase ==================== */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -176,13 +205,11 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
 /* ==================== Estado ==================== */
-let viajes = [];
-let combustible = [];
-let mant = [];
-let usuarios = [];
+let viajes = [], combustible = [], mant = [], usuarios = [];
 let movs = [];
-let patSet = new Set();
-let choSet = new Set();
+let patSet = new Set(), choSet = new Set();
+let activeTab = 'resumen';
+let selectedPatChip = ''; // '' = Total
 
 /* ==================== Refs UI ==================== */
 const fDesde   = document.getElementById('fDesde');
@@ -203,6 +230,10 @@ const kMargen = document.getElementById('kMargen');
 
 const tbody = document.getElementById('tbody');
 const tbodyChofer = document.getElementById('tbodyChofer');
+const tbodyChoferPat = document.getElementById('tbodyChoferPat');
+const chipsPat = document.getElementById('chipsPat');
+const titPat1 = document.getElementById('titPatente');
+const titPat2 = document.getElementById('titPatente2');
 
 const fmt = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
 
@@ -214,7 +245,6 @@ onSnapshot(collection(db,'usuarios'), qs=>{
   usuarios.forEach(u => choSet.add( (u.nombre||u.displayName||u.email||'').trim() ));
   poblarChoferes(); render();
 });
-
 onSnapshot(collection(db,'viajes'), qs=>{
   viajes = qs.docs.map(d => ({id:d.id, ...d.data()}));
   viajes.forEach(v=>{
@@ -223,13 +253,11 @@ onSnapshot(collection(db,'viajes'), qs=>{
   });
   poblarPatentes(); poblarChoferes(); render();
 });
-
 onSnapshot(collection(db,'cargas-combustible'), qs=>{
   combustible = qs.docs.map(d => ({id:d.id, ...d.data()}));
   combustible.forEach(c=> { if (c.patente) patSet.add((c.patente||'').trim()); });
   poblarPatentes(); render();
 });
-
 onSnapshot(collection(db,'mantenimientos'), qs=>{
   mant = qs.docs.map(d => ({id:d.id, ...d.data()}));
   mant.forEach(m=> { if (m.patente) patSet.add((m.patente||'').trim()); });
@@ -242,12 +270,27 @@ function poblarPatentes(){
   const arr = Array.from(patSet).filter(Boolean).sort();
   fPatente.innerHTML = '<option value="">Todas las patentes</option>' + arr.map(p=>`<option>${p}</option>`).join('');
   if (arr.includes(prev)) fPatente.value = prev;
+  buildChips(arr);
 }
 function poblarChoferes(){
   const prev = fChofer.value;
   const arr = Array.from(choSet).filter(Boolean).sort();
   fChofer.innerHTML = '<option value="">Todos los choferes</option>' + arr.map(c=>`<option>${c}</option>`).join('');
   if (arr.includes(prev)) fChofer.value = prev;
+}
+function buildChips(arr){
+  const pats = arr.slice(0,20); // por si hay muchísimas, mostramos 20
+  let html = `<button class="chip ${selectedPatChip===''?'active':''}" data-pt="">Total</button>`;
+  html += pats.map(p => `<button class="chip ${selectedPatChip===p?'active':''}" data-pt="${p}">${p}</button>`).join('');
+  chipsPat.innerHTML = html;
+  chipsPat.querySelectorAll('.chip').forEach(b=>{
+    b.onclick = ()=>{
+      selectedPatChip = b.dataset.pt || '';
+      chipsPat.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      renderCharts(movs); // sólo rehace gráficos
+    };
+  });
 }
 function inRange(fecha, d, h){
   if (!fecha) return false;
@@ -365,23 +408,16 @@ function render(){
   kGastos.textContent = fmt(gastos);
   kMargen.textContent = fmt(margen);
 
-  tbody.innerHTML = '';
-  if (!movs.length){
-    tbody.innerHTML = `<tr><td colspan="6" style="padding:18px;opacity:.85">Sin movimientos.</td></tr>`;
-  }else{
-    for (const m of movs){
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${(m.fecha||'').slice(0,10)}</td>
-        <td>${m.tipo}</td>
-        <td>${m.detalle||''}</td>
-        <td>${m.chofer||''}</td>
-        <td>${m.patente||''}</td>
-        <td class="monto">${fmt(m.importe||0)}</td>
-      `;
-      tbody.appendChild(tr);
-    }
-  }
+  // Tabla
+  tbody.innerHTML = movs.length ? movs.map(m=>`
+    <tr>
+      <td>${(m.fecha||'').slice(0,10)}</td>
+      <td>${m.tipo}</td>
+      <td>${m.detalle||''}</td>
+      <td>${m.chofer||''}</td>
+      <td>${m.patente||''}</td>
+      <td class="monto">${fmt(m.importe||0)}</td>
+    </tr>`).join('') : `<tr><td colspan="6" style="padding:18px;opacity:.85">Sin movimientos.</td></tr>`;
 
   renderChofer(viajesFiltrados);
   renderCharts(movs);
@@ -389,6 +425,7 @@ function render(){
 
 /* ---- Liquidación por chofer ---- */
 function renderChofer(viajesFiltrados){
+  // por Chofer (total)
   const map = new Map();
   for (const v of viajesFiltrados){
     const key = v.chofer||'(Sin chofer)';
@@ -400,15 +437,13 @@ function renderChofer(viajesFiltrados){
     if (v.entradaAplica) o.entrada += Number(v.entradaMonto||0);
     if (v.adelantoAplica)o.adelanto+= Number(v.adelantoMonto||0);
   }
-
   const rows = [...map.entries()].map(([cho, o])=>{
     const comision = o.ingreso * (o.pct ?? DEFAULT_COMMISSION);
     const liq = comision - o.adelanto + o.peaje + o.entrada;
     return {chofer:cho, viajes:o.viajes, ingreso:o.ingreso, pct:o.pct, comision, peaje:o.peaje, entrada:o.entrada, adelanto:o.adelanto, liquidacion:liq};
-  });
+  }).sort((a,b)=> a.chofer.localeCompare(b.chofer));
 
-  rows.sort((a,b)=> a.chofer.localeCompare(b.chofer));
-  tbodyChofer.innerHTML = rows.map(r=>`
+  tbodyChofer.innerHTML = rows.length ? rows.map(r=>`
     <tr>
       <td>${r.chofer}</td>
       <td>${r.viajes}</td>
@@ -419,27 +454,106 @@ function renderChofer(viajesFiltrados){
       <td class="monto">${fmt(r.entrada)}</td>
       <td class="monto">${fmt(r.adelanto)}</td>
       <td class="monto"><b>${fmt(r.liquidacion)}</b></td>
-    </tr>
-  `).join('') || `<tr><td colspan="9" style="padding:14px;opacity:.85">Sin viajes en el rango para el chofer seleccionado.</td></tr>`;
+    </tr>`).join('') : `<tr><td colspan="9" style="padding:14px;opacity:.85">Sin viajes en el rango.</td></tr>`;
 
+  // por Chofer y Patente
+  const map2 = new Map();
+  for (const v of viajesFiltrados){
+    const key = (v.chofer||'(Sin chofer)') + '||' + (v.patente||'(sin patente)');
+    if (!map2.has(key)) map2.set(key, {chofer:v.chofer||'(Sin chofer)', patente:v.patente||'(sin patente)', viajes:0, ingreso:0, peaje:0, entrada:0, adelanto:0, pct:getPctChofer(v.chofer, v.patente)});
+    const o = map2.get(key);
+    o.viajes++;
+    o.ingreso += ingresoViaje(v);
+    if (v.peajeAplica)   o.peaje   += Number(v.peajeMonto||0);
+    if (v.entradaAplica) o.entrada += Number(v.entradaMonto||0);
+    if (v.adelantoAplica)o.adelanto+= Number(v.adelantoMonto||0);
+  }
+  const rows2 = [...map2.values()].map(o=>{
+    const comision = o.ingreso * (o.pct ?? DEFAULT_COMMISSION);
+    const liq = comision - o.adelanto + o.peaje + o.entrada;
+    return {...o, comision, liquidacion:liq};
+  }).sort((a,b)=> a.chofer.localeCompare(b.chofer) || a.patente.localeCompare(b.patente));
+
+  tbodyChoferPat.innerHTML = rows2.length ? rows2.map(r=>`
+    <tr>
+      <td>${r.chofer}</td>
+      <td>${r.patente}</td>
+      <td>${r.viajes}</td>
+      <td class="monto">${fmt(r.ingreso)}</td>
+      <td class="monto">${Math.round(((r.pct ?? DEFAULT_COMMISSION) * 100))}%</td>
+      <td class="monto">${fmt(r.comision)}</td>
+      <td class="monto">${fmt(r.peaje)}</td>
+      <td class="monto">${fmt(r.entrada)}</td>
+      <td class="monto">${fmt(r.adelanto)}</td>
+      <td class="monto"><b>${fmt(r.liquidacion)}</b></td>
+    </tr>`).join('') : `<tr><td colspan="10" style="padding:14px;opacity:.85">Sin viajes en el rango.</td></tr>`;
+
+  // guardamos para imprimir
   window.__rowsChofer = rows;
+  window.__rowsChoferPat = rows2;
 }
 
-/* ---- Charts ---- */
+/* ---- Charts (Total / por camión con chips) ---- */
 function renderCharts(movsAll){
-  const pats = [...new Set(movsAll.map(m=>m.patente).filter(Boolean))].sort();
-  const ing = pats.map(p=> movsAll.filter(m=>m.patente===p && m.tipo==='Ingreso').reduce((a,b)=>a+Number(b.importe||0),0));
-  const egr = pats.map(p=> movsAll.filter(m=>m.patente===p && m.tipo!=='Ingreso').reduce((a,b)=>a+Number(b.importe||0),0));
+  // filtrar por chip seleccionado
+  const mm = selectedPatChip ? movsAll.filter(m=>m.patente===selectedPatChip) : movsAll;
+  titPat1.textContent = selectedPatChip ? `— ${selectedPatChip}` : '— Total';
+  titPat2.textContent = selectedPatChip ? `— ${selectedPatChip}` : '— Total';
+
+  // Ingresos / Egresos (barras)
+  const pats = [...new Set(mm.map(m=>m.patente).filter(Boolean))].sort();
+  const ing = pats.map(p=> mm.filter(m=>m.patente===p && m.tipo==='Ingreso').reduce((a,b)=>a+Number(b.importe||0),0));
+  const egr = pats.map(p=> mm.filter(m=>m.patente===p && m.tipo!=='Ingreso').reduce((a,b)=>a+Number(b.importe||0),0));
+  // Si no hay patentes (porque filtraste una sola), mostramos una barra “Único”
+  const labels = pats.length ? pats : [ selectedPatChip || 'Total' ];
+  const ingV   = pats.length ? ing : [ mm.filter(m=>m.tipo==='Ingreso').reduce((a,b)=>a+Number(b.importe||0),0) ];
+  const egrV   = pats.length ? egr : [ mm.filter(m=>m.tipo!=='Ingreso').reduce((a,b)=>a+Number(b.importe||0),0) ];
 
   const ctx1 = document.getElementById('chartPatentes').getContext('2d');
-  if (window.chrtPat) window.chrtPat.destroy();
-  window.chrtPat = new Chart(ctx1,{ type:'bar', data:{labels:pats,datasets:[{label:'Ingresos',data:ing},{label:'Egresos',data:egr}]}, options:{responsive:true,plugins:{legend:{position:'bottom'}}} });
+  chrtPat && chrtPat.destroy();
+  chrtPat = new Chart(ctx1,{
+    type:'bar',
+    data:{labels, datasets:[
+      {label:'Ingresos', data:ingV, backgroundColor:'#4FC3F7', borderColor:'#4FC3F7', borderWidth:1},
+      {label:'Egresos',  data:egrV, backgroundColor:'#EF5350', borderColor:'#EF5350', borderWidth:1}
+    ]},
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{position:'bottom', labels:{color:'#fff'}},
+        tooltip:{bodyColor:'#111', titleColor:'#111'}
+      },
+      scales:{
+        x:{ticks:{color:'#eee'}, grid:{color:'#333'}},
+        y:{ticks:{color:'#eee'}, grid:{color:'#333'}}
+      }
+    }
+  });
 
+  // Composición Egresos (doughnut)
   const comp = ['Combustible','Mantenimiento','Peaje','Adelanto','Entrada'];
-  const vals = comp.map(t=> movsAll.filter(m=>m.tipo===t).reduce((a,b)=>a+Number(b.importe||0),0));
+  const vals = comp.map(t=> mm.filter(m=>m.tipo===t).reduce((a,b)=>a+Number(b.importe||0),0));
   const ctx2 = document.getElementById('chartEgresos').getContext('2d');
-  if (window.chrtEgr) window.chrtEgr.destroy();
-  window.chrtEgr = new Chart(ctx2,{ type:'doughnut', data:{labels:comp,datasets:[{data:vals}]}, options:{responsive:true,plugins:{legend:{position:'bottom'}}} });
+  chrtEgr && chrtEgr.destroy();
+  chrtEgr = new Chart(ctx2,{
+    type:'doughnut',
+    data:{
+      labels:comp,
+      datasets:[{
+        data:vals,
+        backgroundColor:['#42A5F5','#EC407A','#FFB300','#66BB6A','#AB47BC'],
+        borderColor:['#42A5F5','#EC407A','#FFB300','#66BB6A','#AB47BC'],
+        borderWidth:1
+      }]
+    },
+    options:{
+      responsive:true,
+      cutout:'55%',
+      plugins:{
+        legend:{position:'bottom', labels:{color:'#fff'}}
+      }
+    }
+  });
 }
 
 /* ==================== Eventos ==================== */
@@ -456,6 +570,7 @@ tabs.forEach(b=>{
     tabs.forEach(x=>x.classList.remove('active')); b.classList.add('active');
     document.querySelectorAll('section[id^="tab-"]').forEach(s=>s.style.display='none');
     document.getElementById('tab-'+b.dataset.tab).style.display='block';
+    activeTab = b.dataset.tab;
   };
 });
 
@@ -472,8 +587,12 @@ document.getElementById('btnCSV').addEventListener('click', ()=>{
   URL.revokeObjectURL(url);
 });
 
-/* Print tabla */
+/* Print tabla: primero muestra la vista si no estás en ella */
 document.getElementById('btnPrintTabla').addEventListener('click', ()=>{
+  if (activeTab !== 'tabla'){
+    document.querySelector('.tab[data-tab="tabla"]').click();
+    return; // vista previa primero
+  }
   const rows = movs.map(m => `
     <tr><td>${(m.fecha||'').slice(0,10)}</td><td>${m.tipo}</td><td>${m.detalle||''}</td><td>${m.chofer||''}</td><td>${m.patente||''}</td><td class="r">${fmt(m.importe||0)}</td></tr>
   `).join('');
@@ -494,33 +613,58 @@ document.getElementById('btnPrintTabla').addEventListener('click', ()=>{
   w.document.write(html); w.document.close(); w.focus();
 });
 
-/* Print liquidación por chofer */
+/* Print liquidación: primero muestra “Por chofer” */
 document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
-  const rows = (window.__rowsChofer||[]);
-  if (!rows.length){ alert('No hay datos de chofer en el rango/chofer seleccionados.'); return; }
-  const trs = rows.map(r=>`
+  if (activeTab !== 'chofer'){
+    document.querySelector('.tab[data-tab="chofer"]').click();
+    return;
+  }
+  const rows  = (window.__rowsChofer||[]);
+  const rows2 = (window.__rowsChoferPat||[]);
+  const fmtPct = (p)=> `${Math.round((p ?? DEFAULT_COMMISSION)*100)}%`;
+
+  const tr1 = rows.map(r=>`
     <tr>
       <td>${r.chofer}</td><td class="r">${r.viajes}</td>
-      <td class="r">${fmt(r.ingreso)}</td><td class="r">${Math.round(((r.pct ?? DEFAULT_COMMISSION) * 100))}%</td>
+      <td class="r">${fmt(r.ingreso)}</td><td class="r">${fmtPct(r.pct)}</td>
       <td class="r">${fmt(r.comision)}</td>
       <td class="r">${fmt(r.peaje)}</td><td class="r">${fmt(r.entrada)}</td>
       <td class="r">${fmt(r.adelanto)}</td><td class="r"><b>${fmt(r.liquidacion)}</b></td>
     </tr>`).join('');
+
+  const tr2 = rows2.map(r=>`
+    <tr>
+      <td>${r.chofer}</td><td>${r.patente}</td><td class="r">${r.viajes}</td>
+      <td class="r">${fmt(r.ingreso)}</td><td class="r">${fmtPct(r.pct)}</td>
+      <td class="r">${fmt(r.comision)}</td><td class="r">${fmt(r.peaje)}</td>
+      <td class="r">${fmt(r.entrada)}</td><td class="r">${fmt(r.adelanto)}</td>
+      <td class="r"><b>${fmt(r.liquidacion)}</b></td>
+    </tr>`).join('');
+
   const html = `
-<!DOCTYPE html><html><head><meta charset="utf-8"><title>Liquidación Chofer</title>
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Liquidaciones</title>
 <style>
   body{font-family:Arial;margin:28px;color:#111}
-  table{width:100%;border-collapse:collapse}
+  h3{margin:20px 0 8px}
+  table{width:100%;border-collapse:collapse;margin-top:4px}
   th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
   th{background:#f5f5f5} .r{text-align:right}
   .note{font-size:12px;color:#555;margin-bottom:10px}
 </style></head>
 <body onload="window.print()">
-  <h2>Liquidación por Chofer</h2>
-  <div class="note">Rango: ${fDesde.value||'—'} a ${fHasta.value||'—'} · Filtro Chofer: ${fChofer.value||'Todos'} · Patente: ${fPatente.value||'Todas'}</div>
+  <h2>Liquidaciones</h2>
+  <div class="note">Rango: ${fDesde.value||'—'} a ${fHasta.value||'—'} · Chofer: ${fChofer.value||'Todos'} · Patente: ${fPatente.value||'Todas'}</div>
+
+  <h3>Por Chofer</h3>
   <table>
-    <thead><tr><th>Chofer</th><th>Viajes</th><th class="r">Ingreso</th><th class="r">% Comis.</th><th class="r">Comisión</th><th class="r">Peajes</th><th class="r">Entradas</th><th class="r">Adelantos</th><th class="r">Liquidación</th></tr></thead>
-    <tbody>${trs||'<tr><td colspan="9">Sin datos</td></tr>'}</tbody>
+    <thead><tr><th>Chofer</th><th class="r">Viajes</th><th class="r">Ingreso</th><th class="r">% Comis.</th><th class="r">Comisión</th><th class="r">Peajes</th><th class="r">Entradas</th><th class="r">Adelantos</th><th class="r">Liquidación</th></tr></thead>
+    <tbody>${tr1 || '<tr><td colspan="9">Sin datos</td></tr>'}</tbody>
+  </table>
+
+  <h3>Por Chofer y Patente</h3>
+  <table>
+    <thead><tr><th>Chofer</th><th>Patente</th><th class="r">Viajes</th><th class="r">Ingreso</th><th class="r">% Comis.</th><th class="r">Comisión</th><th class="r">Peajes</th><th class="r">Entradas</th><th class="r">Adelantos</th><th class="r">Liquidación</th></tr></thead>
+    <tbody>${tr2 || '<tr><td colspan="10">Sin datos</td></tr>'}</tbody>
   </table>
 </body></html>`;
   const w = window.open('', '_blank', 'width=900,height=1000');
