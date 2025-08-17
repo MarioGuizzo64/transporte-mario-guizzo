@@ -484,11 +484,11 @@ document.getElementById('btnPrintTabla').addEventListener('click', ()=>{
   table{width:100%;border-collapse:collapse}
   th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
   th{background:#f5f5f5} .r{text-align:right}
-</style></head><body>
+</style></head>
+<body onload="window.print()">
   <h2>Movimientos</h2>
   <table><thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Chofer</th><th>Patente</th><th class="r">Importe</th></tr></thead>
   <tbody>${rows||'<tr><td colspan="6">Sin datos</td></tr>'}</tbody></table>
-  <script>window.print()</script>
 </body></html>`;
   const w = window.open('', '_blank', 'width=900,height=1000');
   w.document.write(html); w.document.close(); w.focus();
@@ -514,14 +514,14 @@ document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
   th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
   th{background:#f5f5f5} .r{text-align:right}
   .note{font-size:12px;color:#555;margin-bottom:10px}
-</style></head><body>
+</style></head>
+<body onload="window.print()">
   <h2>Liquidación por Chofer</h2>
   <div class="note">Rango: ${fDesde.value||'—'} a ${fHasta.value||'—'} · Filtro Chofer: ${fChofer.value||'Todos'} · Patente: ${fPatente.value||'Todas'}</div>
   <table>
     <thead><tr><th>Chofer</th><th>Viajes</th><th class="r">Ingreso</th><th class="r">% Comis.</th><th class="r">Comisión</th><th class="r">Peajes</th><th class="r">Entradas</th><th class="r">Adelantos</th><th class="r">Liquidación</th></tr></thead>
     <tbody>${trs||'<tr><td colspan="9">Sin datos</td></tr>'}</tbody>
   </table>
-  <script>window.print()</script>
 </body></html>`;
   const w = window.open('', '_blank', 'width=900,height=1000');
   w.document.write(html); w.document.close(); w.focus();
