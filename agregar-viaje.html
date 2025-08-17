@@ -7,80 +7,29 @@
   <link rel="stylesheet" href="style.css">
   <script src="https://kit.fontawesome.com/a2e0e6ad65.js" crossorigin="anonymous"></script>
   <style>
-    body {
-      margin: 0;
-      font-family: 'Roboto', Arial, sans-serif;
-      background-color: #FFD700; /* Amarillo */
-      color: white;
-    }
-    .container {
-      background-color: #000;
-      max-width: 520px;
-      margin: 40px auto;
-      padding: 28px;
-      border-radius: 10px;
-      box-shadow: 0 0 20px rgba(0,0,0,.5);
-    }
-    h2 {
-      text-align: center;
-      font-size: 22px;
-      text-transform: uppercase;
-      text-decoration: underline;
-      font-weight: bold;
-      color: white;
-      margin: 0 0 20px;
-    }
-    form { display: flex; flex-direction: column; gap: 12px; }
-    label { font-weight: bold; text-transform: uppercase; }
-    input, textarea, select {
-      padding: 8px;
-      border: 1px solid #000;
-      background-color: #fff;
-      color: #000;
-      border-radius: 4px;
-      width: 100%;
-      box-sizing: border-box;
-    }
-    textarea { min-height: 80px; resize: vertical; }
-    .fila {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-    .grupo-monto { display: none; }
-    .botones {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      margin-top: 12px;
-    }
-    .btn-volver, .btn-guardar {
-      flex: 1;
-      padding: 10px;
-      border: 1px solid #000;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: bold;
-      text-transform: uppercase;
-    }
-    .btn-volver  { background: orange; color: #000; }
-    .btn-guardar { background: green;  color: #fff; }
-    #modalExito {
-      display: none;
-      position: fixed;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      background: #fff; color: green;
-      padding: 18px 22px;
-      border: 2px solid green; border-radius: 10px;
-      z-index: 1000;
-      text-align: center;
-      font-weight: bold;
-    }
-    .ayuda {
-      font-size: 12px; color:#bbb; margin-top:-4px;
-      text-transform: none;
-    }
+    body{margin:0;font-family:'Roboto',sans-serif;background:#FFD700;color:#fff}
+    .container{background:#000;max-width:500px;margin:40px auto;padding:30px;border-radius:10px;box-shadow:0 0 20px rgba(0,0,0,.5)}
+    h2{text-align:center;font-size:24px;text-transform:uppercase;text-decoration:underline;font-weight:bold;color:#fff;margin:0 0 20px}
+    form{display:flex;flex-direction:column;gap:12px}
+    label{font-weight:bold;text-transform:uppercase}
+    input,textarea,select{padding:8px;border:1px solid #000;background:#fff;color:#000;border-radius:4px}
+    .row{display:flex;gap:10px}
+    .row > *{flex:1}
+    .botones{display:flex;justify-content:space-between;gap:10px;margin-top:20px}
+    .btn-volver{flex:1;padding:10px;background:orange;color:#000;border:1px solid #000;border-radius:4px;cursor:pointer}
+    .btn-guardar{flex:1;padding:10px;background:green;color:#fff;border:1px solid #000;border-radius:4px;cursor:pointer}
+
+    /* Sección mantenimiento */
+    .mant-box{border:1px dashed #444;border-radius:8px;padding:12px;margin-top:4px}
+    .mant-extra{display:none;margin-top:8px}
+    .mant-extra.show{display:block}
+
+    /* Modal éxito (overlay) */
+    #modalExito{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;align-items:center;justify-content:center}
+    #modalExito .card{background:#000;border:2px solid #2ecc71;color:#2ecc71;padding:24px 18px;border-radius:12px;max-width:420px;text-align:center}
+    #modalExito h3{margin:0 0 8px;text-transform:uppercase}
+    #modalExito p{margin:0 0 14px}
+    #modalExito button{background:#2ecc71;color:#000;border:1px solid #000;border-radius:8px;padding:8px 14px;font-weight:bold;cursor:pointer}
   </style>
 </head>
 
@@ -92,80 +41,125 @@
       <label for="fecha">Fecha</label>
       <input type="date" id="fecha" required>
 
-      <label for="cuitOrigen">CUIT Origen</label>
-      <input type="text" id="cuitOrigen" placeholder="Ej: 20-12345678-9" required>
+      <div class="row">
+        <div>
+          <label for="origen">CUIT origen</label>
+          <input type="text" id="origen" placeholder="CUIT / Origen" required>
+        </div>
+        <div>
+          <label for="destino">Destino</label>
+          <input type="text" id="destino" required>
+        </div>
+      </div>
 
-      <label for="destino">Destino</label>
-      <input type="text" id="destino" required>
+      <div class="row">
+        <div>
+          <label for="patente">Patente</label>
+          <input type="text" id="patente" required>
+        </div>
+        <div>
+          <label for="tipoCarga">Tipo de cereal</label>
+          <input type="text" id="tipoCarga" required>
+        </div>
+      </div>
 
-      <label for="patente">Patente</label>
-      <input type="text" id="patente" placeholder="ABC123 / AB123CD" required>
-
-      <label for="tipoCereal">Tipo de cereal</label>
-      <input type="text" id="tipoCereal" placeholder="Soja, Maíz, Trigo..." required>
-
-      <div class="fila">
+      <div class="row">
         <div>
           <label for="kgLlevados">Kg llevados</label>
-          <input type="number" id="kgLlevados" step="0.01" min="0" required>
+          <input type="number" id="kgLlevados" min="0" step="1" required>
         </div>
         <div>
           <label for="kgDescargados">Kg descargados</label>
-          <input type="number" id="kgDescargados" step="0.01" min="0" required>
+          <input type="number" id="kgDescargados" min="0" step="1">
         </div>
       </div>
 
-      <label for="cargoCombustible">¿Cargó combustible?</label>
-      <select id="cargoCombustible">
-        <option value="no" selected>No</option>
-        <option value="si">Sí</option>
-      </select>
+      <!-- Cargo combustible -->
+      <label>¿Cargó combustible?</label>
+      <div class="row">
+        <select id="cargoCombustible">
+          <option value="no">No</option>
+          <option value="si">Sí</option>
+        </select>
+        <input type="text" id="combObs" placeholder="(opcional) estación / comentario">
+      </div>
 
       <!-- Adelanto -->
-      <label for="adelantoAplica">Adelanto</label>
-      <select id="adelantoAplica">
-        <option value="no" selected>No</option>
-        <option value="si">Sí</option>
-      </select>
-      <div id="adelantoMontoGrupo" class="grupo-monto">
-        <label for="adelantoMonto">Monto adelanto ($)</label>
-        <input type="number" id="adelantoMonto" step="0.01" min="0">
+      <label>¿Adelanto?</label>
+      <div class="row">
+        <select id="hayAdelanto">
+          <option value="no">No</option>
+          <option value="si">Sí</option>
+        </select>
+        <input type="number" id="montoAdelanto" min="0" step="0.01" placeholder="$ monto" disabled>
       </div>
 
       <!-- Peajes -->
-      <label for="peajeAplica">Gastos en peajes</label>
-      <select id="peajeAplica">
-        <option value="no" selected>No</option>
-        <option value="si">Sí</option>
-      </select>
-      <div id="peajeMontoGrupo" class="grupo-monto">
-        <label for="peajeMonto">Monto peajes ($)</label>
-        <input type="number" id="peajeMonto" step="0.01" min="0">
+      <label>¿Gastos en peajes?</label>
+      <div class="row">
+        <select id="hayPeajes">
+          <option value="no">No</option>
+          <option value="si">Sí</option>
+        </select>
+        <input type="number" id="montoPeajes" min="0" step="0.01" placeholder="$ monto" disabled>
       </div>
 
       <!-- Entrada -->
-      <label for="entradaAplica">Entrada</label>
-      <select id="entradaAplica">
-        <option value="no" selected>No</option>
-        <option value="si">Sí</option>
-      </select>
-      <div id="entradaMontoGrupo" class="grupo-monto">
-        <label for="entradaMonto">Monto entrada ($)</label>
-        <input type="number" id="entradaMonto" step="0.01" min="0">
+      <label>¿Entrada?</label>
+      <div class="row">
+        <select id="hayEntrada">
+          <option value="no">No</option>
+          <option value="si">Sí</option>
+        </select>
+        <input type="number" id="montoEntrada" min="0" step="0.01" placeholder="$ monto" disabled>
       </div>
 
       <label for="observaciones">Observaciones</label>
-      <textarea id="observaciones" placeholder="Notas adicionales..."></textarea>
+      <textarea id="observaciones" placeholder="Notas generales..."></textarea>
+
+      <!-- NUEVO: Sección mantenimiento -->
+      <div class="mant-box">
+        <label><input type="checkbox" id="reqMant"> ¿Requiere mantenimiento?</label>
+
+        <div id="mantExtra" class="mant-extra">
+          <div class="row">
+            <div>
+              <label for="mantTipo">Tipo</label>
+              <select id="mantTipo">
+                <option value="">Seleccionar…</option>
+                <option>Servicio</option>
+                <option>Cambio de aceite</option>
+                <option>Filtros</option>
+                <option>Cubiertas</option>
+                <option>Frenos</option>
+                <option>Reparación</option>
+                <option>Otro</option>
+              </select>
+            </div>
+            <div>
+              <label for="mantDesc">Descripción</label>
+              <input type="text" id="mantDesc" placeholder="Breve descripción del problema">
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- FIN mantenimiento -->
 
       <div class="botones">
         <button type="button" class="btn-volver" onclick="window.location.href='index.html'">Volver</button>
         <button type="submit" class="btn-guardar">Guardar viaje</button>
       </div>
-      <div class="ayuda">* Los montos sólo son obligatorios si elegís “Sí”.</div>
     </form>
   </div>
 
-  <div id="modalExito">¡Guardado correctamente!</div>
+  <!-- Modal éxito -->
+  <div id="modalExito">
+    <div class="card">
+      <h3>¡Viaje guardado!</h3>
+      <p id="msgExtra"></p>
+      <button onclick="window.location.href='index.html'">Ir al inicio</button>
+    </div>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -180,105 +174,103 @@
       appId: "1:465536166890:web:f658690629b09eca8fa093"
     };
 
-    const app  = initializeApp(firebaseConfig);
-    const db   = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
 
-    // ----- UI helpers: mostrar/ocultar montos según "Sí/No"
-    const mapToggles = [
-      { sel: 'adelantoAplica', grupo: 'adelantoMontoGrupo', input: 'adelantoMonto' },
-      { sel: 'peajeAplica',    grupo: 'peajeMontoGrupo',    input: 'peajeMonto'    },
-      { sel: 'entradaAplica',  grupo: 'entradaMontoGrupo',  input: 'entradaMonto'  }
-    ];
-    function toggleMonto(selId, grupoId, inputId) {
-      const sel = document.getElementById(selId);
-      const box = document.getElementById(grupoId);
-      const inp = document.getElementById(inputId);
-      const on  = (sel.value === 'si');
-      box.style.display = on ? 'block' : 'none';
-      inp.required = on;
-      if (!on) inp.value = ''; // limpiar si pasa a "No"
-    }
-    mapToggles.forEach(t => {
-      document.getElementById(t.sel).addEventListener('change', () => toggleMonto(t.sel, t.grupo, t.input));
-      toggleMonto(t.sel, t.grupo, t.input); // estado inicial
-    });
+    // Habilitar/Deshabilitar montos
+    const hayAdelanto  = document.getElementById('hayAdelanto');
+    const montoAdelanto= document.getElementById('montoAdelanto');
+    hayAdelanto.addEventListener('change', ()=> montoAdelanto.disabled = (hayAdelanto.value !== 'si'));
 
-    // Patente siempre en mayúsculas
-    const patenteInput = document.getElementById('patente');
-    patenteInput.addEventListener('input', e => e.target.value = e.target.value.toUpperCase());
+    const hayPeajes  = document.getElementById('hayPeajes');
+    const montoPeajes= document.getElementById('montoPeajes');
+    hayPeajes.addEventListener('change', ()=> montoPeajes.disabled = (hayPeajes.value !== 'si'));
 
-    // ----- Guardar
+    const hayEntrada  = document.getElementById('hayEntrada');
+    const montoEntrada= document.getElementById('montoEntrada');
+    hayEntrada.addEventListener('change', ()=> montoEntrada.disabled = (hayEntrada.value !== 'si'));
+
+    // Mostrar/ocultar extras de mantenimiento
+    const reqMant   = document.getElementById('reqMant');
+    const mantExtra = document.getElementById('mantExtra');
+    reqMant.addEventListener('change', ()=> mantExtra.classList.toggle('show', reqMant.checked));
+
+    // Guardar
     const form = document.getElementById("formViaje");
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      // Validación básica de obligatorios
-      const obligatorios = ["fecha","cuitOrigen","destino","patente","tipoCereal","kgLlevados","kgDescargados"];
-      for (const id of obligatorios) {
+      // Validación básica
+      const campos = ["fecha","origen","destino","patente","tipoCarga","kgLlevados"];
+      for (const id of campos) {
         if (!document.getElementById(id).value) {
           alert("Por favor, complete todos los campos obligatorios.");
           return;
         }
       }
 
-      // Si aplica, validar montos numéricos
-      for (const t of mapToggles) {
-        const aplica = document.getElementById(t.sel).value === 'si';
-        const val    = document.getElementById(t.input).value;
-        if (aplica && (val === "" || isNaN(parseFloat(val)))) {
-          alert("Complete correctamente el monto en: " + t.input.replace('Monto',''));
-          return;
-        }
-      }
-
-      const cargoCombustible = document.getElementById("cargoCombustible").value === "si";
-
       const viaje = {
         fecha: document.getElementById("fecha").value,
-        cuitOrigen: document.getElementById("cuitOrigen").value.trim(),
+        origen: document.getElementById("origen").value.trim(),
         destino: document.getElementById("destino").value.trim(),
         patente: document.getElementById("patente").value.trim(),
-        tipoCereal: document.getElementById("tipoCereal").value.trim(),
-        kgLlevados: parseFloat(document.getElementById("kgLlevados").value),
-        kgDescargados: parseFloat(document.getElementById("kgDescargados").value),
-        cargoCombustible,
+        tipoCarga: document.getElementById("tipoCarga").value.trim(),
+        kgLlevados: Number(document.getElementById("kgLlevados").value || 0),
+        kgDescargados: Number(document.getElementById("kgDescargados").value || 0),
 
-        adelantoAplica: document.getElementById("adelantoAplica").value === "si",
-        adelantoMonto:  parseFloat(document.getElementById("adelantoMonto").value || 0),
+        cargoCombustible: document.getElementById("cargoCombustible").value === 'si',
+        combObs: document.getElementById("combObs").value.trim(),
 
-        peajeAplica:    document.getElementById("peajeAplica").value === "si",
-        peajeMonto:     parseFloat(document.getElementById("peajeMonto").value || 0),
-
-        entradaAplica:  document.getElementById("entradaAplica").value === "si",
-        entradaMonto:   parseFloat(document.getElementById("entradaMonto").value || 0),
+        adelanto: hayAdelanto.value === 'si' ? Number(montoAdelanto.value || 0) : 0,
+        peaje:    hayPeajes.value    === 'si' ? Number(montoPeajes.value  || 0) : 0,
+        entrada:  hayEntrada.value   === 'si' ? Number(montoEntrada.value || 0) : 0,
 
         observaciones: document.getElementById("observaciones").value.trim(),
+
+        // NUEVOS: datos para mantenimiento
+        reqMantenimiento: reqMant.checked,
+        mantTipoSugerido: (document.getElementById("mantTipo").value || "").trim(),
+        mantDescripcion:  (document.getElementById("mantDesc").value || "").trim(),
+
         timestamp: serverTimestamp()
       };
 
       try {
-        await addDoc(collection(db, "viajes"), viaje);
+        // 1) Guardar viaje
+        const ref = await addDoc(collection(db, "viajes"), viaje);
 
+        let msg = "El viaje se guardó correctamente.";
+        // 2) Si requiere mantenimiento, crear doc en 'mantenimientos'
+        if (viaje.reqMantenimiento) {
+          const mant = {
+            creadoDesdeViaje: true,
+            viajeId: ref.id,
+            fecha: viaje.fecha,
+            patente: viaje.patente,
+            tipo: viaje.mantTipoSugerido || "Otro",
+            proveedor: "",
+            km: 0,
+            repuestos: [],
+            manoDeObra: 0,
+            otros: 0,
+            total: 0,
+            pagado: false,
+            estado: "pendiente",
+            proximoFecha: "",
+            observaciones: viaje.mantDescripcion || viaje.observaciones || "",
+            timestamp: serverTimestamp()
+          };
+          await addDoc(collection(db, "mantenimientos"), mant);
+          msg += " También se generó un pedido de mantenimiento.";
+        }
+
+        // Modal éxito
+        document.getElementById("msgExtra").textContent = msg;
         const modal = document.getElementById("modalExito");
-        modal.style.display = "block";
+        modal.style.display = "flex";
 
-        // Después del aviso, redirige
-        setTimeout(() => {
-          modal.style.display = "none";
-
-          if (cargoCombustible) {
-            // Enlaza a agregar-combustible con prefill de patente y fecha
-            const q = new URLSearchParams({
-              patente: viaje.patente,
-              fecha:   viaje.fecha
-            });
-            window.location.href = "agregar-combustible.html?" + q.toString();
-          } else {
-            window.location.href = "index.html";
-          }
-        }, 5000); // 5s como pediste
-      } catch (e) {
-        alert("Error al guardar: " + e);
+      } catch (err) {
+        alert("Error al guardar: " + err.message);
       }
     });
   </script>
