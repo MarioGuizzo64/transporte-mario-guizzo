@@ -157,7 +157,6 @@
 
 <script type="module">
 /* ==================== CONFIG ==================== */
-/** % default para chofer si no se encuentra en usuarios */
 const DEFAULT_COMMISSION = 0.20; // 20%
 document.getElementById('defPct').textContent = `${Math.round(DEFAULT_COMMISSION*100)}%`;
 
@@ -177,11 +176,11 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
 /* ==================== Estado ==================== */
-let viajes = [];           // ingresos + peajes/adelantos/entradas
-let combustible = [];      // egresos
-let mant = [];             // egresos
-let usuarios = [];         // choferes (porcentaje)
-let movs = [];             // movimientos combinados
+let viajes = [];
+let combustible = [];
+let mant = [];
+let usuarios = [];
+let movs = [];
 let patSet = new Set();
 let choSet = new Set();
 
@@ -263,14 +262,12 @@ function pasaTexto(q, ...campos){
   return campos.some(c => ((c||'')+'').toLowerCase().includes(q));
 }
 function getPctChofer(nombre, patente){
-  // 1) por nombre exacto, 2) por patente asociada, 3) default
   const u = usuarios.find(u => (u.nombre||u.displayName||'').trim() === (nombre||'').trim());
   if (u && Number(u.porcentaje)>=0) return Number(u.porcentaje)/100;
   const u2 = usuarios.find(u => Array.isArray(u.patentes) && u.patentes.includes(patente));
   if (u2 && Number(u2.porcentaje)>=0) return Number(u2.porcentaje)/100;
   return DEFAULT_COMMISSION;
 }
-/** ingreso por viaje: importeCobrado || kgDescargados/1000*tarifaPorTon || kgDescargados*tarifaPorKg */
 function ingresoViaje(v){
   const imp = Number(v.importeCobrado ?? NaN);
   if (!isNaN(imp) && imp>0) return imp;
@@ -281,7 +278,6 @@ function ingresoViaje(v){
   if (!isNaN(tKg) && tKg>0) return kg*tKg;
   return 0;
 }
-/** total combustible de un doc (total | litros*precio) */
 function totalComb(c){
   const tot = Number(c.total ?? NaN);
   if (!isNaN(tot)) return tot;
@@ -298,7 +294,7 @@ function render(){
 
   movs = [];
 
-  // --- VIAJES: ingresos + ajustes por chofer ---
+  // VIAJES
   const viajesFiltrados = viajes.filter(v=>{
     if (!inRange(v.fecha, d, h)) return false;
     if (ch && (v.chofer||'') !== ch) return false;
@@ -323,11 +319,11 @@ function render(){
     }
   }
 
-  // --- COMBUSTIBLE (egreso) ---
+  // COMBUSTIBLE
   combustible.filter(c=>{
     if (!inRange(c.fecha, d, h)) return false;
     if (pt && (c.patente||'') !== pt) return false;
-    if (ch && (c.chofer||'') !== ch) return false; // por si guardás chofer en carga
+    if (ch && (c.chofer||'') !== ch) return false;
     if (!pasaTexto(q, c.estacion, c.tipoCombustible||c.tipo, c.metodo, c.patente)) return false;
     return true;
   }).forEach(c=>{
@@ -335,7 +331,7 @@ function render(){
     if (tot>0) movs.push({fecha:c.fecha,tipo:'Combustible',detalle:`${c.estacion||'-'} — ${c.tipoCombustible||c.tipo||''}`,chofer:c.chofer||'',patente:c.patente||'',importe:tot});
   });
 
-  // --- MANTENIMIENTO (egreso) ---
+  // MANTENIMIENTO
   mant.filter(m=>{
     if (!inRange(m.fecha, d, h)) return false;
     if (pt && (m.patente||'') !== pt) return false;
@@ -348,10 +344,8 @@ function render(){
     if (tot>0) movs.push({fecha:m.fecha,tipo:'Mantenimiento',detalle:`${m.tipo||''} — ${m.proveedor||''}`,chofer:'',patente:m.patente||'',importe:tot});
   });
 
-  // Orden
   movs.sort((a,b)=> String(b.fecha).localeCompare(String(a.fecha)));
 
-  // Subtotales
   const sum = (tipo) => movs.filter(x=>x.tipo===tipo).reduce((a,b)=>a+Number(b.importe||0),0);
   const ingresos   = sum('Ingreso');
   const combTotal  = sum('Combustible');
@@ -362,7 +356,6 @@ function render(){
   const gastos     = combTotal + mantTotal + peajeTotal + adelTotal + entTotal;
   const margen     = ingresos - gastos;
 
-  // Cards
   kIng.textContent    = fmt(ingresos);
   kComb.textContent   = fmt(combTotal);
   kMant.textContent   = fmt(mantTotal);
@@ -372,7 +365,6 @@ function render(){
   kGastos.textContent = fmt(gastos);
   kMargen.textContent = fmt(margen);
 
-  // Tabla
   tbody.innerHTML = '';
   if (!movs.length){
     tbody.innerHTML = `<tr><td colspan="6" style="padding:18px;opacity:.85">Sin movimientos.</td></tr>`;
@@ -391,16 +383,12 @@ function render(){
     }
   }
 
-  // Liquidación por chofer
   renderChofer(viajesFiltrados);
-
-  // Gráficos
   renderCharts(movs);
 }
 
 /* ---- Liquidación por chofer ---- */
 function renderChofer(viajesFiltrados){
-  // group por chofer
   const map = new Map();
   for (const v of viajesFiltrados){
     const key = v.chofer||'(Sin chofer)';
@@ -425,7 +413,7 @@ function renderChofer(viajesFiltrados){
       <td>${r.chofer}</td>
       <td>${r.viajes}</td>
       <td class="monto">${fmt(r.ingreso)}</td>
-      <td class="monto">${Math.round((r.pct??DEFAULT_COMMISSION)*100)}%</td>
+      <td class="monto">${Math.round(((r.pct ?? DEFAULT_COMMISSION) * 100))}%</td>
       <td class="monto">${fmt(r.comision)}</td>
       <td class="monto">${fmt(r.peaje)}</td>
       <td class="monto">${fmt(r.entrada)}</td>
@@ -434,40 +422,24 @@ function renderChofer(viajesFiltrados){
     </tr>
   `).join('') || `<tr><td colspan="9" style="padding:14px;opacity:.85">Sin viajes en el rango para el chofer seleccionado.</td></tr>`;
 
-  // Guardamos para impresión
   window.__rowsChofer = rows;
 }
 
 /* ---- Charts ---- */
 function renderCharts(movsAll){
-  // Por Patente
   const pats = [...new Set(movsAll.map(m=>m.patente).filter(Boolean))].sort();
-  const ing = pats.map(p=> movsAll.filter(m=>m.patente===p && m.tipo==='Ingreso')
-                        .reduce((a,b)=>a+Number(b.importe||0),0));
-  const egr = pats.map(p=> movsAll.filter(m=>m.patente===p && m.tipo!=='Ingreso')
-                        .reduce((a,b)=>a+Number(b.importe||0),0));
+  const ing = pats.map(p=> movsAll.filter(m=>m.patente===p && m.tipo==='Ingreso').reduce((a,b)=>a+Number(b.importe||0),0));
+  const egr = pats.map(p=> movsAll.filter(m=>m.patente===p && m.tipo!=='Ingreso').reduce((a,b)=>a+Number(b.importe||0),0));
 
   const ctx1 = document.getElementById('chartPatentes').getContext('2d');
-  chrtPat && chrtPat.destroy();
-  chrtPat = new Chart(ctx1,{
-    type:'bar',
-    data:{labels:pats,datasets:[
-      {label:'Ingresos', data:ing},
-      {label:'Egresos', data:egr}
-    ]},
-    options:{responsive:true, plugins:{legend:{position:'bottom'}}}
-  });
+  if (window.chrtPat) window.chrtPat.destroy();
+  window.chrtPat = new Chart(ctx1,{ type:'bar', data:{labels:pats,datasets:[{label:'Ingresos',data:ing},{label:'Egresos',data:egr}]}, options:{responsive:true,plugins:{legend:{position:'bottom'}}} });
 
-  // Composición Egresos
   const comp = ['Combustible','Mantenimiento','Peaje','Adelanto','Entrada'];
   const vals = comp.map(t=> movsAll.filter(m=>m.tipo===t).reduce((a,b)=>a+Number(b.importe||0),0));
   const ctx2 = document.getElementById('chartEgresos').getContext('2d');
-  chrtEgr && chrtEgr.destroy();
-  chrtEgr = new Chart(ctx2,{
-    type:'doughnut',
-    data:{labels:comp,datasets:[{data:vals}]},
-    options:{responsive:true, plugins:{legend:{position:'bottom'}}}
-  });
+  if (window.chrtEgr) window.chrtEgr.destroy();
+  window.chrtEgr = new Chart(ctx2,{ type:'doughnut', data:{labels:comp,datasets:[{data:vals}]}, options:{responsive:true,plugins:{legend:{position:'bottom'}}} });
 }
 
 /* ==================== Eventos ==================== */
@@ -529,7 +501,7 @@ document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
   const trs = rows.map(r=>`
     <tr>
       <td>${r.chofer}</td><td class="r">${r.viajes}</td>
-      <td class="r">${fmt(r.ingreso)}</td><td class="r">${Math.round((r.pct??${DEFAULT_COMMISSION})*100)}%</td>
+      <td class="r">${fmt(r.ingreso)}</td><td class="r">${Math.round(((r.pct ?? DEFAULT_COMMISSION) * 100))}%</td>
       <td class="r">${fmt(r.comision)}</td>
       <td class="r">${fmt(r.peaje)}</td><td class="r">${fmt(r.entrada)}</td>
       <td class="r">${fmt(r.adelanto)}</td><td class="r"><b>${fmt(r.liquidacion)}</b></td>
@@ -557,4 +529,3 @@ document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
 </script>
 </body>
 </html>
-
