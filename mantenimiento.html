@@ -25,18 +25,23 @@
   .card b{display:block;font-size:18px;margin-top:4px}
   .lista{display:grid;gap:12px}
   .item{
-    background:#191919;border-radius:10px;padding:12px 12px 12px 44px; /* padding-left extra para que no pise FECHA */
+    background:#191919;border-radius:10px;
+    padding:12px 76px 12px 12px; /* CHANGED: margen a la derecha para el selector */
     position:relative
   }
   .item p{margin:3px 0}
-  .acciones{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end} /* derecha */
+  .acciones{
+    margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;
+    padding-right:76px; /* CHANGED: que no choque con el selector derecho */
+  }
   .volver{margin-top:14px}
   .tag{display:inline-block;padding:3px 8px;border-radius:20px;font-size:12px;background:#eee;color:#111}
   .ade{background:#ffe1e1;color:#b71c1c}
   .pag{background:#e6f4ea;color:#1b5e20}
-  /* Selector (radio) */
+
+  /* Selector (radio) a la derecha */
   .pick{
-    position:absolute; left:12px; top:14px; /* ya no pisa "Fecha" */
+    position:absolute; right:12px; top:14px; /* CHANGED: ahora a la derecha */
     display:flex; align-items:center; gap:6px; font-size:12px; color:#bbb;
   }
   .pick input{accent-color:#1976d2}
@@ -279,7 +284,7 @@ function pasaFiltros(v){
 
 /* -------------------- Render -------------------- */
 function render(){
-  const datos = todos.filter(pasaFiltros).sort((a,b)=> String(b.fecha||'').localeCompare(String(a.fecha||'') ) * -1);
+  const datos = todos.filter(pasaFiltros).sort((a,b)=> String(b.fecha||'').localeCompare(String(a.fecha||'')) * -1);
 
   // métricas
   const total = datos.reduce((a,v)=> a + Number(v.total||0), 0);
@@ -334,18 +339,18 @@ function render(){
 /* -------------------- Selección para imprimir -------------------- */
 window._select = (id) => {
   seleccionadoId = id;
-  btnImprimir.disabled = !seleccionadoId;
+  document.getElementById('btnImprimir').disabled = !seleccionadoId;
 };
 
 /* -------------------- Filtros eventos -------------------- */
 [fDesde,fHasta,fPatente,fTipo,fEstado,fQ].forEach(el => el.addEventListener('input', render));
-btnLimpiar.addEventListener('click', ()=>{
+document.getElementById('btnLimpiar').addEventListener('click', ()=>{
   fDesde.value=''; fHasta.value=''; fPatente.value=''; fTipo.value=''; fEstado.value=''; fQ.value='';
   render();
 });
 
 /* -------------------- Nuevo -------------------- */
-btnNuevo.addEventListener('click', ()=>{
+document.getElementById('btnNuevo').addEventListener('click', ()=>{
   actualId = null;
   actual   = {fecha:hoyStr(), tipo:'Cambio de aceite', patente:'', km:0, proveedor:'', proximoFecha:'', repuestos:[], manoDeObra:0, otros:0, total:0, pagado:false, observaciones:''};
   fillModal(actual);
