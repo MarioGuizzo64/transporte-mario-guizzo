@@ -24,16 +24,19 @@
   .card{background:#0f0f0f;border:1px solid #222;border-radius:10px;padding:10px;text-align:center}
   .card b{display:block;font-size:18px;margin-top:4px}
   .lista{display:grid;gap:12px}
-  .item{background:#191919;border-radius:10px;padding:12px;position:relative}
+  .item{
+    background:#191919;border-radius:10px;padding:12px 12px 12px 44px; /* padding-left extra para que no pise FECHA */
+    position:relative
+  }
   .item p{margin:3px 0}
-  .acciones{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+  .acciones{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end} /* derecha */
   .volver{margin-top:14px}
   .tag{display:inline-block;padding:3px 8px;border-radius:20px;font-size:12px;background:#eee;color:#111}
   .ade{background:#ffe1e1;color:#b71c1c}
   .pag{background:#e6f4ea;color:#1b5e20}
   /* Selector (radio) */
   .pick{
-    position:absolute; left:-14px; top:10px;
+    position:absolute; left:12px; top:14px; /* ya no pisa "Fecha" */
     display:flex; align-items:center; gap:6px; font-size:12px; color:#bbb;
   }
   .pick input{accent-color:#1976d2}
@@ -276,7 +279,7 @@ function pasaFiltros(v){
 
 /* -------------------- Render -------------------- */
 function render(){
-  const datos = todos.filter(pasaFiltros).sort((a,b)=> String(b.fecha||'').localeCompare(String(a.fecha||'')));
+  const datos = todos.filter(pasaFiltros).sort((a,b)=> String(b.fecha||'').localeCompare(String(a.fecha||'') ) * -1);
 
   // métricas
   const total = datos.reduce((a,v)=> a + Number(v.total||0), 0);
@@ -307,8 +310,8 @@ function render(){
         <input type="radio" name="selMant" ${seleccionadoId===v.id?'checked':''} onchange="window._select('${v.id}')"> Elegir
       </label>
 
-      <p><strong>Fecha:</strong> ${v.fecha||'-'} ${tag}</p>
-      <p><strong>Tipo:</strong> ${v.tipo||'-'}  |  <strong>Proveedor:</strong> ${v.proveedor||'-'}  |  <strong>KM:</strong> ${v.km||0}</p>
+      <p><strong>Fecha:</strong> ${v.fecha || '-'} ${tag}</p>
+      <p><strong>Tipo:</strong> ${v.tipo || '-'}  |  <strong>Proveedor:</strong> ${v.proveedor || '-'}  |  <strong>KM:</strong> ${v.km || 0}</p>
       <p><strong>Total:</strong> $ ${(Number(v.total||0)).toLocaleString('es-AR')}  |  <strong>Próximo:</strong> ${v.proximoFecha || '-'}</p>
 
       ${rep.length ? `
@@ -366,10 +369,10 @@ function fillModal(v){
   g('m_obs').value      = v.observaciones || '';
   // repuestos
   repList.innerHTML = '';
-  (v.repuestos||[]).forEach((r,idx)=> addRepRow(r.desc||r.descripcion||'', Number(r.importe||r.costo||0), idx));
+  (v.repuestos||[]).forEach((r)=> addRepRow(r.desc||r.descripcion||'', Number(r.importe||r.costo||0)));
 }
 
-function addRepRow(desc, costo, idx){
+function addRepRow(desc, costo){
   const row = document.createElement('div');
   row.className = 'rep-row';
   row.innerHTML = `
