@@ -1,53 +1,63 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FINANZAS</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Finanzas</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   :root{
-    --amarillo:#FFD700; --negro:#0d0d0d; --panel:#111; --blanco:#fff;
-    --verde:#2e7d32; --rojo:#d32f2f; --naranja:#ffa000; --azul:#1976d2;
+    --yellow:#FFD700; --black:#0d0d0d; --panel:#111; --white:#fff;
+    --green:#2e7d32; --red:#d32f2f; --orange:#ffa000; --blue:#1976d2;
   }
-  body{margin:0;background:var(--amarillo);font-family:Arial,Helvetica,sans-serif;color:#fff}
-  .wrap{max-width:980px;margin:36px auto;background:#000;border-radius:12px;padding:22px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
-  h1{margin:0 0 16px;text-align:center;text-transform:uppercase;text-decoration:underline}
-  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  body{margin:0;background:var(--yellow);font-family:Arial,Helvetica,sans-serif;color:#fff}
+  .wrap{max-width:1100px;margin:30px auto;background:#000;border-radius:12px;padding:22px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+  h1{margin:0 0 12px;text-align:center;text-transform:uppercase;text-decoration:underline}
+  .tabs{display:flex;gap:8px;justify-content:center;margin-bottom:10px;flex-wrap:wrap}
+  .tab{padding:10px 12px;border:1px solid #000;border-radius:8px;background:#111;cursor:pointer}
+  .tab.active{background:#1a1a1a;box-shadow:0 0 0 2px #222 inset}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-start;margin-bottom:10px}
   .bar input,.bar select{padding:8px;border:1px solid #000;border-radius:6px;background:#fff;color:#000}
   .btn{padding:10px 12px;border:1px solid #000;border-radius:8px;font-weight:bold;text-transform:uppercase;cursor:pointer}
-  .btn-verde{background:var(--verde);color:#fff}
-  .btn-naranja{background:var(--naranja);color:#000}
-  .btn-azul{background:var(--azul);color:#fff}
-  .cards{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:14px 0}
+  .btn-verde{background:var(--green);color:#fff}
+  .btn-naranja{background:var(--orange);color:#000}
+  .btn-azul{background:var(--blue);color:#fff}
+  .cards{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:10px 0}
   .card{background:#0f0f0f;border:1px solid #222;border-radius:10px;padding:12px;text-align:center}
   .card small{opacity:.8}
   .card b{display:block;margin-top:6px;font-size:18px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .panel{background:#0f0f0f;border:1px solid #222;border-radius:12px;padding:12px}
+  canvas{background:#0b0b0b;border-radius:10px;padding:8px}
   .tabla{width:100%;border-collapse:collapse;background:#111;border-radius:10px;overflow:hidden}
   .tabla th,.tabla td{padding:10px;border-bottom:1px solid #222;text-align:left}
   .tabla th{background:#0f0f0f}
   .monto{text-align:right}
-  .foot{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+  .right{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
   .volver{margin-top:14px}
-  @media (max-width:900px){
-    .cards{grid-template-columns:1fr 1fr 1fr}
-  }
-  @media (max-width:580px){
-    .cards{grid-template-columns:1fr 1fr}
-  }
+  .note{font-size:12px;opacity:.75}
+  @media (max-width:1000px){.cards{grid-template-columns:1fr 1fr 1fr}.grid2{grid-template-columns:1fr}}
+  @media (max-width:640px){.cards{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Finanzas</h1>
 
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" data-tab="resumen">Resumen</button>
+    <button class="tab" data-tab="chofer">Por chofer</button>
+    <button class="tab" data-tab="tabla">Tabla</button>
+  </div>
+
   <!-- FILTROS -->
   <div class="bar">
     <input type="date" id="fDesde">
     <input type="date" id="fHasta">
 
-    <select id="fPatente">
-      <option value="">Todas las patentes</option>
-    </select>
+    <select id="fChofer"><option value="">Todos los choferes</option></select>
+    <select id="fPatente"><option value="">Todas las patentes</option></select>
 
     <select id="fEstadoMant">
       <option value="">Mantenimiento (todos)</option>
@@ -55,45 +65,105 @@
       <option value="adeudado">Mantenimiento adeudado</option>
     </select>
 
-    <input id="fQ" placeholder="Buscar (estación, proveedor, notas)">
+    <input id="fQ" placeholder="Buscar (estación, proveedor, obs)">
     <button id="btnLimpiar" class="btn btn-naranja">Limpiar</button>
-    <button id="btnCSV" class="btn btn-azul">Exportar CSV</button>
-    <button id="btnPrint" class="btn btn-verde">Imprimir</button>
+
+    <div class="right" style="margin-left:auto">
+      <button id="btnCSV" class="btn btn-azul">Exportar CSV</button>
+      <button id="btnPrintTabla" class="btn btn-verde">Imprimir tabla</button>
+      <button id="btnPrintLiq" class="btn btn-verde">Imprimir liquidación chofer</button>
+    </div>
   </div>
 
   <!-- CARDS -->
-  <div class="cards">
-    <div class="card"><small>Combustible</small><b id="kComb">$ 0</b></div>
+  <div id="cards" class="cards panel">
+    <div class="card"><small>Ingresos</small>     <b id="kIng">$ 0</b></div>
+    <div class="card"><small>Combustible</small>  <b id="kComb">$ 0</b></div>
     <div class="card"><small>Mantenimiento</small><b id="kMant">$ 0</b></div>
-    <div class="card"><small>Peajes</small><b id="kPeaje">$ 0</b></div>
-    <div class="card"><small>Adelantos</small><b id="kAdel">$ 0</b></div>
-    <div class="card"><small>Entradas</small><b id="kEntrada">$ 0</b></div>
-    <div class="card"><small>TOTAL GASTOS</small><b id="kTotal">$ 0</b></div>
+    <div class="card"><small>Peajes</small>       <b id="kPeaje">$ 0</b></div>
+    <div class="card"><small>Adelantos</small>    <b id="kAdel">$ 0</b></div>
+    <div class="card"><small>Entradas</small>     <b id="kEntrada">$ 0</b></div>
+  </div>
+  <div class="cards">
+    <div class="card" style="grid-column: span 3"><small>TOTAL GASTOS</small><b id="kGastos">$ 0</b></div>
+    <div class="card" style="grid-column: span 3"><small>MARGEN (Ingresos – Gastos)</small><b id="kMargen">$ 0</b></div>
   </div>
 
-  <!-- LISTA MOVIMIENTOS -->
-  <table class="tabla" id="tabla">
-    <thead>
-      <tr>
-        <th style="width:120px">Fecha</th>
-        <th style="width:140px">Tipo</th>
-        <th>Detalle</th>
-        <th style="width:120px">Patente</th>
-        <th class="monto" style="width:140px">Importe</th>
-      </tr>
-    </thead>
-    <tbody id="tbody"></tbody>
-  </table>
+  <!-- RESUMEN -->
+  <section id="tab-resumen">
+    <div class="grid2">
+      <div class="panel">
+        <h3 style="margin:6px 0 12px">Ingresos vs Egresos por Camión</h3>
+        <canvas id="chartPatentes" height="160"></canvas>
+        <div class="note">Suma de ingresos y egresos del rango filtrado. Si falta tarifa/importe en un viaje, el ingreso de ese viaje se toma como 0.</div>
+      </div>
+      <div class="panel">
+        <h3 style="margin:6px 0 12px">Composición de egresos</h3>
+        <canvas id="chartEgresos" height="160"></canvas>
+        <div class="note">Combustible + Mantenimiento + Peajes + Adelantos + Entradas.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- POR CHOFER -->
+  <section id="tab-chofer" style="display:none">
+    <div class="panel">
+      <h3 style="margin:6px 0 12px">Liquidación por Chofer</h3>
+      <div class="note" style="margin-bottom:8px">
+        Fórmula: <b>Comisión = Ingreso × %</b> · <b>Liquidación</b> = Comisión <b>– Adelantos</b> <b>+ Peajes + Entradas</b>.  
+        % por chofer se toma de <code>usuarios</code> (campo <code>porcentaje</code>). Default: <span id="defPct">20%</span>.
+      </div>
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th style="width:120px">Chofer</th>
+            <th>Viajes</th>
+            <th class="monto" style="width:140px">Ingreso</th>
+            <th class="monto" style="width:100px">% Comis.</th>
+            <th class="monto" style="width:140px">Comisión</th>
+            <th class="monto" style="width:120px">Peajes</th>
+            <th class="monto" style="width:120px">Entradas</th>
+            <th class="monto" style="width:120px">Adelantos</th>
+            <th class="monto" style="width:140px">Liquidación</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyChofer"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- TABLA -->
+  <section id="tab-tabla" style="display:none">
+    <div class="panel">
+      <h3 style="margin:6px 0 12px">Movimientos (Ingresos + Egresos)</h3>
+      <table class="tabla" id="tabla">
+        <thead>
+          <tr>
+            <th style="width:120px">Fecha</th>
+            <th style="width:140px">Tipo</th>
+            <th>Detalle</th>
+            <th style="width:140px">Chofer</th>
+            <th style="width:120px">Patente</th>
+            <th class="monto" style="width:140px">Importe</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </section>
 
   <button class="btn btn-naranja volver" onclick="location.href='admin.html'">Volver</button>
 </div>
 
 <script type="module">
-/* ---------------------- Firebase ---------------------- */
+/* ==================== CONFIG ==================== */
+/** % default para chofer si no se encuentra en usuarios */
+const DEFAULT_COMMISSION = 0.20; // 20%
+document.getElementById('defPct').textContent = `${Math.round(DEFAULT_COMMISSION*100)}%`;
+
+/* ==================== Firebase ==================== */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import {
-  getFirestore, collection, onSnapshot
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
@@ -106,54 +176,79 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
-/* ---------------------- Estado ---------------------- */
-let viajes = [];           // peajes / adelantos / entradas
-let combustible = [];      // total combustible
-let mant = [];             // total mantenimiento
-let movs = [];             // movimientos combinados (para tabla/CSV)
-let patentesSet = new Set();
+/* ==================== Estado ==================== */
+let viajes = [];           // ingresos + peajes/adelantos/entradas
+let combustible = [];      // egresos
+let mant = [];             // egresos
+let usuarios = [];         // choferes (porcentaje)
+let movs = [];             // movimientos combinados
+let patSet = new Set();
+let choSet = new Set();
 
-/* ---------------------- UI ---------------------- */
-const fDesde = document.getElementById('fDesde');
-const fHasta = document.getElementById('fHasta');
+/* ==================== Refs UI ==================== */
+const fDesde   = document.getElementById('fDesde');
+const fHasta   = document.getElementById('fHasta');
+const fChofer  = document.getElementById('fChofer');
 const fPatente = document.getElementById('fPatente');
 const fEstadoMant = document.getElementById('fEstadoMant');
-const fQ = document.getElementById('fQ');
+const fQ       = document.getElementById('fQ');
 
-const tbody = document.getElementById('tbody');
+const kIng = document.getElementById('kIng');
 const kComb = document.getElementById('kComb');
 const kMant = document.getElementById('kMant');
 const kPeaje = document.getElementById('kPeaje');
-const kAdel  = document.getElementById('kAdel');
+const kAdel = document.getElementById('kAdel');
 const kEntrada = document.getElementById('kEntrada');
-const kTotal = document.getElementById('kTotal');
+const kGastos = document.getElementById('kGastos');
+const kMargen = document.getElementById('kMargen');
 
-const fmt = n => new Intl.NumberFormat('es-AR', {style:'currency', currency:'ARS', maximumFractionDigits:0}).format(Number(n||0));
+const tbody = document.getElementById('tbody');
+const tbodyChofer = document.getElementById('tbodyChofer');
 
-/* ---------------------- Subscripciones ---------------------- */
+const fmt = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
+
+/* ==================== Lectura de colecciones ==================== */
+onSnapshot(collection(db,'usuarios'), qs=>{
+  usuarios = qs.docs.map(d => ({id:d.id, ...d.data()}))
+    .filter(u => (u.rol||'').toLowerCase()==='chofer');
+  choSet.clear();
+  usuarios.forEach(u => choSet.add( (u.nombre||u.displayName||u.email||'').trim() ));
+  poblarChoferes(); render();
+});
+
 onSnapshot(collection(db,'viajes'), qs=>{
   viajes = qs.docs.map(d => ({id:d.id, ...d.data()}));
-  viajes.forEach(v => { if (v.patente) patentesSet.add(v.patente.trim()); });
-  poblarPatentes(); render();
+  viajes.forEach(v=>{
+    if (v.patente) patSet.add((v.patente||'').trim());
+    if (v.chofer)  choSet.add((v.chofer||'').trim());
+  });
+  poblarPatentes(); poblarChoferes(); render();
 });
+
 onSnapshot(collection(db,'cargas-combustible'), qs=>{
   combustible = qs.docs.map(d => ({id:d.id, ...d.data()}));
-  combustible.forEach(c => { if (c.patente) patentesSet.add((c.patente||'').trim()); });
-  poblarPatentes(); render();
-});
-onSnapshot(collection(db,'mantenimientos'), qs=>{
-  mant = qs.docs.map(d => ({id:d.id, ...d.data()}));
-  mant.forEach(m => { if (m.patente) patentesSet.add((m.patente||'').trim()); });
+  combustible.forEach(c=> { if (c.patente) patSet.add((c.patente||'').trim()); });
   poblarPatentes(); render();
 });
 
-/* ---------------------- Helpers ---------------------- */
+onSnapshot(collection(db,'mantenimientos'), qs=>{
+  mant = qs.docs.map(d => ({id:d.id, ...d.data()}));
+  mant.forEach(m=> { if (m.patente) patSet.add((m.patente||'').trim()); });
+  poblarPatentes(); render();
+});
+
+/* ==================== Helpers ==================== */
 function poblarPatentes(){
-  const selPrev = fPatente.value;
-  const arr = Array.from(patentesSet).filter(Boolean).sort();
-  fPatente.innerHTML = '<option value="">Todas las patentes</option>' +
-    arr.map(p => `<option value="${p}">${p}</option>`).join('');
-  if (arr.includes(selPrev)) fPatente.value = selPrev;
+  const prev = fPatente.value;
+  const arr = Array.from(patSet).filter(Boolean).sort();
+  fPatente.innerHTML = '<option value="">Todas las patentes</option>' + arr.map(p=>`<option>${p}</option>`).join('');
+  if (arr.includes(prev)) fPatente.value = prev;
+}
+function poblarChoferes(){
+  const prev = fChofer.value;
+  const arr = Array.from(choSet).filter(Boolean).sort();
+  fChofer.innerHTML = '<option value="">Todos los choferes</option>' + arr.map(c=>`<option>${c}</option>`).join('');
+  if (arr.includes(prev)) fChofer.value = prev;
 }
 function inRange(fecha, d, h){
   if (!fecha) return false;
@@ -167,113 +262,236 @@ function pasaTexto(q, ...campos){
   if (!q) return true;
   return campos.some(c => ((c||'')+'').toLowerCase().includes(q));
 }
+function getPctChofer(nombre, patente){
+  // 1) por nombre exacto, 2) por patente asociada, 3) default
+  const u = usuarios.find(u => (u.nombre||u.displayName||'').trim() === (nombre||'').trim());
+  if (u && Number(u.porcentaje)>=0) return Number(u.porcentaje)/100;
+  const u2 = usuarios.find(u => Array.isArray(u.patentes) && u.patentes.includes(patente));
+  if (u2 && Number(u2.porcentaje)>=0) return Number(u2.porcentaje)/100;
+  return DEFAULT_COMMISSION;
+}
+/** ingreso por viaje: importeCobrado || kgDescargados/1000*tarifaPorTon || kgDescargados*tarifaPorKg */
+function ingresoViaje(v){
+  const imp = Number(v.importeCobrado ?? NaN);
+  if (!isNaN(imp) && imp>0) return imp;
+  const kg = Number(v.kgDescargados||0);
+  const tTon = Number(v.tarifaPorTon ?? NaN);
+  if (!isNaN(tTon) && tTon>0) return (kg/1000)*tTon;
+  const tKg = Number(v.tarifaPorKg ?? NaN);
+  if (!isNaN(tKg) && tKg>0) return kg*tKg;
+  return 0;
+}
+/** total combustible de un doc (total | litros*precio) */
+function totalComb(c){
+  const tot = Number(c.total ?? NaN);
+  if (!isNaN(tot)) return tot;
+  return Number(c.litros||0) * Number(c.sl||c.precioPorLitro||0);
+}
 
-/* ---------------------- Render ---------------------- */
+/* ==================== Render principal ==================== */
+let chrtPat = null, chrtEgr = null;
+
 function render(){
-  const d = fDesde.value || '';
-  const h = fHasta.value || '';
-  const p = fPatente.value || '';
-  const est = fEstadoMant.value || '';
-  const q = fQ.value || '';
+  const d = fDesde.value||'', h = fHasta.value||'';
+  const ch = fChofer.value||'', pt = fPatente.value||'';
+  const est = fEstadoMant.value||'', q = fQ.value||'';
 
   movs = [];
 
-  // --- Viajes: peajes / adelantos / entradas ---
-  for (const v of viajes){
-    if (!inRange(v.fecha, d, h)) continue;
-    if (p && (v.patente||'') !== p) continue;
-    if (!pasaTexto(q, v.origen, v.destino, v.cuitOrigen, v.observaciones, v.patente)) continue;
+  // --- VIAJES: ingresos + ajustes por chofer ---
+  const viajesFiltrados = viajes.filter(v=>{
+    if (!inRange(v.fecha, d, h)) return false;
+    if (ch && (v.chofer||'') !== ch) return false;
+    if (pt && (v.patente||'') !== pt) return false;
+    if (!pasaTexto(q, v.origen, v.destino, v.cuitOrigen, v.observaciones, v.chofer, v.patente)) return false;
+    return true;
+  });
 
-    if (v.peajeAplica && Number(v.peajeMonto)>0){
-      movs.push({fecha:v.fecha, tipo:'Peaje', detalle:`Viaje ${v.origen||''} → ${v.destino||''}`, patente:v.patente||'', importe: Number(v.peajeMonto||0)});
+  for (const v of viajesFiltrados){
+    const ingreso = ingresoViaje(v);
+    if (ingreso>0){
+      movs.push({fecha:v.fecha,tipo:'Ingreso',detalle:`${v.origen||''} → ${v.destino||''}`,chofer:v.chofer||'',patente:v.patente||'',importe:ingreso});
     }
-    if (v.adelantoAplica && Number(v.adelantoMonto)>0){
-      movs.push({fecha:v.fecha, tipo:'Adelanto', detalle:`Adelanto chofer`, patente:v.patente||'', importe: Number(v.adelantoMonto||0)});
+    if (v.peajeAplica && Number(v.peajeMonto)>0){
+      movs.push({fecha:v.fecha,tipo:'Peaje',detalle:'Peaje',chofer:v.chofer||'',patente:v.patente||'',importe:Number(v.peajeMonto||0)});
     }
     if (v.entradaAplica && Number(v.entradaMonto)>0){
-      movs.push({fecha:v.fecha, tipo:'Entrada', detalle:`Entrada`, patente:v.patente||'', importe: Number(v.entradaMonto||0)});
+      movs.push({fecha:v.fecha,tipo:'Entrada',detalle:'Entrada',chofer:v.chofer||'',patente:v.patente||'',importe:Number(v.entradaMonto||0)});
+    }
+    if (v.adelantoAplica && Number(v.adelantoMonto)>0){
+      movs.push({fecha:v.fecha,tipo:'Adelanto',detalle:'Adelanto chofer',chofer:v.chofer||'',patente:v.patente||'',importe:Number(v.adelantoMonto||0)});
     }
   }
 
-  // --- Combustible ---
-  for (const c of combustible){
-    // se asume campos: fecha, total, patente, estacion, tipo
-    if (!inRange(c.fecha, d, h)) continue;
-    if (p && (c.patente||'') !== p) continue;
-    if (!pasaTexto(q, c.estacion, c.tipo, c.metodo, c.patente)) continue;
+  // --- COMBUSTIBLE (egreso) ---
+  combustible.filter(c=>{
+    if (!inRange(c.fecha, d, h)) return false;
+    if (pt && (c.patente||'') !== pt) return false;
+    if (ch && (c.chofer||'') !== ch) return false; // por si guardás chofer en carga
+    if (!pasaTexto(q, c.estacion, c.tipoCombustible||c.tipo, c.metodo, c.patente)) return false;
+    return true;
+  }).forEach(c=>{
+    const tot = totalComb(c);
+    if (tot>0) movs.push({fecha:c.fecha,tipo:'Combustible',detalle:`${c.estacion||'-'} — ${c.tipoCombustible||c.tipo||''}`,chofer:c.chofer||'',patente:c.patente||'',importe:tot});
+  });
 
-    const total = Number(c.total ?? (Number(c.litros||0) * Number(c.sl||c.precioLitro||0)));
-    if (total>0){
-      movs.push({fecha:c.fecha, tipo:'Combustible', detalle:`${c.estacion||'-'} — ${c.tipo||''}`, patente:c.patente||'', importe: total});
-    }
-  }
+  // --- MANTENIMIENTO (egreso) ---
+  mant.filter(m=>{
+    if (!inRange(m.fecha, d, h)) return false;
+    if (pt && (m.patente||'') !== pt) return false;
+    if (est==='pagado'   && !(m.pagado===true || m.pagado==='si')) return false;
+    if (est==='adeudado' &&  (m.pagado===true || m.pagado==='si')) return false;
+    if (!pasaTexto(q, m.proveedor, m.tipo, m.observaciones, m.patente)) return false;
+    return true;
+  }).forEach(m=>{
+    const tot = Number(m.total||0);
+    if (tot>0) movs.push({fecha:m.fecha,tipo:'Mantenimiento',detalle:`${m.tipo||''} — ${m.proveedor||''}`,chofer:'',patente:m.patente||'',importe:tot});
+  });
 
-  // --- Mantenimiento ---
-  for (const m of mant){
-    if (!inRange(m.fecha, d, h)) continue;
-    if (p && (m.patente||'') !== p) continue;
-    if (est==='pagado'   && !(m.pagado===true || m.pagado==='si')) continue;
-    if (est==='adeudado' &&  (m.pagado===true || m.pagado==='si')) continue;
-    if (!pasaTexto(q, m.proveedor, m.tipo, m.observaciones, m.patente)) continue;
-
-    const tot = Number(m.total ?? 0);
-    if (tot>0){
-      movs.push({fecha:m.fecha, tipo:'Mantenimiento', detalle:`${m.tipo||''} — ${m.proveedor||''}`, patente:m.patente||'', importe: tot});
-    }
-  }
-
-  // Ordenar por fecha ↓
+  // Orden
   movs.sort((a,b)=> String(b.fecha).localeCompare(String(a.fecha)));
 
-  // Subtotales por tipo
-  const s = (tipo) => movs.filter(x=>x.tipo===tipo).reduce((a,b)=>a+Number(b.importe||0),0);
-  const comb = s('Combustible');
-  const mantT= s('Mantenimiento');
-  const peaj = s('Peaje');
-  const adel = s('Adelanto');
-  const entr = s('Entrada');
-  const total = comb + mantT + peaj + adel + entr;
+  // Subtotales
+  const sum = (tipo) => movs.filter(x=>x.tipo===tipo).reduce((a,b)=>a+Number(b.importe||0),0);
+  const ingresos   = sum('Ingreso');
+  const combTotal  = sum('Combustible');
+  const mantTotal  = sum('Mantenimiento');
+  const peajeTotal = sum('Peaje');
+  const adelTotal  = sum('Adelanto');
+  const entTotal   = sum('Entrada');
+  const gastos     = combTotal + mantTotal + peajeTotal + adelTotal + entTotal;
+  const margen     = ingresos - gastos;
 
-  kComb.textContent = fmt(comb);
-  kMant.textContent = fmt(mantT);
-  kPeaje.textContent= fmt(peaj);
-  kAdel.textContent = fmt(adel);
-  kEntrada.textContent = fmt(entr);
-  kTotal.textContent = fmt(total);
+  // Cards
+  kIng.textContent    = fmt(ingresos);
+  kComb.textContent   = fmt(combTotal);
+  kMant.textContent   = fmt(mantTotal);
+  kPeaje.textContent  = fmt(peajeTotal);
+  kAdel.textContent   = fmt(adelTotal);
+  kEntrada.textContent= fmt(entTotal);
+  kGastos.textContent = fmt(gastos);
+  kMargen.textContent = fmt(margen);
 
-  // Render tabla
+  // Tabla
   tbody.innerHTML = '';
   if (!movs.length){
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td colspan="5" style="padding:18px;opacity:.85">No hay movimientos para los filtros seleccionados.</td>`;
-    tbody.appendChild(tr);
-    return;
+    tbody.innerHTML = `<tr><td colspan="6" style="padding:18px;opacity:.85">Sin movimientos.</td></tr>`;
+  }else{
+    for (const m of movs){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${(m.fecha||'').slice(0,10)}</td>
+        <td>${m.tipo}</td>
+        <td>${m.detalle||''}</td>
+        <td>${m.chofer||''}</td>
+        <td>${m.patente||''}</td>
+        <td class="monto">${fmt(m.importe||0)}</td>
+      `;
+      tbody.appendChild(tr);
+    }
   }
-  for (const m of movs){
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${(m.fecha||'').slice(0,10)}</td>
-      <td>${m.tipo}</td>
-      <td>${m.detalle||''}</td>
-      <td>${m.patente||''}</td>
-      <td class="monto">${fmt(m.importe||0)}</td>
-    `;
-    tbody.appendChild(tr);
-  }
+
+  // Liquidación por chofer
+  renderChofer(viajesFiltrados);
+
+  // Gráficos
+  renderCharts(movs);
 }
 
-/* ---------------------- Eventos filtros ---------------------- */
-[fDesde,fHasta,fPatente,fEstadoMant,fQ].forEach(el => el.addEventListener('input', render));
+/* ---- Liquidación por chofer ---- */
+function renderChofer(viajesFiltrados){
+  // group por chofer
+  const map = new Map();
+  for (const v of viajesFiltrados){
+    const key = v.chofer||'(Sin chofer)';
+    if (!map.has(key)) map.set(key, {viajes:0, ingreso:0, peaje:0, entrada:0, adelanto:0, pct:getPctChofer(v.chofer, v.patente)});
+    const o = map.get(key);
+    o.viajes++;
+    o.ingreso += ingresoViaje(v);
+    if (v.peajeAplica)   o.peaje   += Number(v.peajeMonto||0);
+    if (v.entradaAplica) o.entrada += Number(v.entradaMonto||0);
+    if (v.adelantoAplica)o.adelanto+= Number(v.adelantoMonto||0);
+  }
+
+  const rows = [...map.entries()].map(([cho, o])=>{
+    const comision = o.ingreso * (o.pct ?? DEFAULT_COMMISSION);
+    const liq = comision - o.adelanto + o.peaje + o.entrada;
+    return {chofer:cho, viajes:o.viajes, ingreso:o.ingreso, pct:o.pct, comision, peaje:o.peaje, entrada:o.entrada, adelanto:o.adelanto, liquidacion:liq};
+  });
+
+  rows.sort((a,b)=> a.chofer.localeCompare(b.chofer));
+  tbodyChofer.innerHTML = rows.map(r=>`
+    <tr>
+      <td>${r.chofer}</td>
+      <td>${r.viajes}</td>
+      <td class="monto">${fmt(r.ingreso)}</td>
+      <td class="monto">${Math.round((r.pct??DEFAULT_COMMISSION)*100)}%</td>
+      <td class="monto">${fmt(r.comision)}</td>
+      <td class="monto">${fmt(r.peaje)}</td>
+      <td class="monto">${fmt(r.entrada)}</td>
+      <td class="monto">${fmt(r.adelanto)}</td>
+      <td class="monto"><b>${fmt(r.liquidacion)}</b></td>
+    </tr>
+  `).join('') || `<tr><td colspan="9" style="padding:14px;opacity:.85">Sin viajes en el rango para el chofer seleccionado.</td></tr>`;
+
+  // Guardamos para impresión
+  window.__rowsChofer = rows;
+}
+
+/* ---- Charts ---- */
+function renderCharts(movsAll){
+  // Por Patente
+  const pats = [...new Set(movsAll.map(m=>m.patente).filter(Boolean))].sort();
+  const ing = pats.map(p=> movsAll.filter(m=>m.patente===p && m.tipo==='Ingreso')
+                        .reduce((a,b)=>a+Number(b.importe||0),0));
+  const egr = pats.map(p=> movsAll.filter(m=>m.patente===p && m.tipo!=='Ingreso')
+                        .reduce((a,b)=>a+Number(b.importe||0),0));
+
+  const ctx1 = document.getElementById('chartPatentes').getContext('2d');
+  chrtPat && chrtPat.destroy();
+  chrtPat = new Chart(ctx1,{
+    type:'bar',
+    data:{labels:pats,datasets:[
+      {label:'Ingresos', data:ing},
+      {label:'Egresos', data:egr}
+    ]},
+    options:{responsive:true, plugins:{legend:{position:'bottom'}}}
+  });
+
+  // Composición Egresos
+  const comp = ['Combustible','Mantenimiento','Peaje','Adelanto','Entrada'];
+  const vals = comp.map(t=> movsAll.filter(m=>m.tipo===t).reduce((a,b)=>a+Number(b.importe||0),0));
+  const ctx2 = document.getElementById('chartEgresos').getContext('2d');
+  chrtEgr && chrtEgr.destroy();
+  chrtEgr = new Chart(ctx2,{
+    type:'doughnut',
+    data:{labels:comp,datasets:[{data:vals}]},
+    options:{responsive:true, plugins:{legend:{position:'bottom'}}}
+  });
+}
+
+/* ==================== Eventos ==================== */
+[fDesde,fHasta,fChofer,fPatente,fEstadoMant,fQ].forEach(el => el.addEventListener('input', render));
 document.getElementById('btnLimpiar').addEventListener('click', ()=>{
-  fDesde.value=''; fHasta.value=''; fPatente.value=''; fEstadoMant.value=''; fQ.value='';
+  fDesde.value=''; fHasta.value=''; fChofer.value=''; fPatente.value=''; fEstadoMant.value=''; fQ.value='';
   render();
 });
 
-/* ---------------------- CSV & Print ---------------------- */
+/* Tabs */
+const tabs = document.querySelectorAll('.tab');
+tabs.forEach(b=>{
+  b.onclick = ()=>{
+    tabs.forEach(x=>x.classList.remove('active')); b.classList.add('active');
+    document.querySelectorAll('section[id^="tab-"]').forEach(s=>s.style.display='none');
+    document.getElementById('tab-'+b.dataset.tab).style.display='block';
+  };
+});
+
+/* CSV */
 document.getElementById('btnCSV').addEventListener('click', ()=>{
-  if (!movs.length){ alert('No hay datos para exportar.'); return; }
-  const head = ['Fecha','Tipo','Detalle','Patente','Importe'];
-  const rows = movs.map(m => [ (m.fecha||'').slice(0,10), m.tipo, (m.detalle||'').replace(/[\r\n]+/g,' '), m.patente||'', String(m.importe||0).replace('.',',') ]);
+  if (!movs.length){ alert('No hay datos.'); return; }
+  const head = ['Fecha','Tipo','Detalle','Chofer','Patente','Importe'];
+  const rows = movs.map(m => [ (m.fecha||'').slice(0,10), m.tipo, (m.detalle||'').replace(/[\r\n]+/g,' '), m.chofer||'', m.patente||'', String(m.importe||0).replace('.',',') ]);
   const csv = [head, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
@@ -282,49 +500,59 @@ document.getElementById('btnCSV').addEventListener('click', ()=>{
   URL.revokeObjectURL(url);
 });
 
-document.getElementById('btnPrint').addEventListener('click', ()=>{
+/* Print tabla */
+document.getElementById('btnPrintTabla').addEventListener('click', ()=>{
   const rows = movs.map(m => `
-    <tr>
-      <td>${(m.fecha||'').slice(0,10)}</td>
-      <td>${m.tipo}</td>
-      <td>${m.detalle||''}</td>
-      <td>${m.patente||''}</td>
-      <td class="r">${fmt(m.importe||0)}</td>
-    </tr>`).join('');
-
+    <tr><td>${(m.fecha||'').slice(0,10)}</td><td>${m.tipo}</td><td>${m.detalle||''}</td><td>${m.chofer||''}</td><td>${m.patente||''}</td><td class="r">${fmt(m.importe||0)}</td></tr>
+  `).join('');
   const html = `
-<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
-<title>Finanzas</title>
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Movimientos</title>
 <style>
-  body{font-family:Arial,Segoe UI,Tahoma,sans-serif;margin:28px;color:#111}
-  h1{margin:0 0 8px}
-  .cards{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:10px 0}
-  .card{border:1px solid #bbb;border-radius:8px;padding:8px;text-align:center}
-  .card small{display:block;opacity:.8}
-  table{width:100%;border-collapse:collapse;margin-top:8px}
+  body{font-family:Arial;margin:28px;color:#111}
+  table{width:100%;border-collapse:collapse}
   th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
-  th{background:#f5f5f5}
-  .r{text-align:right}
-  @media print {.no-print{display:none}}
+  th{background:#f5f5f5} .r{text-align:right}
 </style></head><body>
-  <h1>Finanzas</h1>
-  <div class="cards">
-    <div class="card"><small>Combustible</small><b>${kComb.textContent}</b></div>
-    <div class="card"><small>Mantenimiento</small><b>${kMant.textContent}</b></div>
-    <div class="card"><small>Peajes</small><b>${kPeaje.textContent}</b></div>
-    <div class="card"><small>Adelantos</small><b>${kAdel.textContent}</b></div>
-    <div class="card"><small>Entradas</small><b>${kEntrada.textContent}</b></div>
-    <div class="card"><small>Total Gastos</small><b>${kTotal.textContent}</b></div>
-  </div>
-  <table>
-    <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Patente</th><th class="r">Importe</th></tr></thead>
-    <tbody>${rows || `<tr><td colspan="5">Sin datos</td></tr>`}</tbody>
-  </table>
-  <button class="no-print" onclick="window.print()">Imprimir</button>
+  <h2>Movimientos</h2>
+  <table><thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Chofer</th><th>Patente</th><th class="r">Importe</th></tr></thead>
+  <tbody>${rows||'<tr><td colspan="6">Sin datos</td></tr>'}</tbody></table>
+  <script>window.print()</script>
 </body></html>`;
   const w = window.open('', '_blank', 'width=900,height=1000');
-  w.document.open(); w.document.write(html); w.document.close(); w.focus();
-  setTimeout(()=>w.print(), 300);
+  w.document.write(html); w.document.close(); w.focus();
+});
+
+/* Print liquidación por chofer */
+document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
+  const rows = (window.__rowsChofer||[]);
+  if (!rows.length){ alert('No hay datos de chofer en el rango/chofer seleccionados.'); return; }
+  const trs = rows.map(r=>`
+    <tr>
+      <td>${r.chofer}</td><td class="r">${r.viajes}</td>
+      <td class="r">${fmt(r.ingreso)}</td><td class="r">${Math.round((r.pct??${DEFAULT_COMMISSION})*100)}%</td>
+      <td class="r">${fmt(r.comision)}</td>
+      <td class="r">${fmt(r.peaje)}</td><td class="r">${fmt(r.entrada)}</td>
+      <td class="r">${fmt(r.adelanto)}</td><td class="r"><b>${fmt(r.liquidacion)}</b></td>
+    </tr>`).join('');
+  const html = `
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Liquidación Chofer</title>
+<style>
+  body{font-family:Arial;margin:28px;color:#111}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+  th{background:#f5f5f5} .r{text-align:right}
+  .note{font-size:12px;color:#555;margin-bottom:10px}
+</style></head><body>
+  <h2>Liquidación por Chofer</h2>
+  <div class="note">Rango: ${fDesde.value||'—'} a ${fHasta.value||'—'} · Filtro Chofer: ${fChofer.value||'Todos'} · Patente: ${fPatente.value||'Todas'}</div>
+  <table>
+    <thead><tr><th>Chofer</th><th>Viajes</th><th class="r">Ingreso</th><th class="r">% Comis.</th><th class="r">Comisión</th><th class="r">Peajes</th><th class="r">Entradas</th><th class="r">Adelantos</th><th class="r">Liquidación</th></tr></thead>
+    <tbody>${trs||'<tr><td colspan="9">Sin datos</td></tr>'}</tbody>
+  </table>
+  <script>window.print()</script>
+</body></html>`;
+  const w = window.open('', '_blank', 'width=900,height=1000');
+  w.document.write(html); w.document.close(); w.focus();
 });
 </script>
 </body>
