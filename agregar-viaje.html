@@ -1,50 +1,174 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Agregar Viaje</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://kit.fontawesome.com/a2e0e6ad65.js" crossorigin="anonymous"></script>
   <style>
-    body{margin:0;font-family:'Roboto',sans-serif;background:#FFD700;color:#fff}
-    .container{background:#000;max-width:500px;margin:40px auto;padding:30px;border-radius:10px;box-shadow:0 0 20px rgba(0,0,0,.5)}
-    h2{text-align:center;font-size:24px;text-transform:uppercase;text-decoration:underline;font-weight:bold;color:#fff;margin:0 0 20px}
-    form{display:flex;flex-direction:column;gap:12px}
-    label{font-weight:bold;text-transform:uppercase}
-    input,textarea,select{padding:8px;border:1px solid #000;background:#fff;color:#000;border-radius:4px}
-    .row{display:flex;gap:10px}
-    .row > *{flex:1}
-    .botones{display:flex;justify-content:space-between;gap:10px;margin-top:20px}
-    .btn-volver{flex:1;padding:10px;background:orange;color:#000;border:1px solid #000;border-radius:4px;cursor:pointer}
-    .btn-guardar{flex:1;padding:10px;background:green;color:#fff;border:1px solid #000;border-radius:4px;cursor:pointer}
+    :root{
+      --amarillo:#FFD700;
+      --negro:#000;
+      --naranja:#ffa500;
+      --verde:#0a8f2f;
+      --rojo:#e53935;
+      --blanco:#fff;
+      --gris:#222;
+    }
 
-    /* Sección mantenimiento */
-    .mant-box{border:1px dashed #444;border-radius:8px;padding:12px;margin-top:4px}
-    .mant-extra{display:none;margin-top:8px}
-    .mant-extra.show{display:block}
+    body{
+      margin:0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--amarillo);
+      color: var(--blanco);
+    }
 
-    /* Modal éxito (overlay) */
-    #modalExito{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;align-items:center;justify-content:center}
-    #modalExito .card{background:#000;border:2px solid #2ecc71;color:#2ecc71;padding:24px 18px;border-radius:12px;max-width:420px;text-align:center}
-    #modalExito h3{margin:0 0 8px;text-transform:uppercase}
-    #modalExito p{margin:0 0 14px}
-    #modalExito button{background:#2ecc71;color:#000;border:1px solid #000;border-radius:8px;padding:8px 14px;font-weight:bold;cursor:pointer}
+    .container{
+      background: var(--negro);
+      max-width: 520px;
+      margin: 40px auto;
+      padding: 28px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.45);
+    }
+
+    h2{
+      margin: 0 0 18px;
+      text-align:center;
+      text-transform:uppercase;
+      text-decoration: underline;
+      letter-spacing:.4px;
+    }
+
+    label{
+      display:block;
+      font-size:12px;
+      font-weight:700;
+      margin: 10px 0 6px;
+      text-transform:uppercase;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    select,
+    textarea{
+      width:100%;
+      box-sizing: border-box;
+      padding:8px 10px;
+      border:1px solid #000;
+      border-radius:4px;
+      background:#fff;
+      color:#000;
+      font-size:14px;
+    }
+
+    /* Misma altura para controles de una sola línea */
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    select{
+      height: 36px;
+      line-height: 36px;
+    }
+
+    textarea{
+      min-height:80px;
+      resize: vertical;
+    }
+
+    .row2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+
+    .small-note{
+      font-size:12px;
+      opacity:.9;
+    }
+
+    .btns{
+      display:flex;
+      gap:10px;
+      margin-top:18px;
+    }
+
+    .btn{
+      flex:1;
+      padding:12px;
+      border:1px solid #000;
+      border-radius:6px;
+      font-weight:700;
+      text-transform:uppercase;
+      cursor:pointer;
+    }
+    .btn-naranja{ background: var(--naranja); color:#000; }
+    .btn-verde{ background: var(--verde); color:#fff; }
+
+    /* caja de mantenimiento */
+    .mant-box{
+      border:1px dashed #444;
+      background:#0f0f0f;
+      border-radius:8px;
+      padding:12px;
+      margin-top:10px;
+    }
+    .mant-title{
+      font-size:12px;
+      font-weight:700;
+      text-transform:uppercase;
+      margin-bottom:4px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    /* Fila Tipo / Descripción perfectamente alineada */
+    .mant-fields{
+      display:flex;
+      gap:10px;
+      align-items:flex-end;   /* <- clave para que queden al ras */
+    }
+    .mant-fields > div{ flex:1; }
+
+    /* Modal de éxito a pantalla completa */
+    .overlay{
+      position:fixed;
+      inset:0;
+      display:none;
+      background: rgba(0,0,0,.7);
+      align-items:center;
+      justify-content:center;
+      z-index: 9999;
+    }
+    .ok-card{
+      background:#fff;
+      color:#111;
+      border-radius:12px;
+      padding:24px 20px;
+      width:min(480px, 92vw);
+      text-align:center;
+      box-shadow:0 10px 30px rgba(0,0,0,.5);
+    }
+    .ok-card h3{
+      margin:0 0 8px;
+      text-transform:uppercase;
+    }
+    .ok-card p{ margin:0; color:#444; }
   </style>
 </head>
-
 <body>
   <div class="container">
     <h2>Agregar viaje</h2>
 
-    <form id="formViaje">
+    <form id="formViaje" autocomplete="off">
       <label for="fecha">Fecha</label>
       <input type="date" id="fecha" required>
 
-      <div class="row">
+      <div class="row2">
         <div>
-          <label for="origen">CUIT origen</label>
-          <input type="text" id="origen" placeholder="CUIT / Origen" required>
+          <label for="cuitOrigen">CUIT origen</label>
+          <input type="text" id="cuitOrigen" placeholder="CUIT / Origen" required>
         </div>
         <div>
           <label for="destino">Destino</label>
@@ -52,112 +176,113 @@
         </div>
       </div>
 
-      <div class="row">
+      <div class="row2">
         <div>
           <label for="patente">Patente</label>
           <input type="text" id="patente" required>
         </div>
         <div>
-          <label for="tipoCarga">Tipo de cereal</label>
-          <input type="text" id="tipoCarga" required>
+          <label for="tipoCereal">Tipo de cereal</label>
+          <input type="text" id="tipoCereal" required>
         </div>
       </div>
 
-      <div class="row">
+      <div class="row2">
         <div>
           <label for="kgLlevados">Kg llevados</label>
           <input type="number" id="kgLlevados" min="0" step="1" required>
         </div>
         <div>
           <label for="kgDescargados">Kg descargados</label>
-          <input type="number" id="kgDescargados" min="0" step="1">
+          <input type="number" id="kgDescargados" min="0" step="1" required>
         </div>
       </div>
 
-      <!-- Cargo combustible -->
       <label>¿Cargó combustible?</label>
-      <div class="row">
+      <div class="row2">
         <select id="cargoCombustible">
           <option value="no">No</option>
           <option value="si">Sí</option>
         </select>
-        <input type="text" id="combObs" placeholder="(opcional) estación / comentario">
+        <input type="text" id="comentarioComb" placeholder="(opcional) estación / comentario" disabled>
       </div>
 
-      <!-- Adelanto -->
       <label>¿Adelanto?</label>
-      <div class="row">
-        <select id="hayAdelanto">
+      <div class="row2">
+        <select id="tieneAdelanto">
           <option value="no">No</option>
           <option value="si">Sí</option>
         </select>
-        <input type="number" id="montoAdelanto" min="0" step="0.01" placeholder="$ monto" disabled>
+        <input type="number" id="montoAdelanto" placeholder="$ monto" min="0" step="0.01" disabled>
       </div>
 
-      <!-- Peajes -->
       <label>¿Gastos en peajes?</label>
-      <div class="row">
-        <select id="hayPeajes">
+      <div class="row2">
+        <select id="tienePeaje">
           <option value="no">No</option>
           <option value="si">Sí</option>
         </select>
-        <input type="number" id="montoPeajes" min="0" step="0.01" placeholder="$ monto" disabled>
+        <input type="number" id="montoPeaje" placeholder="$ monto" min="0" step="0.01" disabled>
       </div>
 
-      <!-- Entrada -->
       <label>¿Entrada?</label>
-      <div class="row">
-        <select id="hayEntrada">
+      <div class="row2">
+        <select id="tieneEntrada">
           <option value="no">No</option>
           <option value="si">Sí</option>
         </select>
-        <input type="number" id="montoEntrada" min="0" step="0.01" placeholder="$ monto" disabled>
+        <input type="number" id="montoEntrada" placeholder="$ monto" min="0" step="0.01" disabled>
       </div>
 
       <label for="observaciones">Observaciones</label>
       <textarea id="observaciones" placeholder="Notas generales..."></textarea>
 
-      <!-- NUEVO: Sección mantenimiento -->
+      <!-- Mantenimiento solicitado desde el viaje -->
       <div class="mant-box">
-        <label><input type="checkbox" id="reqMant"> ¿Requiere mantenimiento?</label>
+        <div class="mant-title">
+          <label style="margin:0;cursor:pointer;">
+            <input type="checkbox" id="mantRequiere" style="transform:translateY(2px); margin-right:6px;">
+            ¿Requiere mantenimiento?
+          </label>
+        </div>
 
-        <div id="mantExtra" class="mant-extra">
-          <div class="row">
-            <div>
-              <label for="mantTipo">Tipo</label>
-              <select id="mantTipo">
-                <option value="">Seleccionar…</option>
-                <option>Servicio</option>
-                <option>Cambio de aceite</option>
-                <option>Filtros</option>
-                <option>Cubiertas</option>
-                <option>Frenos</option>
-                <option>Reparación</option>
-                <option>Otro</option>
-              </select>
-            </div>
-            <div>
-              <label for="mantDesc">Descripción</label>
-              <input type="text" id="mantDesc" placeholder="Breve descripción del problema">
-            </div>
+        <div class="mant-fields">
+          <div>
+            <label for="mantTipo">Tipo</label>
+            <select id="mantTipo" disabled>
+              <option value="">Seleccionar…</option>
+              <option>Servicio</option>
+              <option>Cambio de aceite</option>
+              <option>Filtros</option>
+              <option>Cubiertas</option>
+              <option>Frenos</option>
+              <option>Reparación</option>
+              <option>Otro</option>
+            </select>
+          </div>
+          <div>
+            <label for="mantDesc">Descripción</label>
+            <input type="text" id="mantDesc" placeholder="Breve descripción del problema" disabled>
           </div>
         </div>
-      </div>
-      <!-- FIN mantenimiento -->
 
-      <div class="botones">
-        <button type="button" class="btn-volver" onclick="window.location.href='index.html'">Volver</button>
-        <button type="submit" class="btn-guardar">Guardar viaje</button>
+        <div class="small-note" style="margin-top:6px;opacity:.8;">
+          * Al guardar el viaje, si marcás esta opción, se crea un pendiente en Mantenimiento.
+        </div>
+      </div>
+
+      <div class="btns">
+        <button type="button" class="btn btn-naranja" onclick="location.href='index.html'">Volver</button>
+        <button type="submit" class="btn btn-verde">Guardar viaje</button>
       </div>
     </form>
   </div>
 
-  <!-- Modal éxito -->
-  <div id="modalExito">
-    <div class="card">
+  <!-- Modal de éxito -->
+  <div class="overlay" id="okOverlay">
+    <div class="ok-card">
       <h3>¡Viaje guardado!</h3>
-      <p id="msgExtra"></p>
-      <button onclick="window.location.href='index.html'">Ir al inicio</button>
+      <p>Redirigiendo…</p>
     </div>
   </div>
 
@@ -165,6 +290,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+    // Tu config
     const firebaseConfig = {
       apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
       authDomain: "transporte-mario-guizzo.firebaseapp.com",
@@ -177,100 +303,127 @@
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
 
-    // Habilitar/Deshabilitar montos
-    const hayAdelanto  = document.getElementById('hayAdelanto');
-    const montoAdelanto= document.getElementById('montoAdelanto');
-    hayAdelanto.addEventListener('change', ()=> montoAdelanto.disabled = (hayAdelanto.value !== 'si'));
+    // helpers de habilitar/deshabilitar
+    const byId = (x)=>document.getElementById(x);
+    const toggleMoney = (selId, inputId) => {
+      const sel = byId(selId);
+      const inp = byId(inputId);
+      const update = () => {
+        const si = sel.value === 'si';
+        inp.disabled = !si;
+        if (!si){ inp.value = ''; }
+      };
+      sel.addEventListener('change', update);
+      update();
+    };
 
-    const hayPeajes  = document.getElementById('hayPeajes');
-    const montoPeajes= document.getElementById('montoPeajes');
-    hayPeajes.addEventListener('change', ()=> montoPeajes.disabled = (hayPeajes.value !== 'si'));
+    // Combustible: comentario sólo si "Sí"
+    (() => {
+      const sel = byId('cargoCombustible');
+      const txt = byId('comentarioComb');
+      const run = () => {
+        const si = sel.value === 'si';
+        txt.disabled = !si;
+        if (!si){ txt.value = ''; }
+      };
+      sel.addEventListener('change', run);
+      run();
+    })();
 
-    const hayEntrada  = document.getElementById('hayEntrada');
-    const montoEntrada= document.getElementById('montoEntrada');
-    hayEntrada.addEventListener('change', ()=> montoEntrada.disabled = (hayEntrada.value !== 'si'));
+    // Montos condicionales
+    toggleMoney('tieneAdelanto','montoAdelanto');
+    toggleMoney('tienePeaje','montoPeaje');
+    toggleMoney('tieneEntrada','montoEntrada');
 
-    // Mostrar/ocultar extras de mantenimiento
-    const reqMant   = document.getElementById('reqMant');
-    const mantExtra = document.getElementById('mantExtra');
-    reqMant.addEventListener('change', ()=> mantExtra.classList.toggle('show', reqMant.checked));
+    // Mantenimiento condicional
+    (() => {
+      const chk = byId('mantRequiere');
+      const tipo= byId('mantTipo');
+      const des = byId('mantDesc');
+      const run = ()=>{
+        const on = chk.checked;
+        tipo.disabled = !on;
+        des.disabled  = !on;
+        if (!on){ tipo.value=''; des.value=''; }
+      };
+      chk.addEventListener('change', run);
+      run();
+    })();
 
     // Guardar
-    const form = document.getElementById("formViaje");
-    form.addEventListener("submit", async (e) => {
+    byId('formViaje').addEventListener('submit', async (e)=>{
       e.preventDefault();
 
-      // Validación básica
-      const campos = ["fecha","origen","destino","patente","tipoCarga","kgLlevados"];
-      for (const id of campos) {
-        if (!document.getElementById(id).value) {
-          alert("Por favor, complete todos los campos obligatorios.");
-          return;
-        }
+      // Campos obligatorios básicos
+      const fecha           = byId('fecha').value;
+      const cuitOrigen      = byId('cuitOrigen').value.trim();
+      const destino         = byId('destino').value.trim();
+      const patente         = byId('patente').value.trim();
+      const tipoCereal      = byId('tipoCereal').value.trim();
+      const kgLlevados      = Number(byId('kgLlevados').value || 0);
+      const kgDescargados   = Number(byId('kgDescargados').value || 0);
+
+      if (!fecha || !cuitOrigen || !destino || !patente || !tipoCereal){
+        alert('Completá fecha, CUIT origen, destino, patente y tipo de cereal.');
+        return;
       }
 
-      const viaje = {
-        fecha: document.getElementById("fecha").value,
-        origen: document.getElementById("origen").value.trim(),
-        destino: document.getElementById("destino").value.trim(),
-        patente: document.getElementById("patente").value.trim(),
-        tipoCarga: document.getElementById("tipoCarga").value.trim(),
-        kgLlevados: Number(document.getElementById("kgLlevados").value || 0),
-        kgDescargados: Number(document.getElementById("kgDescargados").value || 0),
+      // Opcionales / condicionales
+      const cargoCombustible   = byId('cargoCombustible').value === 'si';
+      const comentarioComb     = byId('comentarioComb').value.trim();
 
-        cargoCombustible: document.getElementById("cargoCombustible").value === 'si',
-        combObs: document.getElementById("combObs").value.trim(),
+      const adelanto           = (byId('tieneAdelanto').value === 'si') ? Number(byId('montoAdelanto').value || 0) : 0;
+      const peaje              = (byId('tienePeaje').value   === 'si') ? Number(byId('montoPeaje').value   || 0) : 0;
+      const entrada            = (byId('tieneEntrada').value === 'si') ? Number(byId('montoEntrada').value || 0) : 0;
 
-        adelanto: hayAdelanto.value === 'si' ? Number(montoAdelanto.value || 0) : 0,
-        peaje:    hayPeajes.value    === 'si' ? Number(montoPeajes.value  || 0) : 0,
-        entrada:  hayEntrada.value   === 'si' ? Number(montoEntrada.value || 0) : 0,
+      const observaciones      = byId('observaciones').value.trim();
 
-        observaciones: document.getElementById("observaciones").value.trim(),
+      const mantRequiere       = byId('mantRequiere').checked;
+      const mantTipo           = byId('mantTipo').value;
+      const mantDesc           = byId('mantDesc').value.trim();
 
-        // NUEVOS: datos para mantenimiento
-        reqMantenimiento: reqMant.checked,
-        mantTipoSugerido: (document.getElementById("mantTipo").value || "").trim(),
-        mantDescripcion:  (document.getElementById("mantDesc").value || "").trim(),
-
+      const data = {
+        fecha,
+        cuitOrigen,
+        destino,
+        patente,
+        tipoCereal,
+        kgCargados:     kgLlevados,      // nombre usado en ver-viajes-admin
+        kgDescargados,
+        cargoCombustible,
+        comentarioComb: cargoCombustible ? comentarioComb : "",
+        adelanto,                         // num (0 si no)
+        peaje,                            // num (0 si no)
+        entrada,                          // num (0 si no)
+        observaciones,
+        mantRequiere,
+        mantTipo: mantRequiere ? mantTipo : "",
+        mantDesc: mantRequiere ? mantDesc : "",
         timestamp: serverTimestamp()
       };
 
-      try {
-        // 1) Guardar viaje
-        const ref = await addDoc(collection(db, "viajes"), viaje);
+      try{
+        await addDoc(collection(db,'viajes'), data);
 
-        let msg = "El viaje se guardó correctamente.";
-        // 2) Si requiere mantenimiento, crear doc en 'mantenimientos'
-        if (viaje.reqMantenimiento) {
-          const mant = {
-            creadoDesdeViaje: true,
-            viajeId: ref.id,
-            fecha: viaje.fecha,
-            patente: viaje.patente,
-            tipo: viaje.mantTipoSugerido || "Otro",
-            proveedor: "",
-            km: 0,
-            repuestos: [],
-            manoDeObra: 0,
-            otros: 0,
-            total: 0,
-            pagado: false,
+        // Si pidió mantenimiento, dejamos un pendiente inicial en 'mantenimientos'
+        if (mantRequiere && mantTipo){
+          await addDoc(collection(db,'mantenimientos'), {
+            fechaSolicitud: fecha,
+            patente,
+            tipo: mantTipo,
+            descripcion: mantDesc || "",
+            origenViaje: cuitOrigen + " → " + destino,
             estado: "pendiente",
-            proximoFecha: "",
-            observaciones: viaje.mantDescripcion || viaje.observaciones || "",
             timestamp: serverTimestamp()
-          };
-          await addDoc(collection(db, "mantenimientos"), mant);
-          msg += " También se generó un pedido de mantenimiento.";
+          });
         }
 
-        // Modal éxito
-        document.getElementById("msgExtra").textContent = msg;
-        const modal = document.getElementById("modalExito");
-        modal.style.display = "flex";
+        const ov = byId('okOverlay');
+        ov.style.display = 'flex';
+        setTimeout(()=>{ location.href = 'index.html'; }, 1800);
 
-      } catch (err) {
-        alert("Error al guardar: " + err.message);
+      }catch(err){
+        alert('Error al guardar: ' + err.message);
       }
     });
   </script>
