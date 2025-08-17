@@ -1,76 +1,99 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mantenimiento</title>
-  <style>
-    :root{
-      --amarillo:#FFD700; --negro:#0d0d0d; --panel:#111; --gris:#222;
-      --verde:#2e7d32; --naranja:#ffa500; --rojo:#e53935; --blanco:#fff;
-    }
-    body{margin:0;background:var(--amarillo);font-family:Arial,sans-serif;color:#fff}
-    .wrap{max-width:900px;margin:38px auto;background:var(--panel);border-radius:12px;padding:18px}
-    h1{text-align:center;margin:4px 0 16px;text-transform:uppercase;text-decoration:underline}
-    .filtros{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:12px}
-    .filtros input,.filtros select{padding:8px;border:1px solid #000;border-radius:6px;background:#fff;color:#000}
-    .btn{padding:10px;border:1px solid #000;border-radius:6px;font-weight:bold;text-transform:uppercase;cursor:pointer}
-    .btn-naranja{background:var(--naranja);color:#000}
-    .btn-verde{background:var(--verde);color:#fff}
-    .btn-rojo{background:var(--rojo);color:#fff}
-    .btn-outline{background:#0000;color:#fff;border-color:#333}
-    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
-    .stat{background:var(--gris);border-radius:10px;padding:10px;text-align:center}
-    .stat b{display:block;font-size:18px;margin-top:2px}
-    .lista{display:grid;gap:10px}
-    .item{background:#191919;border-radius:10px;padding:12px;position:relative}
-    .badge{position:absolute;top:10px;right:10px;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700}
-    .b-pend{background:#b71c1c} .b-adeuda{background:#ef6c00} .b-pagado{background:#1b5e20}
-    .item p{margin:3px 0}
-    .acciones{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px}
-    .volver{margin-top:14px}
-    @media (max-width:800px){
-      .filtros{grid-template-columns:1fr 1fr}
-      .stats{grid-template-columns:1fr}
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MANTENIMIENTO</title>
+<style>
+  :root{
+    --yellow:#FFD700; --black:#0d0d0d; --panel:#111; --white:#fff;
+    --green:#2e7d32; --red:#d32f2f; --orange:#ffa000; --blue:#1976d2;
+  }
+  body{margin:0;background:var(--yellow);font-family:Arial,Helvetica,sans-serif;color:#fff}
+  .wrap{max-width:960px;margin:36px auto;background:#000;border-radius:12px;padding:22px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+  h1{margin:0 0 16px;text-align:center;text-transform:uppercase;text-decoration:underline}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-start;margin-bottom:8px}
+  .bar input,.bar select{padding:8px;border:1px solid #000;border-radius:6px;background:#fff;color:#000}
+  .btn{padding:10px 12px;border:1px solid #000;border-radius:8px;font-weight:bold;text-transform:uppercase;cursor:pointer}
+  .btn-verde{background:var(--green);color:#fff}
+  .btn-naranja{background:var(--orange);color:#000}
+  .btn-rojo{background:var(--red);color:#fff}
+  .btn-azul{background:var(--blue);color:#fff}
+  .btn-azul:disabled{opacity:.55;cursor:not-allowed}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0 16px}
+  .card{background:#0f0f0f;border:1px solid #222;border-radius:10px;padding:10px;text-align:center}
+  .card b{display:block;font-size:18px;margin-top:4px}
+  .lista{display:grid;gap:12px}
+  .item{background:#191919;border-radius:10px;padding:12px;position:relative}
+  .item p{margin:3px 0}
+  .acciones{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+  .volver{margin-top:14px}
+  .tag{display:inline-block;padding:3px 8px;border-radius:20px;font-size:12px;background:#eee;color:#111}
+  .ade{background:#ffe1e1;color:#b71c1c}
+  .pag{background:#e6f4ea;color:#1b5e20}
+  /* Selector (radio) */
+  .pick{
+    position:absolute; left:-14px; top:10px;
+    display:flex; align-items:center; gap:6px; font-size:12px; color:#bbb;
+  }
+  .pick input{accent-color:#1976d2}
 
-    /* Modal simple */
-    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);justify-content:center;align-items:center}
-    .modal-content{background:#000;border-radius:12px;padding:16px;width:95%;max-width:600px}
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .modal-content input,.modal-content select,.modal-content textarea{padding:8px;border:1px solid #000;border-radius:6px;background:#fff;color:#000}
-    .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
-  </style>
+  /* Modal */
+  .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);justify-content:center;align-items:center;z-index:50}
+  .modal .content{background:#000;border-radius:12px;padding:16px;width:95%;max-width:760px}
+  .content h2{margin:0 0 12px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .content input,.content select,.content textarea{padding:8px;border:1px solid #000;border-radius:6px;background:#fff;color:#000}
+  .content textarea{min-height:80px;resize:vertical}
+  .rep-row{display:grid;grid-template-columns:1fr 120px 34px;gap:8px;margin:6px 0}
+  .rep-row .rm{background:#b71c1c;color:#fff;border: none;border-radius:6px;cursor:pointer}
+  .foot{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+  @media (max-width:780px){
+    .cards{grid-template-columns:1fr 1fr}
+    .grid2{grid-template-columns:1fr}
+  }
+</style>
 </head>
 <body>
   <div class="wrap">
-    <h1>Mantenimiento</h1>
+    <h1>MANTENIMIENTO</h1>
 
-    <!-- FILTROS -->
-    <form id="formFiltros" class="filtros">
+    <!-- BARRA -->
+    <div class="bar">
+      <button id="btnNuevo" class="btn btn-verde">Nuevo mantenimiento</button>
+
       <input type="date" id="fDesde">
       <input type="date" id="fHasta">
-      <select id="fPatente"><option value="">Todas las patentes</option></select>
+
+      <select id="fPatente">
+        <option value="">Todas las patentes</option>
+      </select>
+
       <select id="fTipo">
         <option value="">Todos los tipos</option>
-        <option>Servicio</option><option>Cambio de aceite</option><option>Filtros</option>
-        <option>Cubiertas</option><option>Frenos</option><option>Reparación</option><option>Otro</option>
+        <option>Servicio</option><option>Cambio de aceite</option>
+        <option>Filtros</option><option>Cubiertas</option>
+        <option>Frenos</option><option>Reparación</option><option>Otro</option>
       </select>
-      <select id="fEstado">
-        <option value="">Todos los estados</option>
-        <option value="pendiente">Pendiente</option>
-        <option value="adeuda">Adeuda</option>
-        <option value="pagado">Pagado</option>
-      </select>
-      <input type="text" id="fQ" placeholder="Buscar (proveedor, repuesto, obs)">
-      <button type="button" id="btnLimpiar" class="btn btn-naranja">Limpiar filtros</button>
-    </form>
 
-    <!-- RESUMEN -->
-    <div class="stats">
-      <div class="stat"><small>TOTAL $</small><b id="sTotal">$ 0</b></div>
-      <div class="stat"><small>REGISTROS</small><b id="sRegs">0</b></div>
-      <div class="stat"><small>PRÓX. 7 DÍAS</small><b id="sProx">0</b></div>
+      <select id="fEstado">
+        <option value="">Todos (pagado/adeudado)</option>
+        <option value="pagado">Pagado</option>
+        <option value="adeudado">Adeudado</option>
+      </select>
+
+      <input id="fQ" placeholder="Buscar (proveedor, repuesto, obs)" />
+
+      <button id="btnLimpiar" class="btn btn-naranja">Limpiar filtros</button>
+      <button id="btnImprimir" class="btn btn-azul" disabled>Imprimir</button>
+    </div>
+
+    <!-- CARDS -->
+    <div class="cards">
+      <div class="card"><small>TOTAL $</small><b id="kTotal">$ 0</b></div>
+      <div class="card"><small>REGISTROS</small><b id="kRegs">0</b></div>
+      <div class="card"><small>ADEUDADOS</small><b id="kAdeu">0</b></div>
+      <div class="card"><small>PRÓX. 7 DÍAS</small><b id="kProx">0</b></div>
     </div>
 
     <!-- LISTA -->
@@ -79,289 +102,439 @@
     <button class="btn btn-naranja volver" onclick="location.href='admin.html'">Volver</button>
   </div>
 
-  <!-- MODAL EDITAR -->
-  <div id="modal" class="modal">
-    <div class="modal-content">
-      <h2 style="margin-top:0;text-transform:uppercase;text-decoration:underline">Editar mantenimiento</h2>
-      <form id="formEdit" class="grid2">
-        <label>Fecha
-          <input type="date" id="e_fecha">
-        </label>
-        <label>Próx. fecha
-          <input type="date" id="e_prox">
-        </label>
-        <label>Patente
-          <input type="text" id="e_patente">
-        </label>
-        <label>Tipo
-          <select id="e_tipo">
-            <option>Servicio</option><option>Cambio de aceite</option><option>Filtros</option>
-            <option>Cubiertas</option><option>Frenos</option><option>Reparación</option><option>Otro</option>
+  <!-- MODAL -->
+  <div id="modal" class="modal" role="dialog" aria-modal="true">
+    <div class="content">
+      <h2>Editar mantenimiento</h2>
+      <div class="grid2">
+        <div>
+          <label>Fecha</label>
+          <input type="date" id="m_fecha">
+        </div>
+        <div>
+          <label>Tipo</label>
+          <select id="m_tipo">
+            <option>Servicio</option><option>Cambio de aceite</option>
+            <option>Filtros</option><option>Cubiertas</option>
+            <option>Frenos</option><option>Reparación</option><option>Otro</option>
           </select>
-        </label>
-        <label>Proveedor
-          <input type="text" id="e_proveedor">
-        </label>
-        <label>KM
-          <input type="number" id="e_km" min="0" step="1">
-        </label>
-        <label>Repuestos (texto)
-          <textarea id="e_repuestos" rows="3"></textarea>
-        </label>
-        <label>Mano de obra ($)
-          <input type="number" id="e_mo" min="0" step="0.01">
-        </label>
-        <label>Otros ($)
-          <input type="number" id="e_otros" min="0" step="0.01">
-        </label>
-        <label>Total ($)
-          <input type="number" id="e_total" min="0" step="0.01">
-        </label>
-        <label>Estado
-          <select id="e_estado">
-            <option value="pendiente">Pendiente</option>
-            <option value="adeuda">Adeuda</option>
-            <option value="pagado">Pagado</option>
+        </div>
+        <div>
+          <label>Patente</label>
+          <input id="m_patente" placeholder="ABC123 / AB123CD">
+        </div>
+        <div>
+          <label>KM</label>
+          <input type="number" id="m_km" min="0" step="1">
+        </div>
+        <div>
+          <label>Proveedor / Taller</label>
+          <input id="m_proveedor">
+        </div>
+        <div>
+          <label>Próximo (fecha)</label>
+          <input type="date" id="m_proximo">
+        </div>
+      </div>
+
+      <h3 style="margin:12px 0 6px;">Repuestos</h3>
+      <div id="repList"></div>
+      <div class="rep-row">
+        <input id="repDesc" placeholder="Descripción repuesto">
+        <input id="repImporte" type="number" min="0" step="1" placeholder="$">
+        <button id="btnAddRep" class="btn btn-verde" type="button">+</button>
+      </div>
+
+      <div class="grid2">
+        <div>
+          <label>Mano de obra ($)</label>
+          <input type="number" id="m_mdo" min="0" step="1" value="0">
+        </div>
+        <div>
+          <label>Otros ($)</label>
+          <input type="number" id="m_otros" min="0" step="1" value="0">
+        </div>
+        <div>
+          <label>Total ($)</label>
+          <input type="number" id="m_total" min="0" step="1" value="0">
+        </div>
+        <div>
+          <label>Pagado</label>
+          <select id="m_pagado">
+            <option value="no">No (adeudado)</option>
+            <option value="si">Sí (pagado)</option>
           </select>
-        </label>
-        <label style="grid-column:1/-1">Observaciones
-          <textarea id="e_obs" rows="3"></textarea>
-        </label>
-      </form>
-      <div class="modal-actions">
-        <button id="btnGuardar" class="btn btn-verde" type="button">Guardar</button>
-        <button id="btnCerrar" class="btn btn-naranja" type="button">Cerrar</button>
+        </div>
+      </div>
+
+      <label style="display:block;margin-top:8px">Observaciones</label>
+      <textarea id="m_obs"></textarea>
+
+      <div class="foot">
+        <button id="btnPrintModal" class="btn btn-azul" type="button">Imprimir</button>
+        <button id="btnSave" class="btn btn-verde" type="button">Guardar</button>
+        <button id="btnDelete" class="btn btn-rojo" type="button">Eliminar</button>
+        <button id="btnClose" class="btn btn-naranja" type="button">Cerrar</button>
       </div>
     </div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<script type="module">
+/* -------------------- Firebase -------------------- */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
-      authDomain: "transporte-mario-guizzo.firebaseapp.com",
-      projectId: "transporte-mario-guizzo",
-      storageBucket: "transporte-mario-guizzo.appspot.com",
-      messagingSenderId: "465536166890",
-      appId: "1:465536166890:web:f658690629b09eca8fa093"
-    };
+const firebaseConfig = {
+  apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
+  authDomain: "transporte-mario-guizzo.firebaseapp.com",
+  projectId: "transporte-mario-guizzo",
+  storageBucket: "transporte-mario-guizzo.appspot.com",
+  messagingSenderId: "465536166890",
+  appId: "1:465536166890:web:f658690629b09eca8fa093"
+};
 
-    const app = initializeApp(firebaseConfig);
-    const db  = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
 
-    const col = collection(db,"mantenimientos");
+/* -------------------- State -------------------- */
+let todos = [];             // todos los docs
+let actual = null;          // doc abierto en modal
+let actualId = null;
+let seleccionadoId = null;  // para imprimir desde barra
 
-    const $ = (id)=>document.getElementById(id);
-    const lista = $("lista");
+/* -------------------- UI refs -------------------- */
+const lista      = document.getElementById('lista');
+const fDesde     = document.getElementById('fDesde');
+const fHasta     = document.getElementById('fHasta');
+const fPatente   = document.getElementById('fPatente');
+const fTipo      = document.getElementById('fTipo');
+const fEstado    = document.getElementById('fEstado');
+const fQ         = document.getElementById('fQ');
+const btnLimpiar = document.getElementById('btnLimpiar');
+const btnNuevo   = document.getElementById('btnNuevo');
+const btnImprimir= document.getElementById('btnImprimir');
 
-    const fDesde=$("fDesde"), fHasta=$("fHasta"), fPatente=$("fPatente"), fTipo=$("fTipo"), fEstado=$("fEstado"), fQ=$("fQ");
-    const sTotal=$("sTotal"), sRegs=$("sRegs"), sProx=$("sProx");
-    const btnLimpiar=$("btnLimpiar");
+const kTotal = document.getElementById('kTotal');
+const kRegs  = document.getElementById('kRegs');
+const kAdeu  = document.getElementById('kAdeu');
+const kProx  = document.getElementById('kProx');
 
-    let all = [];      // todos los mantenimientos
-    let current = null; // item en edición
+/* -------------------- Modal refs -------------------- */
+const modal = document.getElementById('modal');
+const g = id => document.getElementById(id);
+const repList     = g('repList');
+const repDesc     = g('repDesc');
+const repImporte  = g('repImporte');
 
-    // Helpers
-    const todayStr = ()=> new Date().toISOString().slice(0,10);
-    const inNext7 = (d)=>{
-      if(!d) return false;
-      const t = new Date(); t.setHours(0,0,0,0);
-      const n7= new Date(t); n7.setDate(n7.getDate()+7);
-      const dd=new Date(d); dd.setHours(0,0,0,0);
-      return dd>=t && dd<=n7;
-    };
+/* -------------------- Subscripción -------------------- */
+onSnapshot(collection(db,'mantenimientos'), (qs) => {
+  todos = qs.docs.map(d => ({ id:d.id, ...d.data() }));
+  // normalizar números
+  todos.forEach(v => {
+    v.manoDeObra = Number(v.manoDeObra||0);
+    v.otros      = Number(v.otros||0);
+    if (!Array.isArray(v.repuestos)) v.repuestos = [];
+    const repSum = v.repuestos.reduce((a,r)=> a + Number(r.importe||r.costo||0), 0);
+    v.total = Number(v.total ?? (repSum + v.manoDeObra + v.otros));
+  });
 
-    // Cargar en tiempo real
-    onSnapshot(col,(qs)=>{
-      all = qs.docs.map(d=>({id:d.id, ...d.data()}));
-      all.sort((a,b)=> String(b.fecha||"").localeCompare(String(a.fecha||"")));
-      poblarPatentes();
-      render();
-    });
+  poblarSelectPatentes();
+  render();
+});
 
-    function poblarPatentes(){
-      const sel=fPatente.value;
-      const pats=[...new Set(all.map(x=>x.patente).filter(Boolean))].sort();
-      fPatente.innerHTML='<option value="">Todas las patentes</option>'+pats.map(p=>`<option>${p}</option>`).join('');
-      if(sel) fPatente.value=sel;
-    }
+/* -------------------- Select de patentes -------------------- */
+function poblarSelectPatentes(){
+  const sel = fPatente.value;
+  const set = Array.from(new Set(todos.map(v => (v.patente||'').trim()).filter(Boolean))).sort();
+  fPatente.innerHTML = '<option value="">Todas las patentes</option>' +
+    set.map(p => `<option value="${p}">${p}</option>`).join('');
+  if (set.includes(sel)) fPatente.value = sel;
+}
 
-    function pasaFiltros(it){
-      if (fDesde.value && String(it.fecha||"") < fDesde.value) return false;
-      if (fHasta.value && String(it.fecha||"") > fHasta.value) return false;
-      if (fPatente.value && (it.patente||"") !== fPatente.value) return false;
-      if (fTipo.value && (it.tipo||"") !== fTipo.value) return false;
-      if (fEstado.value && (it.estado||"") !== fEstado.value) return false;
+/* -------------------- Filtros -------------------- */
+function pasaFiltros(v){
+  if (fDesde.value && String(v.fecha||'') < fDesde.value) return false;
+  if (fHasta.value && String(v.fecha||'') > fHasta.value) return false;
+  if (fPatente.value && (v.patente||'') !== fPatente.value) return false;
+  if (fTipo.value && (v.tipo||'') !== fTipo.value) return false;
 
-      const q=fQ.value.trim().toLowerCase();
-      if(q){
-        const blob=[it.proveedor, it.repuestos && (Array.isArray(it.repuestos)? it.repuestos.join(" "): it.repuestos), it.observaciones, it.tipo, it.patente]
-          .map(x=>(x||"")+"").join(" ").toLowerCase();
-        if(!blob.includes(q)) return false;
-      }
-      return true;
-    }
+  if (fEstado.value === 'pagado'   && !(v.pagado===true || v.pagado==='si')) return false;
+  if (fEstado.value === 'adeudado' &&  (v.pagado===true || v.pagado==='si')) return false;
 
-    function money(n){ n = Number(n||0); return "$ " + n.toLocaleString("es-AR", {minimumFractionDigits:0}); }
+  const q = fQ.value.trim().toLowerCase();
+  if (q){
+    const rep = (v.repuestos||[]).map(r => (r.desc||r.descripcion||'') + ' ' + (r.importe||r.costo||'')).join(' ');
+    const blob = [
+      v.proveedor, v.observaciones, v.tipo, v.patente, rep
+    ].map(x => (x||'')+'').join(' ').toLowerCase();
+    if (!blob.includes(q)) return false;
+  }
+  return true;
+}
 
-    function render(){
-      const data = all.filter(pasaFiltros);
-      lista.innerHTML="";
+/* -------------------- Render -------------------- */
+function render(){
+  const datos = todos.filter(pasaFiltros).sort((a,b)=> String(b.fecha||'').localeCompare(String(a.fecha||'')));
 
-      // Stats
-      const total = data.reduce((a,b)=>a+(Number(b.total)||0),0);
-      const regs  = data.length;
-      const prox7 = data.reduce((a,b)=> a + (inNext7(b.proximoFecha)?1:0), 0);
-      sTotal.textContent = money(total);
-      sRegs.textContent = regs;
-      sProx.textContent = prox7;
+  // métricas
+  const total = datos.reduce((a,v)=> a + Number(v.total||0), 0);
+  const adeu  = datos.filter(v => !(v.pagado===true || v.pagado==='si')).length;
+  const hoy   = new Date();
+  const d7    = new Date(hoy.getTime() + 7*24*60*60*1000).toISOString().slice(0,10);
+  const prox7 = datos.filter(v => v.proximoFecha && v.proximoFecha <= d7).length;
 
-      if(!data.length){
-        lista.innerHTML='<div class="item"><p>No hay registros para los filtros seleccionados.</p></div>';
-        return;
-      }
+  kTotal.textContent = total.toLocaleString('es-AR', {style:'currency', currency:'ARS', maximumFractionDigits:0});
+  kRegs.textContent  = String(datos.length);
+  kAdeu.textContent  = String(adeu);
+  kProx.textContent  = String(prox7);
 
-      for(const v of data){
-        const div=document.createElement("div");
-        div.className="item";
+  lista.innerHTML = '';
+  if (!datos.length){
+    lista.innerHTML = '<div class="item"><p>No hay registros para los filtros seleccionados.</p></div>';
+    return;
+  }
 
-        // badge estado
-        let badgeClass="", badgeText="";
-        if((v.estado||"") === "pendiente"){ badgeClass="b-pend"; badgeText="PENDIENTE"; }
-        else if((v.estado||"") === "adeuda"){ badgeClass="b-adeuda"; badgeText="ADEUDA"; }
-        else if((v.estado||"") === "pagado"){ badgeClass="b-pagado"; badgeText="PAGADO"; }
-        if(badgeText) div.innerHTML+=`<span class="badge ${badgeClass}">${badgeText}</span>`;
+  for (const v of datos){
+    const tag = (v.pagado===true || v.pagado==='si') ? '<span class="tag pag">Pagado</span>' : '<span class="tag ade">Adeudado</span>';
+    const rep = Array.isArray(v.repuestos) ? v.repuestos : [];
 
-        // detalle
-        const repTxt = Array.isArray(v.repuestos) ? v.repuestos.join(", ") : (v.repuestos||"-");
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `
+      <label class="pick" title="Seleccionar">
+        <input type="radio" name="selMant" ${seleccionadoId===v.id?'checked':''} onchange="window._select('${v.id}')"> Elegir
+      </label>
 
-        div.innerHTML += `
-          <p><b>Fecha:</b> ${v.fecha||"-"}  |  <b>Patente:</b> ${v.patente||"-"}</p>
-          <p><b>Tipo:</b> ${v.tipo||"-"}  |  <b>Proveedor:</b> ${v.proveedor||"-"}  |  <b>KM:</b> ${v.km||0}</p>
-          <p><b>Repuestos:</b> ${repTxt}</p>
-          <p><b>MO:</b> ${money(v.manoDeObra)}  |  <b>Otros:</b> ${money(v.otros)}  |  <b>Total:</b> <b>${money(v.total)}</b></p>
-          <p><b>Próx. fecha:</b> ${v.proximoFecha||"-"}</p>
-          <p><i>${v.observaciones||""}</i></p>
-        `;
+      <p><strong>Fecha:</strong> ${v.fecha||'-'} ${tag}</p>
+      <p><strong>Tipo:</strong> ${v.tipo||'-'}  |  <strong>Proveedor:</strong> ${v.proveedor||'-'}  |  <strong>KM:</strong> ${v.km||0}</p>
+      <p><strong>Total:</strong> $ ${(Number(v.total||0)).toLocaleString('es-AR')}  |  <strong>Próximo:</strong> ${v.proximoFecha || '-'}</p>
 
-        const acc=document.createElement("div");
-        acc.className="acciones";
-        acc.innerHTML=`
-          <button class="btn btn-verde"  onclick="window._edit('${v.id}')">Editar</button>
-          <button class="btn btn-outline" onclick="window._setEstado('${v.id}','pendiente')">Pendiente</button>
-          <button class="btn btn-outline" onclick="window._setEstado('${v.id}','adeuda')">Adeuda</button>
-          <button class="btn btn-outline" onclick="window._setEstado('${v.id}','pagado')">Pagado</button>
-          <button class="btn btn-naranja" onclick="window._print('${v.id}')">Imprimir</button>
-        `;
-        div.appendChild(acc);
-        lista.appendChild(div);
-      }
-    }
+      ${rep.length ? `
+      <details><summary>Ver repuestos (${rep.length})</summary>
+        <ul style="margin:6px 0 0 20px">
+          ${rep.map(r => `<li>${(r.desc||r.descripcion||'-')} — $ ${(Number(r.importe||r.costo||0)).toLocaleString('es-AR')}</li>`).join('')}
+        </ul>
+      </details>` : ''}
 
-    [fDesde,fHasta,fPatente,fTipo,fEstado,fQ].forEach(el=> el.addEventListener('input', render));
-    btnLimpiar.addEventListener('click', ()=>{
-      fDesde.value=fHasta.value=fPatente.value=fTipo.value=fEstado.value=fQ.value="";
-      render();
-    });
+      ${v.observaciones ? `<p style="opacity:.8"><strong>Obs:</strong> ${v.observaciones}</p>` : ''}
 
-    // --- Editar / Guardar
-    const modal=$("modal"), formEdit=$("formEdit");
-    const e_fecha=$("e_fecha"), e_prox=$("e_prox"), e_patente=$("e_patente"), e_tipo=$("e_tipo"), e_proveedor=$("e_proveedor"),
-          e_km=$("e_km"), e_repuestos=$("e_repuestos"), e_mo=$("e_mo"), e_otros=$("e_otros"), e_total=$("e_total"),
-          e_estado=$("e_estado"), e_obs=$("e_obs");
-    const btnGuardar=$("btnGuardar"), btnCerrar=$("btnCerrar");
-    btnCerrar.onclick=()=> modal.style.display="none";
+      <div class="acciones">
+        <button class="btn btn-verde" onclick="window._abrir('${v.id}')">Ver / Editar</button>
+      </div>
+    `;
+    lista.appendChild(div);
+  }
+}
 
-    window._edit=(id)=>{
-      const v = all.find(x=>x.id===id); if(!v) return;
-      current = v;
-      e_fecha.value = v.fecha || "";
-      e_prox.value  = v.proximoFecha || "";
-      e_patente.value = v.patente || "";
-      e_tipo.value = v.tipo || "Otro";
-      e_proveedor.value = v.proveedor || "";
-      e_km.value = v.km || 0;
-      e_repuestos.value = Array.isArray(v.repuestos)? v.repuestos.join("\n"): (v.repuestos||"");
-      e_mo.value = Number(v.manoDeObra||0);
-      e_otros.value = Number(v.otros||0);
-      e_total.value = Number(v.total||0);
-      e_estado.value = v.estado || "pendiente";
-      e_obs.value = v.observaciones || "";
-      modal.style.display="flex";
-    };
+/* -------------------- Selección para imprimir -------------------- */
+window._select = (id) => {
+  seleccionadoId = id;
+  btnImprimir.disabled = !seleccionadoId;
+};
 
-    btnGuardar.onclick= async ()=>{
-      if(!current) return;
-      const data={
-        fecha: e_fecha.value || "",
-        proximoFecha: e_prox.value || "",
-        patente: e_patente.value.trim(),
-        tipo: e_tipo.value,
-        proveedor: e_proveedor.value.trim(),
-        km: Number(e_km.value||0),
-        repuestos: e_repuestos.value ? e_repuestos.value.split(/\n+/).map(s=>s.trim()).filter(Boolean) : [],
-        manoDeObra: Number(e_mo.value||0),
-        otros: Number(e_otros.value||0),
-        total: Number(e_total.value||0),
-        estado: e_estado.value,
-        pagado: e_estado.value==="pagado",
-        observaciones: e_obs.value.trim()
-      };
-      try{
-        await updateDoc(doc(db,"mantenimientos", current.id), data);
-        modal.style.display="none";
-      }catch(err){ alert("Error guardando: "+err.message); }
-    };
+/* -------------------- Filtros eventos -------------------- */
+[fDesde,fHasta,fPatente,fTipo,fEstado,fQ].forEach(el => el.addEventListener('input', render));
+btnLimpiar.addEventListener('click', ()=>{
+  fDesde.value=''; fHasta.value=''; fPatente.value=''; fTipo.value=''; fEstado.value=''; fQ.value='';
+  render();
+});
 
-    // --- Cambiar estado rápido
-    window._setEstado = async (id, estado)=>{
-      try{
-        await updateDoc(doc(db,"mantenimientos", id), { estado, pagado: estado==="pagado" });
-      }catch(err){ alert("Error cambiando estado: "+err.message); }
-    };
+/* -------------------- Nuevo -------------------- */
+btnNuevo.addEventListener('click', ()=>{
+  actualId = null;
+  actual   = {fecha:hoyStr(), tipo:'Cambio de aceite', patente:'', km:0, proveedor:'', proximoFecha:'', repuestos:[], manoDeObra:0, otros:0, total:0, pagado:false, observaciones:''};
+  fillModal(actual);
+  showModal(true);
+});
 
-    // --- Imprimir un mantenimiento
-    window._print = (id)=>{
-      const v = all.find(x=>x.id===id); if(!v) return;
-      const repTxt = Array.isArray(v.repuestos) ? v.repuestos.join(", ") : (v.repuestos||"-");
-      const html = `
-        <html>
-          <head>
-            <meta charset="utf-8">
-            <title>Impresión mantenimiento</title>
-            <style>
-              body{font-family:Arial, sans-serif; margin:24px}
-              h2{text-align:center;text-transform:uppercase}
-              .box{border:1px solid #000;padding:14px;border-radius:8px}
-              .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-              .row p{margin:4px 0}
-              .mt{margin-top:8px}
-            </style>
-          </head>
-          <body>
-            <h2>Mantenimiento</h2>
-            <div class="box">
-              <div class="row">
-                <p><b>Fecha:</b> ${v.fecha||"-"}</p>
-                <p><b>Próx.:</b> ${v.proximoFecha||"-"}</p>
-                <p><b>Patente:</b> ${v.patente||"-"}</p>
-                <p><b>Tipo:</b> ${v.tipo||"-"}</p>
-                <p><b>Proveedor:</b> ${v.proveedor||"-"}</p>
-                <p><b>KM:</b> ${v.km||0}</p>
-              </div>
-              <p class="mt"><b>Repuestos:</b> ${repTxt}</p>
-              <p><b>MO:</b> ${v.manoDeObra||0}  |  <b>Otros:</b> ${v.otros||0}  |  <b>Total:</b> ${v.total||0}</p>
-              <p><b>Estado:</b> ${v.estado||"-"}</p>
-              <p><b>Obs:</b> ${v.observaciones||""}</p>
-            </div>
-            <script>window.print(); setTimeout(()=>window.close(), 300);<\/script>
-          </body>
-        </html>`;
-      const w = window.open("", "_blank", "width=820,height=900");
-      w.document.open(); w.document.write(html); w.document.close();
-    };
-  </script>
+/* -------------------- Modal helpers -------------------- */
+function hoyStr(){ return new Date().toISOString().slice(0,10); }
+
+function fillModal(v){
+  g('m_fecha').value    = v.fecha || hoyStr();
+  g('m_tipo').value     = v.tipo || 'Cambio de aceite';
+  g('m_patente').value  = v.patente || '';
+  g('m_km').value       = v.km || 0;
+  g('m_proveedor').value= v.proveedor || '';
+  g('m_proximo').value  = v.proximoFecha || '';
+  g('m_mdo').value      = Number(v.manoDeObra||0);
+  g('m_otros').value    = Number(v.otros||0);
+  g('m_total').value    = Number(v.total||0);
+  g('m_pagado').value   = (v.pagado===true || v.pagado==='si') ? 'si':'no';
+  g('m_obs').value      = v.observaciones || '';
+  // repuestos
+  repList.innerHTML = '';
+  (v.repuestos||[]).forEach((r,idx)=> addRepRow(r.desc||r.descripcion||'', Number(r.importe||r.costo||0), idx));
+}
+
+function addRepRow(desc, costo, idx){
+  const row = document.createElement('div');
+  row.className = 'rep-row';
+  row.innerHTML = `
+    <input value="${desc}" data-k="desc">
+    <input type="number" min="0" step="1" value="${Number(costo||0)}" data-k="costo">
+    <button class="rm" type="button" title="Quitar">✕</button>
+  `;
+  row.querySelector('.rm').onclick = () => {
+    row.remove(); recalcTotal();
+  };
+  row.querySelectorAll('input').forEach(i => i.addEventListener('input', recalcTotal));
+  repList.appendChild(row);
+}
+
+g('btnAddRep').addEventListener('click', ()=>{
+  if (!repDesc.value.trim()) { repDesc.focus(); return; }
+  addRepRow(repDesc.value.trim(), Number(repImporte.value||0));
+  repDesc.value=''; repImporte.value='';
+  recalcTotal();
+});
+
+[g('m_mdo'), g('m_otros')].forEach(el => el.addEventListener('input', recalcTotal));
+function recalcTotal(){
+  const mdo = Number(g('m_mdo').value||0);
+  const otr = Number(g('m_otros').value||0);
+  const rep = [...repList.querySelectorAll('.rep-row')].reduce((a,row)=>{
+    return a + Number(row.querySelector('input[data-k="costo"]').value||0);
+  },0);
+  g('m_total').value = Math.max(0, Math.round(mdo + otr + rep));
+}
+
+function showModal(flag){ modal.style.display = flag ? 'flex' : 'none'; }
+
+/* -------------------- Abrir -------------------- */
+window._abrir = (id)=>{
+  const v = todos.find(x => x.id === id);
+  if (!v) return;
+  actualId = id; actual = v;
+  fillModal(v);
+  showModal(true);
+};
+
+/* -------------------- Guardar / Eliminar -------------------- */
+g('btnSave').onclick = async ()=>{
+  const data = {
+    fecha: g('m_fecha').value || hoyStr(),
+    tipo:  g('m_tipo').value || 'Cambio de aceite',
+    patente: (g('m_patente').value||'').toUpperCase().trim(),
+    km: Number(g('m_km').value||0),
+    proveedor: g('m_proveedor').value || '',
+    proximoFecha: g('m_proximo').value || '',
+    repuestos: [...repList.querySelectorAll('.rep-row')].map(row => ({
+      desc: row.querySelector('[data-k="desc"]').value.trim(),
+      importe: Number(row.querySelector('[data-k="costo"]').value||0)
+    })).filter(r => r.desc),
+    manoDeObra: Number(g('m_mdo').value||0),
+    otros: Number(g('m_otros').value||0),
+    total: Number(g('m_total').value||0),
+    pagado: g('m_pagado').value === 'si',
+    observaciones: g('m_obs').value.trim()
+  };
+
+  try{
+    if (actualId) await updateDoc(doc(db,'mantenimientos', actualId), data);
+    else          await addDoc(collection(db,'mantenimientos'), data);
+    showModal(false);
+  }catch(err){
+    alert('Error al guardar: ' + err.message);
+  }
+};
+
+g('btnDelete').onclick = async ()=>{
+  if (!actualId) { showModal(false); return; }
+  if (!confirm('¿Eliminar este mantenimiento?')) return;
+  try{
+    await deleteDoc(doc(db,'mantenimientos', actualId));
+    showModal(false);
+  }catch(err){
+    alert('Error: ' + err.message);
+  }
+};
+g('btnClose').onclick = ()=> showModal(false);
+
+/* -------------------- Imprimir -------------------- */
+btnImprimir.addEventListener('click', ()=>{
+  const v = todos.find(x => x.id === seleccionadoId);
+  if (!v){ alert('Seleccioná un mantenimiento.'); return; }
+  printMant(v);
+});
+g('btnPrintModal').onclick = ()=>{
+  if (!actual){ alert('Abrí un mantenimiento primero.'); return; }
+  printMant(actual);
+};
+
+function printMant(v){
+  if (!v){ alert('Nada para imprimir'); return; }
+  const repuestos = Array.isArray(v.repuestos) ? v.repuestos : [];
+  const fmt = n => new Intl.NumberFormat('es-AR', {style:'currency', currency:'ARS', maximumFractionDigits:0})
+                    .format(Number(n||0));
+  const pagadoTxt = (v.pagado===true || v.pagado==='si') ? 'Pagado' : 'Adeudado';
+
+  const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Mantenimiento - ${v.patente||''}</title>
+<style>
+  body{font-family:Arial,Segoe UI,Tahoma,sans-serif;margin:28px;color:#111}
+  h1{margin:0 0 8px}
+  .meta{margin-bottom:12px}
+  .box{border:1px solid #bbb;border-radius:8px;padding:12px;margin-top:12px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;font-size:14px}
+  .right{text-align:right}
+  .tag{display:inline-block;padding:3px 8px;border-radius:20px;font-size:12px;background:#eee}
+  .ade{background:#ffe1e1;color:#b71c1c}
+  .pag{background:#e6f4ea;color:#1b5e20}
+  @media print{ .no-print{display:none} }
+</style>
+</head>
+<body>
+  <h1>Mantenimiento — ${v.patente||''}</h1>
+  <div class="meta">
+    <span class="tag ${pagadoTxt==='Pagado'?'pag':'ade'}">${pagadoTxt}</span>
+  </div>
+
+  <div class="box">
+    <table>
+      <tr><th>Fecha</th><td>${v.fecha||''}</td><th>Próximo</th><td>${v.proximoFecha||''}</td></tr>
+      <tr><th>Tipo</th><td>${v.tipo||''}</td><th>KM</th><td>${v.km||0}</td></tr>
+      <tr><th>Proveedor/Taller</th><td>${v.proveedor||''}</td><th>Total</th><td class="right">${fmt(v.total||0)}</td></tr>
+      <tr><th>Estado</th><td>${pagadoTxt}</td><th>Patente</th><td>${v.patente||''}</td></tr>
+    </table>
+  </div>
+
+  <div class="box">
+    <h3 style="margin:0 0 8px">Repuestos</h3>
+    ${repuestos.length ? `
+    <table>
+      <thead><tr><th>Descripción</th><th class="right">Importe</th></tr></thead>
+      <tbody>
+        ${repuestos.map(r => {
+          const desc = (r.desc || r.descripcion || r.nombre || '').toString();
+          const imp  = fmt(r.importe || r.costo || 0);
+          return `<tr><td>${desc}</td><td class="right">${imp}</td></tr>`;
+        }).join('')}
+      </tbody>
+    </table>` : `<div>No se cargaron repuestos.</div>`}
+  </div>
+
+  ${v.observaciones ? `<div class="box"><strong>Observaciones:</strong><br>${(v.observaciones||'').replace(/\n/g,'<br>')}</div>` : ''}
+
+  <div style="margin-top:16px;font-size:12px;color:#555">Generado: ${new Date().toLocaleString('es-AR')}</div>
+  <button class="no-print" onclick="window.print()">Imprimir</button>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank', 'width=900,height=1000');
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 300);
+}
+</script>
 </body>
 </html>
