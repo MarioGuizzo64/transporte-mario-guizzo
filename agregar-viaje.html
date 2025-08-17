@@ -65,6 +65,12 @@
     }
     .btn-volver  { background: orange; color: #000; }
     .btn-guardar { background: green;  color: #fff; }
+
+ /* Sección mantenimiento */
+    .mant-box{border:1px dashed #444;border-radius:8px;padding:12px;margin-top:4px}
+    .mant-extra{display:none;margin-top:8px}
+    .mant-extra.show{display:block}
+    
     #modalExito {
       display: none;
       position: fixed;
@@ -157,6 +163,34 @@
       <label for="observaciones">Observaciones</label>
       <textarea id="observaciones" placeholder="Notas adicionales..."></textarea>
 
+       <!-- NUEVO: Sección mantenimiento -->
+      <div class="mant-box">
+        <label><input type="checkbox" id="reqMant"> ¿Requiere mantenimiento?</label>
+
+        <div id="mantExtra" class="mant-extra">
+          <div class="row">
+            <div>
+              <label for="mantTipo">Tipo</label>
+              <select id="mantTipo">
+                <option value="">Seleccionar…</option>
+                <option>Servicio</option>
+                <option>Cambio de aceite</option>
+                <option>Filtros</option>
+                <option>Cubiertas</option>
+                <option>Frenos</option>
+                <option>Reparación</option>
+                <option>Otro</option>
+              </select>
+            </div>
+            <div>
+              <label for="mantDesc">Descripción</label>
+              <input type="text" id="mantDesc" placeholder="Breve descripción del problema">
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- FIN mantenimiento -->
+
       <div class="botones">
         <button type="button" class="btn-volver" onclick="window.location.href='index.html'">Volver</button>
         <button type="submit" class="btn-guardar">Guardar viaje</button>
@@ -202,6 +236,10 @@
       document.getElementById(t.sel).addEventListener('change', () => toggleMonto(t.sel, t.grupo, t.input));
       toggleMonto(t.sel, t.grupo, t.input); // estado inicial
     });
+ // Mostrar/ocultar extras de mantenimiento
+    const reqMant   = document.getElementById('reqMant');
+    const mantExtra = document.getElementById('mantExtra');
+    reqMant.addEventListener('change', ()=> mantExtra.classList.toggle('show', reqMant.checked));
 
     // Patente siempre en mayúsculas
     const patenteInput = document.getElementById('patente');
@@ -281,6 +319,43 @@
         alert("Error al guardar: " + e);
       }
     });
+    // NUEVOS: datos para mantenimiento
+        reqMantenimiento: reqMant.checked,
+        mantTipoSugerido: (document.getElementById("mantTipo").value || "").trim(),
+        mantDescripcion:  (document.getElementById("mantDesc").value || "").trim(),
+
+        timestamp: serverTimestamp()
+      };
+
+      try {
+        // 1) Guardar viaje
+        const ref = await addDoc(collection(db, "viajes"), viaje);
+
+        let msg = "El viaje se guardó correctamente.";
+        // 2) Si requiere mantenimiento, crear doc en 'mantenimientos'
+        if (viaje.reqMantenimiento) {
+          const mant = {
+            creadoDesdeViaje: true,
+            viajeId: ref.id,
+            fecha: viaje.fecha,
+            patente: viaje.patente,
+            tipo: viaje.mantTipoSugerido || "Otro",
+            proveedor: "",
+            km: 0,
+            repuestos: [],
+            manoDeObra: 0,
+            otros: 0,
+            total: 0,
+            pagado: false,
+            estado: "pendiente",
+            proximoFecha: "",
+            observaciones: viaje.mantDescripcion || viaje.observaciones || "",
+            timestamp: serverTimestamp()
+          };
+          await addDoc(collection(db, "mantenimientos"), mant);
+          msg += " También se generó un pedido de mantenimiento.";
+        }
+
   </script>
 </body>
 </html>
