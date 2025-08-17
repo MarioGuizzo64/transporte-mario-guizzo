@@ -66,7 +66,7 @@
     .btn-volver  { background: orange; color: #000; }
     .btn-guardar { background: green;  color: #fff; }
 
- /* Sección mantenimiento */
+    /* Sección mantenimiento */
     .mant-box{border:1px dashed #444;border-radius:8px;padding:12px;margin-top:4px}
     .mant-extra{display:none;margin-top:8px}
     .mant-extra.show{display:block}
@@ -163,12 +163,12 @@
       <label for="observaciones">Observaciones</label>
       <textarea id="observaciones" placeholder="Notas adicionales..."></textarea>
 
-       <!-- NUEVO: Sección mantenimiento -->
+      <!-- Sección mantenimiento -->
       <div class="mant-box">
         <label><input type="checkbox" id="reqMant"> ¿Requiere mantenimiento?</label>
 
         <div id="mantExtra" class="mant-extra">
-          <div class="row">
+          <div class="fila">
             <div>
               <label for="mantTipo">Tipo</label>
               <select id="mantTipo">
@@ -236,7 +236,8 @@
       document.getElementById(t.sel).addEventListener('change', () => toggleMonto(t.sel, t.grupo, t.input));
       toggleMonto(t.sel, t.grupo, t.input); // estado inicial
     });
- // Mostrar/ocultar extras de mantenimiento
+
+    // Mostrar/ocultar extras de mantenimiento
     const reqMant   = document.getElementById('reqMant');
     const mantExtra = document.getElementById('mantExtra');
     reqMant.addEventListener('change', ()=> mantExtra.classList.toggle('show', reqMant.checked));
@@ -271,14 +272,19 @@
 
       const cargoCombustible = document.getElementById("cargoCombustible").value === "si";
 
+      // Datos de mantenimiento (si se marcó)
+      const mantRequiere     = reqMant.checked;
+      const mantTipoSugerido = (document.getElementById("mantTipo").value || "").trim();
+      const mantDescripcion  = (document.getElementById("mantDesc").value || "").trim();
+
       const viaje = {
         fecha: document.getElementById("fecha").value,
         cuitOrigen: document.getElementById("cuitOrigen").value.trim(),
         destino: document.getElementById("destino").value.trim(),
         patente: document.getElementById("patente").value.trim(),
         tipoCereal: document.getElementById("tipoCereal").value.trim(),
-        kgLlevados: parseFloat(document.getElementById("kgLlevados").value),
-        kgDescargados: parseFloat(document.getElementById("kgDescargados").value),
+        kgLlevados: parseFloat(document.getElementById("kgLlevados").value) || 0,
+        kgDescargados: parseFloat(document.getElementById("kgDescargados").value) || 0,
         cargoCombustible,
 
         adelantoAplica: document.getElementById("adelantoAplica").value === "si",
@@ -291,38 +297,11 @@
         entradaMonto:   parseFloat(document.getElementById("entradaMonto").value || 0),
 
         observaciones: document.getElementById("observaciones").value.trim(),
-        timestamp: serverTimestamp()
-      };
 
-      try {
-        await addDoc(collection(db, "viajes"), viaje);
-
-        const modal = document.getElementById("modalExito");
-        modal.style.display = "block";
-
-        // Después del aviso, redirige
-        setTimeout(() => {
-          modal.style.display = "none";
-
-          if (cargoCombustible) {
-            // Enlaza a agregar-combustible con prefill de patente y fecha
-            const q = new URLSearchParams({
-              patente: viaje.patente,
-              fecha:   viaje.fecha
-            });
-            window.location.href = "agregar-combustible.html?" + q.toString();
-          } else {
-            window.location.href = "index.html";
-          }
-        }, 5000); // 5s como pediste
-      } catch (e) {
-        alert("Error al guardar: " + e);
-      }
-    });
-    // NUEVOS: datos para mantenimiento
-        reqMantenimiento: reqMant.checked,
-        mantTipoSugerido: (document.getElementById("mantTipo").value || "").trim(),
-        mantDescripcion:  (document.getElementById("mantDesc").value || "").trim(),
+        // guardo lo pedido para mantenimiento
+        reqMantenimiento: mantRequiere,
+        mantTipoSugerido,
+        mantDescripcion,
 
         timestamp: serverTimestamp()
       };
@@ -331,15 +310,14 @@
         // 1) Guardar viaje
         const ref = await addDoc(collection(db, "viajes"), viaje);
 
-        let msg = "El viaje se guardó correctamente.";
         // 2) Si requiere mantenimiento, crear doc en 'mantenimientos'
-        if (viaje.reqMantenimiento) {
+        if (mantRequiere) {
           const mant = {
             creadoDesdeViaje: true,
             viajeId: ref.id,
             fecha: viaje.fecha,
             patente: viaje.patente,
-            tipo: viaje.mantTipoSugerido || "Otro",
+            tipo: mantTipoSugerido || "Otro",
             proveedor: "",
             km: 0,
             repuestos: [],
@@ -349,13 +327,32 @@
             pagado: false,
             estado: "pendiente",
             proximoFecha: "",
-            observaciones: viaje.mantDescripcion || viaje.observaciones || "",
+            observaciones: mantDescripcion || viaje.observaciones || "",
             timestamp: serverTimestamp()
           };
           await addDoc(collection(db, "mantenimientos"), mant);
-          msg += " También se generó un pedido de mantenimiento.";
         }
 
+        // Modal de éxito + redirección
+        const modal = document.getElementById("modalExito");
+        modal.style.display = "block";
+
+        setTimeout(() => {
+          modal.style.display = "none";
+          if (cargoCombustible) {
+            const q = new URLSearchParams({
+              patente: viaje.patente,
+              fecha:   viaje.fecha
+            });
+            window.location.href = "agregar-combustible.html?" + q.toString();
+          } else {
+            window.location.href = "index.html";
+          }
+        }, 5000);
+      } catch (e) {
+        alert("Error al guardar: " + e.message);
+      }
+    });
   </script>
 </body>
 </html>
