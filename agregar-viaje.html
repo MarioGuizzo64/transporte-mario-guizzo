@@ -7,89 +7,35 @@
   <link rel="stylesheet" href="style.css">
   <script src="https://kit.fontawesome.com/a2e0e6ad65.js" crossorigin="anonymous"></script>
   <style>
-    body {
-      margin: 0;
-      font-family: 'Roboto', Arial, sans-serif;
-      background-color: #FFD700; /* Amarillo */
-      color: white;
-    }
-    .container {
-      background-color: #000;
-      max-width: 520px;
-      margin: 40px auto;
-      padding: 28px;
-      border-radius: 10px;
-      box-shadow: 0 0 20px rgba(0,0,0,.5);
-    }
-    h2 {
-      text-align: center;
-      font-size: 22px;
-      text-transform: uppercase;
-      text-decoration: underline;
-      font-weight: bold;
-      color: white;
-      margin: 0 0 20px;
-    }
-    form { display: flex; flex-direction: column; gap: 12px; }
-    label { font-weight: bold; text-transform: uppercase; }
-    input, textarea, select {
-      padding: 8px;
-      border: 1px solid #000;
-      background-color: #fff;
-      color: #000;
-      border-radius: 4px;
-      width: 100%;
-      box-sizing: border-box;
-    }
-    textarea { min-height: 80px; resize: vertical; }
-    .fila {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-    .grupo-monto { display: none; }
-    .botones {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      margin-top: 12px;
-    }
-    .btn-volver, .btn-guardar {
-      flex: 1;
-      padding: 10px;
-      border: 1px solid #000;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: bold;
-      text-transform: uppercase;
-    }
-    .btn-volver  { background: orange; color: #000; }
-    .btn-guardar { background: green;  color: #fff; }
-
-    /* Sección mantenimiento */
+    body{margin:0;font-family:'Roboto',Arial,sans-serif;background:#FFD700;color:#fff}
+    .container{background:#000;max-width:520px;margin:40px auto;padding:28px;border-radius:10px;box-shadow:0 0 20px rgba(0,0,0,.5)}
+    h2{text-align:center;font-size:22px;text-transform:uppercase;text-decoration:underline;font-weight:bold;color:#fff;margin:0 0 20px}
+    form{display:flex;flex-direction:column;gap:12px}
+    label{font-weight:bold;text-transform:uppercase}
+    input,textarea,select{padding:8px;border:1px solid #000;background:#fff;color:#000;border-radius:4px;width:100%;box-sizing:border-box}
+    textarea{min-height:80px;resize:vertical}
+    .fila{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .grupo-monto{display:none}
+    .botones{display:flex;justify-content:space-between;gap:10px;margin-top:12px}
+    .btn-volver,.btn-guardar{flex:1;padding:10px;border:1px solid #000;border-radius:4px;cursor:pointer;font-weight:bold;text-transform:uppercase}
+    .btn-volver{background:orange;color:#000}
+    .btn-guardar{background:green;color:#fff}
     .mant-box{border:1px dashed #444;border-radius:8px;padding:12px;margin-top:4px}
     .mant-extra{display:none;margin-top:8px}
     .mant-extra.show{display:block}
-    
-    #modalExito {
-      display: none;
-      position: fixed;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      background: #fff; color: green;
-      padding: 18px 22px;
-      border: 2px solid green; border-radius: 10px;
-      z-index: 1000;
-      text-align: center;
-      font-weight: bold;
+    #modalExito{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;color:green;padding:18px 22px;border:2px solid green;border-radius:10px;z-index:1000;text-align:center;font-weight:bold}
+    .ayuda{font-size:12px;color:#bbb;margin-top:-4px;text-transform:none}
+
+    /* DEBUG (puedes quitarlo cuando funcione) */
+    #dbg{
+      position:fixed;left:8px;right:8px;bottom:8px;background:#000;border:1px solid #333;border-radius:8px;
+      padding:8px 10px;color:#9ee;font:12px/1.3 monospace;opacity:.9
     }
-    .ayuda {
-      font-size: 12px; color:#bbb; margin-top:-4px;
-      text-transform: none;
-    }
+    #dbg b{color:#fff}
+    #dbg .bad{color:#ff9e9e}
+    #dbg .ok{color:#9effa3}
   </style>
 </head>
-
 <body>
   <div class="container">
     <h2>Agregar viaje</h2>
@@ -166,7 +112,6 @@
       <!-- Sección mantenimiento -->
       <div class="mant-box">
         <label><input type="checkbox" id="reqMant"> ¿Requiere mantenimiento?</label>
-
         <div id="mantExtra" class="mant-extra">
           <div class="fila">
             <div>
@@ -201,10 +146,21 @@
 
   <div id="modalExito">¡Guardado correctamente!</div>
 
+  <!-- DEBUG PANEL -->
+  <div id="dbg">
+    <div><b>UID:</b> <span id="d_uid" class="bad">—</span> · <b>email:</b> <span id="d_mail">—</span></div>
+    <div><b>projectId:</b> <span id="d_pid">—</span> · <b>write test:</b> <span id="d_probe" class="bad">pendiente…</span></div>
+  </div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";  
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getFirestore, collection, addDoc, serverTimestamp, setLogLevel
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // 🔎 logs Firestore
+    setLogLevel('debug');
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
@@ -216,23 +172,54 @@
     };
 
     const app  = initializeApp(firebaseConfig);
-    const auth = getAuth(app); 
+    const auth = getAuth(app);
     const db   = getFirestore(app);
 
-    // ---- Guard simple: si no hay sesión, al login
+    // DEBUG view
+    document.getElementById('d_pid').textContent = firebaseConfig.projectId;
+    const dUID   = document.getElementById('d_uid');
+    const dMail  = document.getElementById('d_mail');
+    const dProbe = document.getElementById('d_probe');
+
+    // ---- Guard de sesión y TEST de permisos
     let currentUser = null;
-    onAuthStateChanged(auth, (u) => {
+    onAuthStateChanged(auth, async (u) => {
+      console.log('[AUTH] user =', u?.uid || null);
       if (!u) {
+        dUID.textContent = 'sin sesión';
+        dUID.className = 'bad';
         window.location.href = "login.html";
-      } else {
-        currentUser = u;
-        // Tip: podés setear por defecto la fecha de hoy
-        if (!document.getElementById('fecha').value) {
-          document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
-        }
+        return;
+      }
+      currentUser = u;
+      dUID.textContent = u.uid;
+      dUID.className = 'ok';
+      dMail.textContent = u.email || '(sin email)';
+
+      // Fecha por defecto
+      if (!document.getElementById('fecha').value) {
+        document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
+      }
+
+      // 🔥 TEST: escribir un doc de prueba
+      try {
+        console.log('[PROBE] intentando escribir en _perms_probe…');
+        const r = await addDoc(collection(db, "_perms_probe"), {
+          at: serverTimestamp(),
+          uid: u.uid,
+          page: "agregar-viaje"
+        });
+        console.log('[PROBE] OK id=', r.id);
+        dProbe.textContent = 'OK';
+        dProbe.className = 'ok';
+      } catch (e) {
+        console.error('[PROBE] FAIL', e.code, e.message);
+        dProbe.textContent = `FAIL ${e.code||''}`;
+        dProbe.className = 'bad';
+        alert("⚠️ No tengo permisos para escribir (test). Código: " + (e.code||e.message));
       }
     });
-    
+
     // ----- UI helpers: mostrar/ocultar montos según "Sí/No"
     const mapToggles = [
       { sel: 'adelantoAplica', grupo: 'adelantoMontoGrupo', input: 'adelantoMonto' },
@@ -246,11 +233,11 @@
       const on  = (sel.value === 'si');
       box.style.display = on ? 'block' : 'none';
       inp.required = on;
-      if (!on) inp.value = ''; // limpiar si pasa a "No"
+      if (!on) inp.value = '';
     }
     mapToggles.forEach(t => {
       document.getElementById(t.sel).addEventListener('change', () => toggleMonto(t.sel, t.grupo, t.input));
-      toggleMonto(t.sel, t.grupo, t.input); // estado inicial
+      toggleMonto(t.sel, t.grupo, t.input);
     });
 
     // Mostrar/ocultar extras de mantenimiento
@@ -267,13 +254,13 @@
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      /* ← NUEVO: no intento escribir si no hay sesión */
       if (!currentUser) {
-        alert("Tu sesión expiró. Iniciá sesión nuevamente.");
+        alert("No hay sesión. Volvé a iniciar sesión.");
+        window.location.href = "login.html";
         return;
       }
 
-      // Validación básica de obligatorios
+      // Validación básica
       const obligatorios = ["fecha","cuitOrigen","destino","patente","tipoCereal","kgLlevados","kgDescargados"];
       for (const id of obligatorios) {
         if (!document.getElementById(id).value) {
@@ -281,8 +268,7 @@
           return;
         }
       }
-
-      // Si aplica, validar montos numéricos
+      // Montos si aplica
       for (const t of mapToggles) {
         const aplica = document.getElementById(t.sel).value === 'si';
         const val    = document.getElementById(t.input).value;
@@ -294,7 +280,7 @@
 
       const cargoCombustible = document.getElementById("cargoCombustible").value === "si";
 
-      // Datos de mantenimiento (si se marcó)
+      // Datos mantenimiento (si se marcó)
       const mantRequiere     = reqMant.checked;
       const mantTipoSugerido = (document.getElementById("mantTipo").value || "").trim();
       const mantDescripcion  = (document.getElementById("mantDesc").value || "").trim();
@@ -320,7 +306,7 @@
 
         observaciones: document.getElementById("observaciones").value.trim(),
 
-        // guardo lo pedido para mantenimiento
+        // mantenimiento
         reqMantenimiento: mantRequiere,
         mantTipoSugerido,
         mantDescripcion,
@@ -329,10 +315,9 @@
       };
 
       try {
-        // 1) Guardar viaje
+        console.log('[WRITE] uid=', currentUser.uid, 'colección=viajes');
         const ref = await addDoc(collection(db, "viajes"), viaje);
 
-        // 2) Si requiere mantenimiento, crear doc en 'mantenimientos'
         if (mantRequiere) {
           const mant = {
             creadoDesdeViaje: true,
@@ -341,38 +326,28 @@
             patente: viaje.patente,
             tipo: mantTipoSugerido || "Otro",
             proveedor: "",
-            km: 0,
-            repuestos: [],
-            manoDeObra: 0,
-            otros: 0,
-            total: 0,
-            pagado: false,
-            estado: "pendiente",
-            proximoFecha: "",
+            km: 0, repuestos: [], manoDeObra: 0, otros: 0, total: 0,
+            pagado: false, estado: "pendiente", proximoFecha: "",
             observaciones: mantDescripcion || viaje.observaciones || "",
             timestamp: serverTimestamp()
           };
           await addDoc(collection(db, "mantenimientos"), mant);
         }
 
-        // Modal de éxito + redirección
         const modal = document.getElementById("modalExito");
         modal.style.display = "block";
-
         setTimeout(() => {
           modal.style.display = "none";
           if (cargoCombustible) {
-            const q = new URLSearchParams({
-              patente: viaje.patente,
-              fecha:   viaje.fecha
-            });
+            const q = new URLSearchParams({ patente: viaje.patente, fecha: viaje.fecha });
             window.location.href = "agregar-combustible.html?" + q.toString();
           } else {
             window.location.href = "index.html";
           }
-        }, 5000);
+        }, 3000);
       } catch (e) {
-        alert("Error al guardar: " + e.message);
+        console.error('[WRITE] ERROR', e.code, e.message);
+        alert("Error al guardar: " + (e.code || e.message));
       }
     });
   </script>
