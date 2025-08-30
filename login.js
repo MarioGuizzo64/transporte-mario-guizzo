@@ -1,4 +1,4 @@
-// login.js robusto
+// login.js (robusto: busca rol por docId y por campos UID/uid)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
@@ -18,46 +18,71 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 
-// Helper: intentar obtener el doc de usuarios por UID, luego por uid, luego por email
-async function fetchUsuarioDoc(user) {
-  // 1) Por ID = UID (recomendado tener así los docs)
-  let snap = await getDoc(doc(db, 'usuarios', user.uid));
-  if (snap.exists()) return snap.data();
+// --- helper: intenta múltiples formas de obtener el rol ---
+async function getRolDeUsuario(uid) {
+  // 1) por ID de documento (/usuarios/{uid})
+  try {
+    const ref = doc(db, "usuarios", uid);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data() || {};
+      const rol = (data.rol || data.role || "").toString().toLowerCase();
+      console.log("[LOGIN] rol por docId:", rol);
+      if (rol) return rol;
+    } else {
+      console.log("[LOGIN] /usuarios/{uid} no existe");
+    }
+  } catch (e) {
+    console.warn("[LOGIN] getDoc error:", e);
+  }
 
-  // 2) Fallback por campo uid
-  let qs = await getDocs(query(collection(db, 'usuarios'), where('uid', '==', user.uid)));
-  if (!qs.empty) return qs.docs[0].data();
+  // 2) por campo UID (mayúsculas)
+  try {
+    const q1 = query(collection(db, "usuarios"), where("UID", "==", uid));
+    const s1 = await getDocs(q1);
+    if (!s1.empty) {
+      const data = s1.docs[0].data() || {};
+      const rol = (data.rol || data.role || "").toString().toLowerCase();
+      console.log("[LOGIN] rol por campo UID:", rol);
+      if (rol) return rol;
+    } else {
+      console.log("[LOGIN] no hay docs con campo UID == uid");
+    }
+  } catch (e) {
+    console.warn("[LOGIN] query UID error:", e);
+  }
 
-  // 3) Fallback por email (minúsculas)
-  const eml = (user.email || '').toLowerCase();
-  qs = await getDocs(query(collection(db, 'usuarios'), where('email', '==', eml)));
-  if (!qs.empty) return qs.docs[0].data();
+  // 3) por campo uid (minúsculas)
+  try {
+    const q2 = query(collection(db, "usuarios"), where("uid", "==", uid));
+    const s2 = await getDocs(q2);
+    if (!s2.empty) {
+      const data = s2.docs[0].data() || {};
+      const rol = (data.rol || data.role || "").toString().toLowerCase();
+      console.log("[LOGIN] rol por campo uid:", rol);
+      if (rol) return rol;
+    } else {
+      console.log("[LOGIN] no hay docs con campo uid == uid");
+    }
+  } catch (e) {
+    console.warn("[LOGIN] query uid error:", e);
+  }
 
-  return null;
+  return null; // no encontrado
 }
 
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  // Normalizar email
-  const email = (document.getElementById("email").value || '').trim().toLowerCase();
+  const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
 
   try {
     const { user } = await signInWithEmailAndPassword(auth, email, password);
     console.log("[LOGIN] UID:", user.uid, "email:", user.email);
 
-    // Buscar rol en Firestore (doc por UID -> uid -> email)
-    const datos = await fetchUsuarioDoc(user);
-
-    if (!datos || !datos.rol) {
-      // No se encontró el doc/rol: por seguridad, enviar a chofer
-      alert('No pude leer tu rol en "usuarios". Te llevo a la pantalla de chofer.');
-      window.location.href = "index.html";
-      return;
-    }
-
-    const rol = String(datos.rol || '').toLowerCase();
+    const rol = (await getRolDeUsuario(user.uid)) || "chofer";
     console.log("[LOGIN] Rol resuelto:", rol);
+
     window.location.href = (rol === "admin") ? "admin.html" : "index.html";
   } catch (error) {
     console.error("[LOGIN] Error de login:", error);
