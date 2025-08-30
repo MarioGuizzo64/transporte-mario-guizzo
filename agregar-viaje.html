@@ -156,8 +156,9 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    // IMPORT EXTRA solo para el test de permisos (no toca tu lógica)
     import { setDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    /* 👇 NUEVO: import para poder usar setLogLevel */
+    import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     // 🔎 logs Firestore
     setLogLevel('debug');
@@ -175,53 +176,52 @@
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
-// ---- DEBUG de proyecto (para confirmar que estás en el proyecto correcto)
-console.log('[DEBUG] projectId', app.options.projectId);
-console.log('[DEBUG] authDomain', app.options.authDomain);
+    // ---- DEBUG de proyecto (para confirmar que estás en el proyecto correcto)
+    console.log('[DEBUG] projectId', app.options.projectId);
+    console.log('[DEBUG] authDomain', app.options.authDomain);
 
-// ---- Guard de sesión: no envíes nada a Firestore si Auth todavía no cargó
-let currentUser = null;
-let authReady = false;
+    // ---- Guard de sesión: no envíes nada a Firestore si Auth todavía no cargó
+    let currentUser = null;
+    let authReady = false;
 
-onAuthStateChanged(auth, (u) => {
-  console.log('[DEBUG] onAuthStateChanged =>', u?.uid, u?.email);
-  if (!u) {
-    // si no hay sesión, redirigimos al login
-    window.location.href = "login.html";
-    return;
-  }
-  currentUser = u;
-  authReady = true;
+    onAuthStateChanged(auth, (u) => {
+      console.log('[DEBUG] onAuthStateChanged =>', u?.uid, u?.email);
+      if (!u) {
+        window.location.href = "login.html";
+        return;
+      }
+      currentUser = u;
+      authReady = true;
 
-  // Fecha por defecto (si querés)
-  const f = document.getElementById('fecha');
-  if (f && !f.value) f.value = new Date().toISOString().slice(0,10);
-});
-
-// Bloqueo “suave” del submit si Auth no está listo aún
-document.getElementById("formViaje").addEventListener("submit", (ev) => {
-  if (!authReady || !currentUser) {
-    ev.preventDefault();
-    alert("Esperá un segundo que se cargue tu sesión…");
-  }
-}, { capture:false });
-
-// Llamalo desde la consola del navegador con: await window._permTest()
-window._permTest = async () => {
-  try {
-    const id = 'TEST_' + Math.random().toString(36).slice(2,8);
-    await setDoc(doc(db, 'viajes', id), {
-      _probe: true,
-      at: serverTimestamp(),
-      page: 'agregar-viaje'
+      // Fecha por defecto (si querés)
+      const f = document.getElementById('fecha');
+      if (f && !f.value) f.value = new Date().toISOString().slice(0,10);
     });
-    alert('OK: se escribió viajes/' + id);
-  } catch (e) {
-    console.error('[DEBUG] _permTest', e.code, e.message, e);
-    alert('DENEGADO: ' + e.code + ' — ' + e.message);
-  }
-};
-    
+
+    // Bloqueo “suave” del submit si Auth no está listo aún
+    document.getElementById("formViaje").addEventListener("submit", (ev) => {
+      if (!authReady || !currentUser) {
+        ev.preventDefault();
+        alert("Esperá un segundo que se cargue tu sesión…");
+      }
+    }, { capture:false });
+
+    // Llamalo desde la consola del navegador con: await window._permTest()
+    window._permTest = async () => {
+      try {
+        const id = 'TEST_' + Math.random().toString(36).slice(2,8);
+        await setDoc(doc(db, 'viajes', id), {
+          _probe: true,
+          at: serverTimestamp(),
+          page: 'agregar-viaje'
+        });
+        alert('OK: se escribió viajes/' + id);
+      } catch (e) {
+        console.error('[DEBUG] _permTest', e.code, e.message, e);
+        alert('DENEGADO: ' + (e.code || e.message));
+      }
+    };
+
     // DEBUG view
     document.getElementById('d_pid').textContent = firebaseConfig.projectId;
     const dUID   = document.getElementById('d_uid');
@@ -229,7 +229,10 @@ window._permTest = async () => {
     const dProbe = document.getElementById('d_probe');
 
     // ---- Guard de sesión y TEST de permisos
-    let currentUser = null;
+    /* ❗️ANTES: aquí redeclarabas 'let currentUser = null;' y eso rompía el script.
+       Lo dejo comentado para que veas dónde estaba.
+       // let currentUser = null;
+    */
     onAuthStateChanged(auth, async (u) => {
       console.log('[AUTH] user =', u?.uid || null);
       if (!u) {
@@ -248,10 +251,11 @@ window._permTest = async () => {
         document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
       }
 
-      // 🔥 TEST: escribir un doc de prueba
+      // 🔥 TEST de permisos: ahora escribe en 'viajes' (permitido por tus reglas)
       try {
-        console.log('[PROBE] intentando escribir en _perms_probe…');
-        const r = await addDoc(collection(db, "_perms_probe"), {
+        console.log('[PROBE] intentando escribir doc de prueba en viajes…');
+        const r = await addDoc(collection(db, "viajes"), {
+          _probe: true,
           at: serverTimestamp(),
           uid: u.uid,
           page: "agregar-viaje"
@@ -400,3 +404,4 @@ window._permTest = async () => {
   </script>
 </body>
 </html>
+
