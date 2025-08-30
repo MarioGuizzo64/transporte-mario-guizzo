@@ -124,12 +124,17 @@
   </div>
 
   <div class="modal" id="modal-confirmacion">Carga guardada correctamente</div>
+
 <script type="module">
-  // Importa y usa las funciones de los SDK que necesites
+  // === TUS IMPORTS ORIGINALES (se mantienen) ===
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  // Tu configuración de Firebase
+  // === AGREGADOS ===
+  import { serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+  // Tu configuración de Firebase (dejé tus líneas tal cual)
   const firebaseConfig = {
     apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
     authDomain: "transporte-mario-guizzo.firebaseapp.com",
@@ -142,20 +147,57 @@
 
   // Inicializar Firebase
   const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+  const db  = getFirestore(app);
+  // === AGREGADO: Auth para cumplir reglas ===
+  const auth = getAuth(app);
 
+  // === AGREGADO: Guard de sesión y helpers ===
+  let currentUser = null;
+  onAuthStateChanged(auth, (u) => {
+    if (!u) {
+      // sin sesión => a login (reglas requieren auth)
+      location.href = "login.html";
+      return;
+    }
+    currentUser = u;
+    // Prefill rápidos
+    const qs = new URLSearchParams(location.search);
+    const p = qs.get('patente');
+    const f = qs.get('fecha');
+    if (p) document.getElementById('patente').value = p.toUpperCase();
+    if (f) document.getElementById('fecha').value = f;
+    // fecha hoy si quedó vacía
+    if (!document.getElementById('fecha').value) {
+      document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
+    }
+  });
+
+  // === TUS REFERENCIAS ORIGINALES (se mantienen) ===
   const litros = document.getElementById('litros');
   const precio = document.getElementById('precio');
-  const total = document.getElementById('total');
+  const total  = document.getElementById('total');
   const formCarga = document.getElementById('form-carga');
 
+  // === AGREGADO: normalizador para aceptar 7.093.416,00 etc. ===
+  const toNum = (v) => {
+    if (typeof v === 'number') return v;
+    v = String(v||'').trim().replace(/\./g,'').replace(',', '.');
+    const n = parseFloat(v);
+    return isNaN(n) ? 0 : n;
+  };
+
+  // patente siempre en mayúsculas (AGREGADO)
+  document.getElementById('patente').addEventListener('input', e => {
+    e.target.value = e.target.value.toUpperCase();
+  });
+
+  // Calcula total (tuyas, sin cambios de lógica)
   litros.addEventListener('input', calcularTotal);
   precio.addEventListener('input', calcularTotal);
-
   function calcularTotal() {
-    const litrosVal = parseFloat(litros.value);
-    const precioVal = parseFloat(precio.value);
-    if (!isNaN(litrosVal) && !isNaN(precioVal)) {
+    const litrosVal = toNum(litros.value);
+    const precioVal = toNum(precio.value);
+    if (litrosVal && precioVal) {
       total.value = (litrosVal * precioVal).toFixed(2);
     } else {
       total.value = '';
@@ -165,16 +207,29 @@
   formCarga.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const fecha = document.getElementById('fecha').value;
-    const litrosVal = parseFloat(litros.value);
-    const precioVal = parseFloat(precio.value);
-    const totalVal = parseFloat(total.value);
-    const estacion = document.getElementById('estacion').value;
-    const tipo = document.getElementById('tipo').value;
-    const patente = document.getElementById('patente').value;
+    if (!currentUser) { // AGREGADO: no escribir si no hay sesión
+      alert('Iniciá sesión nuevamente.');
+      location.href = 'login.html';
+      return;
+    }
+
+    const fecha     = document.getElementById('fecha').value;
+    const litrosVal = toNum(litros.value);
+    const precioVal = toNum(precio.value);
+    let totalVal    = toNum(total.value);
+    const estacion  = document.getElementById('estacion').value.trim();
+    const tipo      = document.getElementById('tipo').value;
+    const patente   = document.getElementById('patente').value.trim().toUpperCase();
+
+    // Si por alguna razón el total está vacío pero hay litros y precio, lo calculo
+    if (!totalVal && litrosVal && precioVal) {
+      totalVal = Math.round(litrosVal * precioVal * 100) / 100;
+    }
 
     try {
+      // DATA: guardo con tus campos **y** los que usa el resto de la app
       await addDoc(collection(db, "cargas-combustible"), {
+        // tus nombres originales
         fecha: fecha,
         litros: litrosVal,
         precioPorLitro: precioVal,
@@ -182,7 +237,15 @@
         estacionServicio: estacion,
         tipoCombustible: tipo,
         patenteCamion: patente,
-        timestamp: new Date().toISOString()
+
+        // compatibilidad con el resto (finanzas, etc.)
+        total: totalVal,
+        estacion: estacion,
+        patente: patente,
+
+        // metadata estable
+        timestamp: serverTimestamp(),
+        uid: currentUser.uid
       });
 
       const modal = document.getElementById('modal-confirmacion');
@@ -190,11 +253,11 @@
       setTimeout(() => {
         modal.style.display = 'none';
         window.location.href = 'index.html';
-      }, 5000);
+      }, 1500);
 
     } catch (error) {
       console.error("Error al guardar el documento: ", error);
-      alert("Hubo un error al guardar la carga. Por favor, inténtalo de nuevo.");
+      alert("Hubo un error al guardar la carga. Por favor, inténtalo de nuevo.\n" + (error.code || error.message || error));
     }
   });
 </script>
