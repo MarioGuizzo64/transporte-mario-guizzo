@@ -203,6 +203,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";  
     import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -215,8 +216,23 @@
     };
 
     const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app); 
     const db   = getFirestore(app);
 
+    // ---- Guard simple: si no hay sesión, al login
+    let currentUser = null;
+    onAuthStateChanged(auth, (u) => {
+      if (!u) {
+        window.location.href = "login.html";
+      } else {
+        currentUser = u;
+        // Tip: podés setear por defecto la fecha de hoy
+        if (!document.getElementById('fecha').value) {
+          document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
+        }
+      }
+    });
+    
     // ----- UI helpers: mostrar/ocultar montos según "Sí/No"
     const mapToggles = [
       { sel: 'adelantoAplica', grupo: 'adelantoMontoGrupo', input: 'adelantoMonto' },
