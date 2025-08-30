@@ -9,32 +9,35 @@
     .container{background:#000;max-width:900px;margin:40px auto;padding:24px;border-radius:12px;}
     h1{text-align:center;text-transform:uppercase;text-decoration:underline;margin:0 0 16px}
 
-    /* Filtros */
     .filtros{
       display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-      gap:10px;margin:0 0 16px;width:100%;box-sizing:border-box;
+      grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));
+      gap:10px;
+      margin:0 0 16px;
+      width:100%;
+      box-sizing:border-box;
     }
-    .filtros input,.filtros select{padding:10px;border:1px solid #000;border-radius:6px;color:#000;background:#fff;box-sizing:border-box;font-weight:600}
+    .filtros input,.filtros select {
+      padding:10px;border:1px solid #000;border-radius:6px;color:#000;background:#fff;box-sizing:border-box;font-weight:600;
+    }
 
     .btn{padding:10px;border:1px solid #000;border-radius:6px;font-weight:bold;cursor:pointer;text-transform:uppercase}
     .btn-verde{background:green;color:#fff}
     .btn-naranja{background:orange;color:#000}
     .btn-rojo{background:red;color:#fff}
     .btn-volver{margin-top:16px}
-
+    
     .lista{display:grid;gap:10px}
     .item{background:#191919;border-radius:10px;padding:12px}
     .item p{margin:3px 0}
     .topline{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .badge{display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:bold}
     .badge-rojo{background:#cc1d1d;color:#fff;border:1px solid #000}
+    .badge-amarillo{background:#ffbf00;color:#000;border:1px solid #000}
+
     .acciones{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+    .btn-volver{margin-top:16px}
 
-    .status{margin:10px 0;padding:10px;border:1px dashed #444;border-radius:8px;background:#111;text-align:center;opacity:.9}
-    .status.bad{border-color:#cc1d1d;color:#ffbcbc}
-
-    /* Modal */
     .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);justify-content:center;align-items:center}
     .modal-content{background:#000;border-radius:12px;padding:16px;width:95%;max-width:600px}
     .edit-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -44,14 +47,16 @@
     .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
 
     @media (max-width:900px){ .filtros{grid-template-columns:repeat(3,1fr)} }
-    @media (max-width:600px){ .filtros{grid-template-columns:1fr} .edit-form{grid-template-columns:1fr} }
+    @media (max-width:600px){
+      .filtros{grid-template-columns:1fr}
+      .edit-form{grid-template-columns:1fr}
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Ver Viajes</h1>
 
-    <!-- FILTROS -->
     <form class="filtros" id="formFiltros">
       <input type="date" id="desde" />
       <input type="date" id="hasta" />
@@ -62,13 +67,11 @@
       <button type="button" class="btn btn-naranja" id="btnLimpiar">Limpiar</button>
     </form>
 
-    <div id="status" class="status" style="display:none">Cargando…</div>
     <div id="lista" class="lista"></div>
 
     <button class="btn btn-naranja btn-volver" onclick="location.href='admin.html'">Volver</button>
   </div>
 
-  <!-- MODAL DETALLE/EDICIÓN -->
   <div id="modal" class="modal">
     <div class="modal-content">
       <h2 style="text-transform:uppercase;text-decoration:underline;margin-top:0">Detalle / Editar Viaje</h2>
@@ -100,9 +103,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import {
-      getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
@@ -112,150 +113,144 @@
       messagingSenderId: "465536166890",
       appId: "1:465536166890:web:f658690629b09eca8fa093"
     };
+
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
+    const auth = getAuth(app);          // <<<<<< INICIALIZAR AUTH
     const db   = getFirestore(app);
 
-    const lista      = document.getElementById("lista");
-    const statusBox  = document.getElementById("status");
+    // ======= AUTH GATE =======
+    onAuthStateChanged(auth, (user) => {
+      if (!user) { window.location.href = "login.html"; return; }
+      start(user);                      // Sólo arrancamos Firestore cuando hay auth
+    });
+    // =========================
 
-    const fDesde   = document.getElementById("desde");
-    const fHasta   = document.getElementById("hasta");
-    const fChofer  = document.getElementById("fChofer");
-    const fPatente = document.getElementById("fPatente");
-    const fCuit    = document.getElementById("fCuit");
-    const fBuscar  = document.getElementById("buscar");
-    const btnLimpiar = document.getElementById("btnLimpiar");
+    function start(user){
+      const col = collection(db, "viajes");
+      const lista = document.getElementById("lista");
 
-    let todos = [];
-    let actualId = null;
-    let unsub = null;
+      const fDesde = document.getElementById("desde");
+      const fHasta = document.getElementById("hasta");
+      const fChofer = document.getElementById("fChofer");
+      const fPatente = document.getElementById("fPatente");
+      const fCuit = document.getElementById("fCuit");
+      const fBuscar = document.getElementById("buscar");
+      const btnLimpiar = document.getElementById("btnLimpiar");
 
-    const safe = v => (v ?? '').toString();
-    const fmt  = s => safe(s).slice(0,10);
+      let todos = [];
+      let actualId = null;
+      let actual = null;
 
-    function showStatus(text, bad=false){
-      statusBox.textContent = text;
-      statusBox.style.display = 'block';
-      statusBox.classList.toggle('bad', !!bad);
-    }
-    function hideStatus(){ statusBox.style.display = 'none'; }
-
-    function poblarSelects(){
-      const choferes = Array.from(new Set(todos.map(v => v.chofer).filter(Boolean))).sort();
-      const patentes = Array.from(new Set(todos.map(v => v.patente).filter(Boolean))).sort();
-      const chSel = fChofer.value, ptSel = fPatente.value;
-      fChofer.innerHTML = '<option value="">Todos los choferes</option>' + choferes.map(c=>`<option>${c}</option>`).join('');
-      fPatente.innerHTML = '<option value="">Todas las patentes</option>' + patentes.map(p=>`<option>${p}</option>`).join('');
-      if (chSel) fChofer.value = chSel;
-      if (ptSel) fPatente.value = ptSel;
-    }
-
-    function pasaFiltros(v){
-      const vf = String(v.fecha || '');
-      if (fDesde.value && vf < fDesde.value) return false;
-      if (fHasta.value && vf > fHasta.value) return false;
-      if (fChofer.value && v.chofer !== fChofer.value) return false;
-      if (fPatente.value && v.patente !== fPatente.value) return false;
-      const cuitOrigen = (v.cuitOrigen || v.cuit || '').toString();
-      if (fCuit.value.trim() && !cuitOrigen.includes(fCuit.value.trim())) return false;
-      const q = fBuscar.value.trim().toLowerCase();
-      if (q){
-        const blob = [v.origen,v.destino,v.observaciones,v.tipoCereal,v.patente,v.chofer].map(x=>(x||'')+'').join(' ').toLowerCase();
-        if (!blob.includes(q)) return false;
-      }
-      return true;
-    }
-
-    function render(){
-      const datos = todos.filter(pasaFiltros);
-      lista.innerHTML = '';
-      if (!datos.length){
-        lista.innerHTML = '<div class="item"><p>No hay viajes para los filtros seleccionados.</p></div>';
-        return;
-      }
-      for (const v of datos){
-        const kgC = (v.kgLlevados ?? v.peso ?? '-') + (v.kgLlevados||v.peso ? ' kg':'');
-        const kgD = (v.kgDescargados ?? '-') + (v.kgDescargados||v.kgDescargados===0 ? ' kg':'' );
-        const hayObs = !!(v.observaciones && String(v.observaciones).trim());
-        const div = document.createElement('div');
-        div.className = 'item';
-        div.innerHTML = `
-          <div class="topline">
-            <p style="margin:0"><strong>Fecha:</strong> ${v.fecha || '-'}</p>
-            ${hayObs ? '<span class="badge badge-rojo">OBSERVACIONES</span>' : ''}
-          </div>
-          <p><strong>Chofer:</strong> ${v.chofer || '-'}</p>
-          <p><strong>Patente:</strong> ${v.patente || '-'}</p>
-          <p><strong>Origen → Destino:</strong> ${v.origen || '-'} → ${v.destino || '-'}</p>
-          <p><strong>Kg cargados:</strong> ${kgC} &nbsp; | &nbsp; <strong>Kg descargados:</strong> ${kgD}</p>
-          <div class="acciones">
-            <button class="btn btn-verde" data-open="${v.id}">Ver / Editar</button>
-          </div>
-        `;
-        lista.appendChild(div);
-      }
-      lista.querySelectorAll('[data-open]').forEach(b=>{
-        b.onclick = () => abrir(b.getAttribute('data-open'));
-      });
-    }
-
-    function escuchar(){
-      // ordenar: por timestamp si existe, si no por fecha descendente
-      const ref = query(collection(db,'viajes'), orderBy('fecha','desc'));
-      if (unsub){ try{unsub();}catch{} }
-      showStatus('Cargando…');
-      unsub = onSnapshot(ref, (qs)=>{
-        todos = qs.docs.map(d=>({id:d.id, ...d.data()}));
-        // sort robusto
-        todos.sort((a,b)=>{
-          const ta = a.timestamp?.seconds ?? Date.parse(a.fecha||0) || 0;
-          const tb = b.timestamp?.seconds ?? Date.parse(b.fecha||0) || 0;
+      onSnapshot(col, (qs) => {
+        todos = qs.docs.map(d => ({ id: d.id, ...d.data() }));
+        todos.sort((a,b) => {
+          const ta = a.timestamp?.seconds ? a.timestamp.seconds : Date.parse(a.fecha || 0);
+          const tb = b.timestamp?.seconds ? b.timestamp.seconds : Date.parse(b.fecha || 0);
           return tb - ta;
         });
-        hideStatus();
         poblarSelects();
         render();
-      }, (err)=>{
-        console.error('[onSnapshot] error', err);
-        showStatus('No se pudieron cargar los viajes: '+(err.code||err.message), true);
       });
-    }
 
-    // filtros
-    [fDesde,fHasta,fChofer,fPatente,fCuit,fBuscar].forEach(el=> el.addEventListener('input', render));
-    btnLimpiar.addEventListener('click', ()=>{ fDesde.value='';fHasta.value='';fChofer.value='';fPatente.value='';fCuit.value='';fBuscar.value=''; render(); });
+      function poblarSelects(){
+        const choferes = Array.from(new Set(todos.map(v => v.chofer).filter(Boolean))).sort();
+        const patentes = Array.from(new Set(todos.map(v => v.patente).filter(Boolean))).sort();
+        const chSel = fChofer.value, ptSel = fPatente.value;
+        fChofer.innerHTML = '<option value="">Todos los choferes</option>' + choferes.map(c => `<option value="${c}">${c}</option>`).join('');
+        fPatente.innerHTML = '<option value="">Todas las patentes</option>' + patentes.map(p => `<option value="${p}">${p}</option>`).join('');
+        if (chSel) fChofer.value = chSel;
+        if (ptSel) fPatente.value = ptSel;
+      }
 
-    // -------- MODAL --------
-    const modal = document.getElementById('modal');
-    const get = id => document.getElementById(id);
-    let actual = null;
+      function normalSiNo(val){
+        if (typeof val === 'boolean') return val ? 'SI' : 'NO';
+        if (typeof val === 'string') return val.trim().toLowerCase() === 'si' ? 'SI' : (val.trim().toLowerCase() === 'no' ? 'NO' : '-');
+        return '-';
+      }
 
-    function abrir(id){
-      const v = todos.find(x=>x.id===id);
-      if (!v) return;
-      actual = v; actualId = id;
-      get('e_fecha').value = v.fecha || '';
-      get('e_origen').value = v.origen || '';
-      get('e_destino').value = v.destino || '';
-      get('e_patente').value = v.patente || '';
-      get('e_chofer').value = v.chofer || '';
-      get('e_tipoCarga').value = (v.tipoCereal || v.tipoCarga || '');
-      get('e_peso').value = (v.kgLlevados ?? v.peso ?? '');
-      get('e_kgDescargados').value = (v.kgDescargados ?? '');
-      get('e_cuit').value = (v.cuitOrigen || v.cuit || '');
-      get('e_adelanto').value = v.adelanto || '';
-      get('e_peaje').value = v.peaje || '';
-      get('e_entrada').value = v.entrada || '';
-      get('e_observaciones').value = v.observaciones || '';
-      modal.style.display = 'flex';
-    }
-    window.abrir = abrir;
+      function pasaFiltros(v){
+        const vf = String(v.fecha || '');
+        if (fDesde.value && vf < fDesde.value) return false;
+        if (fHasta.value && vf > fHasta.value) return false;
+        if (fChofer.value && v.chofer !== fChofer.value) return false;
+        if (fPatente.value && v.patente !== fPatente.value) return false;
+        const cuitOrigen = (v.cuitOrigen || v.cuit || '').toString();
+        const qCuit = fCuit.value.trim();
+        if (qCuit && !cuitOrigen.includes(qCuit)) return false;
+        const q = fBuscar.value.trim().toLowerCase();
+        if (q){
+          const blob = [ v.origen, v.destino, v.observaciones, v.tipoCarga, v.tipoCereal, v.patente, v.chofer ]
+            .map(x => (x||'') + '').join(' ').toLowerCase();
+          if (!blob.includes(q)) return false;
+        }
+        return true;
+      }
 
-    get('btnCerrar').onclick = ()=> modal.style.display='none';
-    get('btnGuardar').onclick = async ()=>{
-      try{
-        await updateDoc(doc(db,'viajes', actualId), {
+      function render(){
+        const datos = todos.filter(pasaFiltros);
+        lista.innerHTML = '';
+        if (!datos.length){
+          lista.innerHTML = '<div class="item"><p>No hay viajes para los filtros seleccionados.</p></div>';
+          return;
+        }
+        for (const v of datos){
+          const kgCargados = (v.kgLlevados ?? v.peso ?? '-') + (v.kgLlevados || v.peso ? ' kg' : '');
+          const kgDesc = (v.kgDescargados ?? '-') + (v.kgDescargados ? ' kg' : (v.kgDescargados===0?' kg':''));
+          const comb = v.hasOwnProperty('cargoCombustible') ? normalSiNo(v.cargoCombustible) : '-';
+          const hayObs = !!(v.observaciones && String(v.observaciones).trim());
+          const div = document.createElement('div');
+          div.className = 'item';
+          div.innerHTML = `
+            <div class="topline">
+              <p style="margin:0"><strong>Fecha:</strong> ${v.fecha || '-'}</p>
+              ${hayObs ? '<span class="badge badge-rojo">OBSERVACIONES</span>' : ''}
+            </div>
+            <p><strong>Chofer:</strong> ${v.chofer || '-'}</p>
+            <p><strong>Patente:</strong> ${v.patente || '-'}</p>
+            <p><strong>Origen → Destino:</strong> ${v.origen || '-'} → ${v.destino || '-'}</p>
+            <p><strong>Kg cargados:</strong> ${kgCargados} &nbsp; | &nbsp; <strong>Kg descargados:</strong> ${kgDesc}</p>
+            <p><strong>Cargó combustible:</strong> ${comb}</p>
+            <div class="acciones">
+              <button class="btn btn-verde" onclick="window._abrir('${v.id}')">Ver / Editar</button>
+            </div>
+          `;
+          lista.appendChild(div);
+        }
+      }
+
+      [fDesde,fHasta,fChofer,fPatente,fCuit,fBuscar].forEach(el => el.addEventListener('input', render));
+      btnLimpiar.addEventListener('click', () => {
+        fDesde.value=''; fHasta.value=''; fChofer.value=''; fPatente.value=''; fCuit.value=''; fBuscar.value='';
+        render();
+      });
+
+      const modal = document.getElementById('modal');
+      const get = id => document.getElementById(id);
+
+      window._abrir = (id) => {
+        const v = todos.find(x => x.id === id);
+        if (!v) return;
+        actualId = id; actual = v;
+        get('e_fecha').value = v.fecha || '';
+        get('e_origen').value = v.origen || '';
+        get('e_destino').value = v.destino || '';
+        get('e_patente').value = v.patente || '';
+        get('e_chofer').value = v.chofer || '';
+        get('e_tipoCarga').value = (v.tipoCereal || v.tipoCarga || '');
+        get('e_peso').value = (v.kgLlevados ?? v.peso ?? '');
+        get('e_kgDescargados').value = (v.kgDescargados ?? '');
+        get('e_cuit').value = (v.cuitOrigen || v.cuit || '');
+        get('e_adelanto').value = v.adelanto || '';
+        get('e_peaje').value = v.peaje || '';
+        get('e_entrada').value = v.entrada || '';
+        get('e_observaciones').value = v.observaciones || '';
+        modal.style.display = 'flex';
+      };
+
+      get('btnCerrar').onclick = () => modal.style.display = 'none';
+
+      get('btnGuardar').onclick = async () => {
+        const data = {
           fecha: get('e_fecha').value || null,
           origen: get('e_origen').value.trim(),
           destino: get('e_destino').value.trim(),
@@ -272,32 +267,31 @@
           peaje: Number(get('e_peaje').value || 0),
           entrada: Number(get('e_entrada').value || 0),
           observaciones: get('e_observaciones').value.trim(),
-        });
-        alert('Viaje actualizado');
-        modal.style.display='none';
-      }catch(err){
-        alert('Error al guardar: '+(err.code||err.message));
-      }
-    };
-    get('btnEliminar').onclick = async ()=>{
-      if (!confirm('¿Eliminar este viaje?')) return;
-      try{ await deleteDoc(doc(db,'viajes', actualId)); modal.style.display='none'; }
-      catch(err){ alert('Error al eliminar: '+(err.code||err.message)); }
-    };
-    get('btnCombustible').onclick = ()=>{
-      const q = new URLSearchParams({ patente: get('e_patente').value, fecha: get('e_fecha').value });
-      location.href = 'agregar-combustible.html?'+q.toString();
-    };
+        };
+        try{
+          await updateDoc(doc(db,'viajes', actualId), data);
+          alert('Viaje actualizado');
+          modal.style.display = 'none';
+        }catch(err){
+          alert('Error al guardar: ' + err.message);
+        }
+      };
 
-    // ---------- AUTH GATE ----------
-    onAuthStateChanged(auth, u=>{
-      if (!u){
-        location.href = 'login.html';
-        return;
-      }
-      // ya autenticado → escuchar Firestore
-      escuchar();
-    });
+      get('btnEliminar').onclick = async () => {
+        if (!confirm('¿Eliminar este viaje?')) return;
+        try{
+          await deleteDoc(doc(db,'viajes', actualId));
+          modal.style.display = 'none';
+        }catch(err){
+          alert('Error al eliminar: ' + err.message);
+        }
+      };
+
+      get('btnCombustible').onclick = () => {
+        const q = new URLSearchParams({ patente: get('e_patente').value, fecha: get('e_fecha').value });
+        window.location.href = 'agregar-combustible.html?' + q.toString();
+      };
+    }
   </script>
 </body>
 </html>
