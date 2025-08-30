@@ -4,165 +4,198 @@
   <meta charset="UTF-8">
   <title>Ver viajes</title>
   <style>
-    body {
-      margin: 0;
-      background-color: #FFD700; /* amarillo oscuro */
-      font-family: Arial, sans-serif;
-      color: white;
-    }
-
-    .contenedor {
-      background-color: #111;
-      margin: 50px auto;
-      padding: 20px;
-      border-radius: 10px;
-      max-width: 800px;
-    }
-
-    h1 {
-      text-align: center;
-      text-decoration: underline;
-      color: white;
-    }
-
-    .viaje {
-      background-color: #222;
-      margin: 10px 0;
-      padding: 15px;
-      border-radius: 10px;
-    }
-
-    .viaje p {
-      margin: 5px 0;
-    }
-
-    .boton {
-      padding: 8px 15px;
-      margin: 5px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    .editar {
-      background-color: green;
-      color: white;
-    }
-
-    .eliminar {
-      background-color: red;
-      color: white;
-    }
+    body{margin:0;background:#FFD700;font-family:Arial,sans-serif;color:#fff}
+    .contenedor{background:#111;margin:50px auto;padding:20px;border-radius:10px;max-width:900px}
+    h1{text-align:center;text-decoration:underline;color:#fff;margin-top:0}
+    .bar{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+    .bar input,.bar select{padding:8px;border:1px solid #000;border-radius:6px;background:#fff;color:#000}
+    .viaje{background:#222;margin:10px 0;padding:14px;border-radius:10px}
+    .viaje p{margin:4px 0}
+    .muted{opacity:.75}
+    .boton{padding:8px 14px;margin:4px 6px 0 0;border:none;border-radius:6px;cursor:pointer;font-weight:bold}
+    .editar{background:#2e7d32;color:#fff}
+    .eliminar{background:#d32f2f;color:#fff}
+    .volver{background:orange;color:#000}
+    .tag{display:inline-block;background:#333;border:1px solid #444;border-radius:999px;padding:2px 8px;margin-left:6px;font-size:12px}
+    .empty{padding:16px;background:#1a1a1a;border:1px dashed #333;border-radius:8px;text-align:center}
   </style>
 </head>
 <body>
   <div class="contenedor">
     <h1>Viajes cargados</h1>
+
+    <div class="bar">
+      <div>
+        <label class="muted">Buscar:</label>
+        <input id="q" placeholder="destino, patente, chofer, CUIT…" />
+      </div>
+      <div>
+        <label class="muted">Ordenar por:</label>
+        <select id="orden">
+          <option value="fecha_desc">Fecha ↓</option>
+          <option value="fecha_asc">Fecha ↑</option>
+          <option value="ts_desc">Creación ↓</option>
+          <option value="ts_asc">Creación ↑</option>
+        </select>
+      </div>
+      <button class="boton volver" onclick="location.href='index.html'">Volver</button>
+    </div>
+
     <div id="lista-viajes"></div>
+    <div id="msg" class="empty" style="display:none">Cargando…</div>
   </div>
 
-  <!-- Firebase SDK -->
   <script type="module">
-    // Importar Firebase
+    // Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getFirestore, collection, onSnapshot, getDocs, query, orderBy, doc, deleteDoc, updateDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
-  apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
-  authDomain: "transporte-mario-guizzo.firebaseapp.com",
-  projectId: "transporte-mario-guizzo",
-  storageBucket: "transporte-mario-guizzo.firebasestorage.app",
-  messagingSenderId: "465536166890",
-  appId: "1:465536166890:web:f658690629b09eca8fa093",
-  measurementId: "G-187MCQ2XPW"
-};
+      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
+      authDomain: "transporte-mario-guizzo.firebaseapp.com",
+      projectId: "transporte-mario-guizzo",
+      storageBucket: "transporte-mario-guizzo.firebasestorage.app",
+      messagingSenderId: "465536166890",
+      appId: "1:465536166890:web:f658690629b09eca8fa093",
+      measurementId: "G-187MCQ2XPW"
+    };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
 
-    const listaViajes = document.getElementById("lista-viajes");
+    const lista = document.getElementById("lista-viajes");
+    const msg   = document.getElementById("msg");
+    const qInp  = document.getElementById("q");
+    const selOrd= document.getElementById("orden");
 
-    async function cargarViajes() {
-      const querySnapshot = await getDocs(collection(db, "viajes"));
-      listaViajes.innerHTML = ""; // Limpiar antes de cargar
-      querySnapshot.forEach((docu) => {
-        const viaje = docu.data();
-        const div = document.createElement("div");
-        div.classList.add("viaje");
-        div.innerHTML = `
-          <p><strong>Origen:</strong> ${viaje.origen}</p>
-          <p><strong>Destino:</strong> ${viaje.destino}</p>
-          <p><strong>Fecha:</strong> ${viaje.fecha}</p>
-          <p><strong>Camión:</strong> ${viaje.patente}</p>
-          <p><strong>Chofer:</strong> ${viaje.chofer}</p>
-          <button class="boton editar" onclick="editarViaje('${docu.id}')">Editar</button>
-          <button class="boton eliminar" onclick="eliminarViaje('${docu.id}')">Eliminar</button>
+    let datos = [];      // viajes en memoria (para filtrar por texto)
+    let unsub  = null;   // para re-suscribir al cambiar orden
+
+    // Helpers
+    const safe = v => (v ?? '').toString();
+    const fmt  = s => safe(s).slice(0,10); // fecha YYYY-MM-DD si viene con hora
+    const up   = s => safe(s).toUpperCase();
+
+    function render(){
+      const qtxt = up(qInp.value.trim());
+      lista.innerHTML = "";
+
+      const fil = qtxt
+        ? datos.filter(v => (
+            up(v.destino).includes(qtxt) ||
+            up(v.patente).includes(qtxt) ||
+            up(v.chofer).includes(qtxt) ||
+            up(v.cuitOrigen).includes(qtxt) ||
+            up(v.origen).includes(qtxt)
+          ))
+        : datos;
+
+      if (!fil.length){
+        msg.style.display = "block";
+        msg.textContent = "Sin viajes para mostrar.";
+        return;
+      } else {
+        msg.style.display = "none";
+      }
+
+      for (const v of fil){
+        const el = document.createElement("div");
+        el.className = "viaje";
+        el.innerHTML = `
+          <p><strong>Destino:</strong> ${safe(v.destino) || "-"}</p>
+          <p><strong>Fecha:</strong> ${fmt(v.fecha) || "-"}</p>
+          <p><strong>Patente:</strong> ${safe(v.patente) || "-"}</p>
+          <p><strong>Chofer:</strong> ${safe(v.chofer) || "-"}</p>
+          <p class="muted">
+            <span class="tag">Kg desc.: ${Number(v.kgDescargados||0)}</span>
+            <span class="tag">Cereal: ${safe(v.tipoCereal)||"-"}</span>
+            <span class="tag">CUIT Origen: ${safe(v.cuitOrigen)||"-"}</span>
+          </p>
+          <button class="boton editar" data-edit="${v.__id}">Editar</button>
+          <button class="boton eliminar" data-del="${v.__id}">Eliminar</button>
         `;
-        listaViajes.appendChild(div);
+        lista.appendChild(el);
+      }
+
+      // Delegación de eventos para botones
+      lista.querySelectorAll('[data-edit]').forEach(b=>{
+        b.onclick = ()=> editarViaje(b.getAttribute('data-edit'));
+      });
+      lista.querySelectorAll('[data-del]').forEach(b=>{
+        b.onclick = ()=> eliminarViaje(b.getAttribute('data-del'));
       });
     }
 
-    window.eliminarViaje = async function (id) {
-      if (confirm("¿Estás seguro de eliminar este viaje?")) {
-        await deleteDoc(doc(db, "viajes", id));
-        cargarViajes(); // Refrescar
+    function escuchar(ordenSel){
+      // Cancelo suscripción previa
+      if (unsub) { try{unsub();}catch(_){} unsub=null; }
+
+      const ref = collection(db, "viajes");
+      let qy;
+      switch(ordenSel){
+        case 'fecha_asc': qy = query(ref, orderBy('fecha','asc')); break;
+        case 'ts_desc':   qy = query(ref, orderBy('timestamp','desc')); break;
+        case 'ts_asc':    qy = query(ref, orderBy('timestamp','asc')); break;
+        default:          qy = query(ref, orderBy('fecha','desc')); // fecha_desc
       }
-    };
 
-    window.editarViaje = function (id) {
-      // Redireccionar a una futura pantalla de edición
-      alert("Funcionalidad de edición en desarrollo. ID del viaje: " + id);
-    };
+      msg.style.display = "block";
+      msg.textContent = "Cargando…";
 
-    cargarViajes();
-onSnapshot(viajesRef, (querySnapshot) => {
-    const listaViajes = document.getElementById('lista-viajes');
-    listaViajes.innerHTML = '';
+      unsub = onSnapshot(qy, snap=>{
+        datos = snap.docs.map(d => ({ __id:d.id, ...d.data() }));
+        render();
+      }, err=>{
+        console.error(err);
+        msg.style.display = "block";
+        msg.textContent = "No se pudieron cargar los viajes ("+(err.code||err.message)+").";
+      });
+    }
 
-    querySnapshot.forEach((doc) => {
-        const viaje = doc.data();
-        const item = document.createElement('div');
-        item.classList.add('viaje-item');
-        item.innerHTML = `
-            <p><strong>Destino:</strong> ${viaje.destino}</p>
-            <p><strong>Fecha:</strong> ${viaje.fecha}</p>
-            <p><strong>Patente:</strong> ${viaje.patente}</p>
-            <p><strong>Chofer:</strong> ${viaje.chofer}</p>
-            <button class="btn-verde" onclick="editarViaje('${doc.id}', ${JSON.stringify(viaje).replace(/"/g, '&quot;')})">Editar</button>
-            <button class="btn-rojo" onclick="eliminarViaje('${doc.id}')">Eliminar</button>
-        `;
-        listaViajes.appendChild(item);
+    async function eliminarViaje(id){
+      if (!confirm("¿Eliminar el viaje?")) return;
+      try{
+        await deleteDoc(doc(db,"viajes",id));
+      }catch(e){
+        alert("No se pudo eliminar: " + (e.code||e.message));
+      }
+    }
+
+    async function editarViaje(id){
+      const v = datos.find(x=>x.__id===id);
+      if (!v) return;
+
+      const nd = prompt("Modificar destino:", safe(v.destino));
+      if (nd===null) return;
+      const nf = prompt("Modificar fecha (YYYY-MM-DD):", fmt(v.fecha));
+      if (nf===null) return;
+      const np = prompt("Modificar patente:", safe(v.patente));
+      if (np===null) return;
+
+      try{
+        await updateDoc(doc(db,"viajes",id), {
+          destino: nd.trim(),
+          fecha: nf.trim(),
+          patente: up(np.trim())
+        });
+      }catch(e){
+        alert("No se pudo actualizar: " + (e.code||e.message));
+      }
+    }
+
+    // Filtros y orden
+    qInp.addEventListener('input', render);
+    selOrd.addEventListener('change', ()=> escuchar(selOrd.value));
+
+    // Auth gate (tus reglas requieren usuario autenticado)
+    onAuthStateChanged(auth, u=>{
+      if (!u){ location.href = "login.html"; return; }
+      escuchar(selOrd.value);
     });
-});
-function editarViaje(id, viajeData) {
-    const nuevoDestino = prompt("Modificar destino:", viajeData.destino);
-    const nuevaFecha = prompt("Modificar fecha (YYYY-MM-DD):", viajeData.fecha);
-    const nuevaPatente = prompt("Modificar patente:", viajeData.patente);
-
-    if (nuevoDestino && nuevaFecha && nuevaPatente) {
-        updateDoc(doc(db, "viajes", id), {
-            destino: nuevoDestino,
-            fecha: nuevaFecha,
-            patente: nuevaPatente,
-            chofer: viajeData.chofer // Mantenemos el chofer original
-        }).then(() => {
-            alert("Viaje actualizado correctamente.");
-        }).catch((error) => {
-            console.error("Error al actualizar viaje:", error);
-        });
-    }
-}
-function eliminarViaje(id) {
-    if (confirm("¿Estás seguro de que querés eliminar este viaje?")) {
-        deleteDoc(doc(db, "viajes", id)).then(() => {
-            alert("Viaje eliminado.");
-        }).catch((error) => {
-            console.error("Error al eliminar viaje:", error);
-        });
-    }
-}
-
   </script>
 </body>
 </html>
