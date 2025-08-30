@@ -267,6 +267,12 @@
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
+      /* ← NUEVO: no intento escribir si no hay sesión */
+      if (!currentUser) {
+        alert("Tu sesión expiró. Iniciá sesión nuevamente.");
+        return;
+      }
+
       // Validación básica de obligatorios
       const obligatorios = ["fecha","cuitOrigen","destino","patente","tipoCereal","kgLlevados","kgDescargados"];
       for (const id of obligatorios) {
