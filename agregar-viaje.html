@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Agregar Viaje</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://kit.fontawesome.com/a2e0e6ad65.js" crossorigin="anonymous"></script>
   <style>
     body{margin:0;font-family:'Roboto',Arial,sans-serif;background:#FFD700;color:#fff}
     .container{background:#000;max-width:520px;margin:40px auto;padding:28px;border-radius:10px;box-shadow:0 0 20px rgba(0,0,0,.5)}
@@ -25,15 +23,6 @@
     .mant-extra.show{display:block}
     #modalExito{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;color:green;padding:18px 22px;border:2px solid green;border-radius:10px;z-index:1000;text-align:center;font-weight:bold}
     .ayuda{font-size:12px;color:#bbb;margin-top:-4px;text-transform:none}
-
-    /* DEBUG (puedes quitarlo cuando funcione) */
-    #dbg{
-      position:fixed;left:8px;right:8px;bottom:8px;background:#000;border:1px solid #333;border-radius:8px;
-      padding:8px 10px;color:#9ee;font:12px/1.3 monospace;opacity:.9
-    }
-    #dbg b{color:#fff}
-    #dbg .bad{color:#ff9e9e}
-    #dbg .ok{color:#9effa3}
   </style>
 </head>
 <body>
@@ -146,22 +135,10 @@
 
   <div id="modalExito">¡Guardado correctamente!</div>
 
-  <!-- DEBUG PANEL -->
-  <div id="dbg">
-    <div><b>UID:</b> <span id="d_uid" class="bad">—</span> · <b>email:</b> <span id="d_mail">—</span></div>
-    <div><b>projectId:</b> <span id="d_pid">—</span> · <b>write test:</b> <span id="d_probe" class="bad">pendiente…</span></div>
-  </div>
-
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { setDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    /* 👇 NUEVO: import para poder usar setLogLevel */
-    import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-    // 🔎 logs Firestore
-    setLogLevel('debug');
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
@@ -176,99 +153,14 @@
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
-    // ---- DEBUG de proyecto (para confirmar que estás en el proyecto correcto)
-    console.log('[DEBUG] projectId', app.options.projectId);
-    console.log('[DEBUG] authDomain', app.options.authDomain);
-
-    // ---- Guard de sesión: no envíes nada a Firestore si Auth todavía no cargó
     let currentUser = null;
-    let authReady = false;
 
     onAuthStateChanged(auth, (u) => {
-      console.log('[DEBUG] onAuthStateChanged =>', u?.uid, u?.email);
-      if (!u) {
-        window.location.href = "login.html";
-        return;
-      }
+      if (!u) { window.location.href = "login.html"; return; }
       currentUser = u;
-      authReady = true;
-
-      // Fecha por defecto (si querés)
+      // Fecha por defecto
       const f = document.getElementById('fecha');
       if (f && !f.value) f.value = new Date().toISOString().slice(0,10);
-    });
-
-    // Bloqueo “suave” del submit si Auth no está listo aún
-    document.getElementById("formViaje").addEventListener("submit", (ev) => {
-      if (!authReady || !currentUser) {
-        ev.preventDefault();
-        alert("Esperá un segundo que se cargue tu sesión…");
-      }
-    }, { capture:false });
-
-    // Llamalo desde la consola del navegador con: await window._permTest()
-    window._permTest = async () => {
-      try {
-        const id = 'TEST_' + Math.random().toString(36).slice(2,8);
-        await setDoc(doc(db, 'viajes', id), {
-          _probe: true,
-          at: serverTimestamp(),
-          page: 'agregar-viaje'
-        });
-        alert('OK: se escribió viajes/' + id);
-      } catch (e) {
-        console.error('[DEBUG] _permTest', e.code, e.message, e);
-        alert('DENEGADO: ' + (e.code || e.message));
-      }
-    };
-
-    // DEBUG view
-    document.getElementById('d_pid').textContent = firebaseConfig.projectId;
-    const dUID   = document.getElementById('d_uid');
-    const dMail  = document.getElementById('d_mail');
-    const dProbe = document.getElementById('d_probe');
-
-    // ---- Guard de sesión y TEST de permisos
-    /* ❗️ANTES: aquí redeclarabas 'let currentUser = null;' y eso rompía el script.
-       Lo dejo comentado para que veas dónde estaba.
-       // let currentUser = null;
-    */
-    onAuthStateChanged(auth, async (u) => {
-      console.log('[AUTH] user =', u?.uid || null);
-      if (!u) {
-        dUID.textContent = 'sin sesión';
-        dUID.className = 'bad';
-        window.location.href = "login.html";
-        return;
-      }
-      currentUser = u;
-      dUID.textContent = u.uid;
-      dUID.className = 'ok';
-      dMail.textContent = u.email || '(sin email)';
-
-      // Fecha por defecto
-      if (!document.getElementById('fecha').value) {
-        document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
-      }
-
-      // 🔥 TEST de permisos: ahora escribe en 'viajes' (permitido por tus reglas)
-      try {
-        console.log('[PROBE] intentando escribir doc de prueba en viajes…');
-        const r = await addDoc(collection(db, "viajes"), {
-          _probe: true,
-          at: serverTimestamp(),
-          uid: u.uid,
-          page: "agregar-viaje"
-        });
-        console.log('[PROBE] OK id=', r.id);
-        dProbe.textContent = 'OK';
-        dProbe.className = 'ok';
-      } catch (e) {
-        console.error('[PROBE] FAIL', e.code, e.message);
-        dProbe.textContent = `FAIL ${e.code||''}`;
-        dProbe.className = 'bad';
-        alert("⚠️ No tengo permisos para escribir (test). Código: " + (e.code||e.message));
-      }
     });
 
     // ----- UI helpers: mostrar/ocultar montos según "Sí/No"
@@ -296,20 +188,14 @@
     const mantExtra = document.getElementById('mantExtra');
     reqMant.addEventListener('change', ()=> mantExtra.classList.toggle('show', reqMant.checked));
 
-    // Patente siempre en mayúsculas
+    // Patente siempre en mayúsculas mientras se escribe
     const patenteInput = document.getElementById('patente');
     patenteInput.addEventListener('input', e => e.target.value = e.target.value.toUpperCase());
 
-    // ----- Guardar
-    const form = document.getElementById("formViaje");
-    form.addEventListener("submit", async (e) => {
+    // ----- Guardar viaje
+    document.getElementById("formViaje").addEventListener("submit", async (e) => {
       e.preventDefault();
-
-      if (!currentUser) {
-        alert("No hay sesión. Volvé a iniciar sesión.");
-        window.location.href = "login.html";
-        return;
-      }
+      if (!currentUser) { alert("No hay sesión. Volvé a iniciar sesión."); return; }
 
       // Validación básica
       const obligatorios = ["fecha","cuitOrigen","destino","patente","tipoCereal","kgLlevados","kgDescargados"];
@@ -329,21 +215,27 @@
         }
       }
 
-      const cargoCombustible = document.getElementById("cargoCombustible").value === "si";
+      // Normalización de campos
+      const patenteUP = document.getElementById("patente").value.trim().toUpperCase();
+      document.getElementById("patente").value = patenteUP; // por si se muestra luego
 
-      // Datos mantenimiento (si se marcó)
-      const mantRequiere     = reqMant.checked;
+      const cargoCombustible = document.getElementById("cargoCombustible").value === "si";
+      const mantRequiere     = document.getElementById('reqMant').checked;
       const mantTipoSugerido = (document.getElementById("mantTipo").value || "").trim();
       const mantDescripcion  = (document.getElementById("mantDesc").value || "").trim();
 
       const viaje = {
+        // filtro servidor: o patente del usuario o uidCreador === uid
+        uidCreador: currentUser.uid,
+
         fecha: document.getElementById("fecha").value,
         cuitOrigen: document.getElementById("cuitOrigen").value.trim(),
         destino: document.getElementById("destino").value.trim(),
-        patente: document.getElementById("patente").value.trim(),
+        patente: patenteUP,
         tipoCereal: document.getElementById("tipoCereal").value.trim(),
         kgLlevados: parseFloat(document.getElementById("kgLlevados").value) || 0,
         kgDescargados: parseFloat(document.getElementById("kgDescargados").value) || 0,
+
         cargoCombustible,
 
         adelantoAplica: document.getElementById("adelantoAplica").value === "si",
@@ -357,7 +249,7 @@
 
         observaciones: document.getElementById("observaciones").value.trim(),
 
-        // mantenimiento
+        // mantenimiento (solo sugerencia)
         reqMantenimiento: mantRequiere,
         mantTipoSugerido,
         mantDescripcion,
@@ -366,7 +258,6 @@
       };
 
       try {
-        console.log('[WRITE] uid=', currentUser.uid, 'colección=viajes');
         const ref = await addDoc(collection(db, "viajes"), viaje);
 
         if (mantRequiere) {
@@ -404,4 +295,3 @@
   </script>
 </body>
 </html>
-
