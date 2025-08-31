@@ -72,10 +72,12 @@
       width:90%;max-width:400px;
       text-align:left;
     }
+    /* Bloquea la UI hasta validar admin */
+    .disabled { opacity: 0.5; pointer-events: none; }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="container disabled" id="appContainer">
     <h1>GESTIÓN DE USUARIOS</h1>
 
     <!-- Formulario creación -->
@@ -125,7 +127,7 @@
       getAuth, createUserWithEmailAndPassword, onAuthStateChanged, fetchSignInMethodsForEmail 
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { 
-      getFirestore, collection, getDocs, deleteDoc, doc, updateDoc, setDoc 
+      getFirestore, collection, getDocs, deleteDoc, doc, updateDoc, setDoc, getDoc 
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -143,28 +145,57 @@
     const db = getFirestore(app);
 
     // --- helpers de UI ---
+    const appContainer = document.getElementById('appContainer');
     const listaDiv = document.getElementById('listaUsuarios');
     const form = document.getElementById('formUsuario');
     const modal = document.getElementById('modalEdit');
     const formEdit = document.getElementById('formEdit');
     let editId = null;
 
-    // Solo permitir esta página si es admin
-    onAuthStateChanged(auth, (user) => {
+    // ---------- Chequeo de ADMIN por ROL en Firestore ----------
+    async function isAdminUser(user) {
+      try {
+        const emailLower = (user.email || '').toLowerCase();
+
+        // 1) Buscar documento por UID
+        const byUidRef = doc(db, 'usuarios', user.uid);
+        const byUidSnap = await getDoc(byUidRef);
+        if (byUidSnap.exists() && byUidSnap.data()?.rol === 'admin') return true;
+
+        // 2) Si no está por UID, buscar por emailLower (esquema alternativo)
+        const byEmailRef = doc(db, 'usuarios', emailLower);
+        const byEmailSnap = await getDoc(byEmailRef);
+        if (byEmailSnap.exists() && byEmailSnap.data()?.rol === 'admin') return true;
+
+        // 3) Fallback opcional: si querés whitelistear algún correo específico, agregalo acá
+        // if (emailLower === 'admin@guizzo.com') return true;
+
+        return false;
+      } catch (e) {
+        console.error('Error verificando rol admin:', e);
+        return false;
+      }
+    }
+
+    onAuthStateChanged(auth, async (user) => {
       if (!user) {
         window.location.href = 'login.html';
         return;
       }
-      // Validación simple por email (mejor: custom claims)
-      if (user.email !== 'admin@guizzo.com') {
+
+      const ok = await isAdminUser(user);
+      if (!ok) {
         alert('Acceso solo para administrador.');
         window.location.href = 'index.html';
         return;
       }
+
+      // Habilitar UI y cargar datos
+      appContainer.classList.remove('disabled');
       cargarUsuarios();
     });
 
-    // Cargar usuarios (colección 'usuarios')
+    // ---------- Lista ----------
     async function cargarUsuarios() {
       listaDiv.innerHTML = '';
       const snap = await getDocs(collection(db, 'usuarios'));
@@ -187,7 +218,7 @@
       });
     }
 
-    // Eliminar usuario (solo borra el doc de Firestore; borrar en Auth requiere Admin SDK/Cloud Function)
+    // ---------- Eliminar (Firestore) ----------
     window.eliminarUsuario = async (id) => {
       if (confirm('Eliminar usuario? (Solo se eliminará el documento de Firestore)')) {
         await deleteDoc(doc(db,'usuarios',id));
@@ -195,7 +226,7 @@
       }
     };
 
-    // Crear usuario (soporta caso de email ya existente en Auth)
+    // ---------- Crear (Auth + Firestore) ----------
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
@@ -216,7 +247,7 @@
 
       try {
         // ¿El email ya existe en Auth?
-        const methods = await fetchSignInMethodsForEmail(getAuth(), data.email);
+        const methods = await fetchSignInMethodsForEmail(auth, data.email);
 
         if (methods.length === 0) {
           // NO existe en Auth => crear con app secundaria (no afecta sesión del admin)
@@ -249,7 +280,7 @@
       }
     });
 
-    // Abrir modal con datos (edita SOLO Firestore, no Auth)
+    // ---------- Editar (solo Firestore) ----------
     window.abrirModal = (id, u) => {
       editId = id;
       formEdit.editNombre.value = u.nombre ?? '';
@@ -265,7 +296,6 @@
       editId = null;
     };
 
-    // Guardar cambios (solo Firestore, no Auth)
     formEdit.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!editId) return;
