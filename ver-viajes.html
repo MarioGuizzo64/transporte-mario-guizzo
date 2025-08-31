@@ -1,1 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ver viajes</title>
+  <style>
+    body{margin:0;background:#FFD700;font-family:Arial,sans-serif;color:#fff}
+    .contenedor{background:#111;margin:50px auto;padding:20px;border-radius:10px;max-width:900px}
+    h1{text-align:center;text-decoration:underline;color:#fff;margin-top:0}
+    .bar{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+    .bar input,.bar select{padding:8px;border:1px solid #000;border-radius:6px;background:#fff;color:#000}
+    .viaje{background:#222;margin:10px 0;padding:14px;border-radius:10px}
+    .viaje p{margin:4px 0}
+    .muted{opacity:.75}
+    .boton{padding:8px 14px;margin:4px 6px 0 0;border:none;border-radius:6px;cursor:pointer;font-weight:bold}
+    .editar{background:#2e7d32;color:#fff}
+    .eliminar{background:#d32f2f;color:#fff}
+    .volver{background:orange;color:#000}
+    .tag{display:inline-block;background:#333;border:1px solid #444;border-radius:999px;padding:2px 8px;margin-left:6px;font-size:12px}
+    .empty{padding:16px;background:#1a1a1a;border:1px dashed #333;border-radius:8px;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h1>Viajes cargados</h1>
 
+    <div class="bar">
+      <div>
+        <label class="muted">Buscar:</label>
+        <input id="q" placeholder="destino, patente, chofer, CUIT…">
+      </div>
+      <div>
+        <label class="muted">Ordenar por:</label>
+        <select id="orden">
+          <option value="fecha_desc">Fecha ↓</option>
+          <option value="fecha_asc">Fecha ↑</option>
+          <option value="ts_desc">Creación ↓</option>
+          <option value="ts_asc">Creación ↑</option>
+        </select>
+      </div>
+      <button class="boton volver" onclick="location.href='index.html'">Volver</button>
+    </div>
+
+    <div id="lista-viajes"></div>
+    <div id="msg" class="empty" style="display:none">Cargando…</div>
+  </div>
+
+  <script type="module">
+    // Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getFirestore, collection, onSnapshot, getDocs, query, orderBy, where,
+      doc, getDoc, deleteDoc, updateDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
+      authDomain: "transporte-mario-guizzo.firebaseapp.com",
+      projectId: "transporte-mario-guizzo",
+      storageBucket: "transporte-mario-guizzo.firebasestorage.app",
+      messagingSenderId: "465536166890",
+      appId: "1:465536166890:web:f658690629b09eca8fa093",
+      measurementId: "G-187MCQ2XPW"
+    };
+
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+
+    const lista  = document.getElementById("lista-viajes");
+    const msg    = document.getElementById("msg");
+    const qInp   = document.getElementById("q");
+    const selOrd = document.getElementById("orden");
+
+    let datos = [];        // viajes en memoria (para filtrar/ordenar)
+    let unsub = null;      // para desuscribir onSnapshot actual
+    let esAdmin = false;   // rol
+    let misPatentes = [];  // patentes del chofer (array)
+    let miUid = null;      // uid para posible filtro por uidCreador
+
+    // Helpers
+    const safe = v => (v ?? '').toString();
+    const fmt  = s => safe(s).slice(0,10); // fecha YYYY-MM-DD
+    const up   = s => safe(s).toUpperCase();
+
+    function ordenarEnMemoria(arr, clave){
+      const byFecha = (a,b) => (safe(a.fecha)||'').localeCompare(safe(b.fecha)||'');
+      const byTs    = (a,b) => (a.timestamp||0) - (b.timestamp||0);
+      const copy = [...arr];
+      switch (clave){
+        case 'fecha_asc': copy.sort(byFecha); break;
+        case 'fecha_desc': copy.sort(byFecha).reverse(); break;
+        case 'ts_asc': copy.sort(byTs); break;
+        case 'ts_desc': copy.sort(byTs).reverse(); break;
+      }
+      return copy;
+    }
+
+    function render(){
+      const qtxt = up(qInp.value.trim());
+      lista.innerHTML = "";
+
+      // aplicar orden siempre en memoria (robusto para modo chofer)
+      const ordenados = ordenarEnMemoria(datos, selOrd.value);
+
+      const fil = qtxt
+        ? ordenados.filter(v => (
+            up(v.destino).includes(qtxt) ||
+            up(v.patente).includes(qtxt) ||
+            up(v.chofer).includes(qtxt) ||
+            up(v.cuitOrigen).includes(qtxt) ||
+            up(v.origen).includes(qtxt)
+          ))
+        : ordenados;
+
+      if (!fil.length){
+        msg.style.display = "block";
+        msg.textContent = "Sin viajes para mostrar.";
+        return;
+      } else {
+        msg.style.display = "none";
+      }
+
+      for (const v of fil){
+        const el = document.createElement("div");
+        el.className = "viaje";
+        el.innerHTML = `
+          <p><strong>Destino:</strong> ${safe(v.destino) || "-"}</p>
+          <p><strong>Fecha:</strong> ${fmt(v.fecha) || "-"}</p>
+          <p><strong>Patente:</strong> ${safe(v.patente) || "-"}</p>
+          <p><strong>Chofer:</strong> ${safe(v.chofer) || "-"}</p>
+          <p class="muted">
+            <span class="tag">Kg desc.: ${Number(v.kgDescargados||0)}</span>
+            <span class="tag">Cereal: ${safe(v.tipoCereal)||"-"}</span>
+            <span class="tag">CUIT Origen: ${safe(v.cuitOrigen)||"-"}</span>
+          </p>
+          <button class="boton editar" data-edit="${v.__id}">Editar</button>
+          <button class="boton eliminar" data-del="${v.__id}">Eliminar</button>
+        `;
+        lista.appendChild(el);
+      }
+
+      // Botones
+      lista.querySelectorAll('[data-edit]').forEach(b=>{
+        b.onclick = ()=> editarViaje(b.getAttribute('data-edit'));
+      });
+      lista.querySelectorAll('[data-del]').forEach(b=>{
+        b.onclick = ()=> eliminarViaje(b.getAttribute('data-del'));
+      });
+    }
+
+    // Suscripción según rol
+    function escuchar(){
+      if (unsub) { try{unsub();}catch(_){} unsub = null; }
+
+      const ref = collection(db, "viajes");
+      msg.style.display = "block";
+      msg.textContent = "Cargando…";
+
+      // ---- MODO ADMIN: ve todo (como antes) ----
+      if (esAdmin){
+        // conservamos el orderBy en el query para admins
+        let qy;
+        switch(selOrd.value){
+          case 'fecha_asc': qy = query(ref, orderBy('fecha','asc')); break;
+          case 'ts_desc':   qy = query(ref, orderBy('timestamp','desc')); break;
+          case 'ts_asc':    qy = query(ref, orderBy('timestamp','asc')); break;
+          default:          qy = query(ref, orderBy('fecha','desc')); // fecha_desc
+        }
+        unsub = onSnapshot(qy, snap=>{
+          datos = snap.docs.map(d => ({ __id:d.id, ...d.data() }));
+          render();
+        }, onErr);
+        return;
+      }
+
+      // ---- MODO CHOFER: filtra por sus patentes (o por uidCreador) ----
+      let qyChofer = null;
+
+      // 1) Si tenés una sola patente:
+      if (misPatentes.length === 1){
+        qyChofer = query(ref, where('patente','==', misPatentes[0]));
+      }
+      // 2) Si tenés entre 2 y 10 patentes:
+      else if (misPatentes.length > 1 && misPatentes.length <= 10){
+        qyChofer = query(ref, where('patente','in', misPatentes));
+      }
+      // 3) Alternativa por UID del creador (usá este bloque si guardás uidCreador en cada viaje)
+      else if (miUid){
+        // *** ACTIVA ESTO si tus documentos de viaje tienen el campo 'uidCreador' ***
+        // qyChofer = query(ref, where('uidCreador','==', miUid));
+      }
+
+      if (qyChofer){
+        unsub = onSnapshot(qyChofer, snap=>{
+          datos = snap.docs.map(d => ({ __id:d.id, ...d.data() }));
+          render(); // el orden ya lo aplicamos en memoria
+        }, onErr);
+      } else {
+        // Fallback (no hay patente ni uid configurado): no mostramos nada y avisamos
+        datos = [];
+        msg.style.display = "block";
+        msg.textContent = "Tu usuario no tiene patente asignada. Contactá al administrador.";
+        render();
+      }
+    }
+
+    function onErr(err){
+      console.error(err);
+      msg.style.display = "block";
+      msg.textContent = "No se pudieron cargar los viajes ("+(err.code||err.message)+").";
+    }
+
+    async function eliminarViaje(id){
+      if (!confirm("¿Eliminar el viaje?")) return;
+      try{
+        await deleteDoc(doc(db,"viajes",id));
+      }catch(e){
+        alert("No se pudo eliminar: " + (e.code||e.message));
+      }
+    }
+
+    async function editarViaje(id){
+      const v = datos.find(x=>x.__id===id);
+      if (!v) return;
+
+      const nd = prompt("Modificar destino:", safe(v.destino));
+      if (nd===null) return;
+      const nf = prompt("Modificar fecha (YYYY-MM-DD):", fmt(v.fecha));
+      if (nf===null) return;
+      const np = prompt("Modificar patente:", safe(v.patente));
+      if (np===null) return;
+
+      try{
+        await updateDoc(doc(db,"viajes",id), {
+          destino: nd.trim(),
+          fecha: nf.trim(),
+          patente: up(np.trim())
+        });
+      }catch(e){
+        alert("No se pudo actualizar: " + (e.code||e.message));
+      }
+    }
+
+    // Eventos UI
+    qInp.addEventListener('input', render);
+    selOrd.addEventListener('change', escuchar); // re-suscribimos (admin usa orderBy del query)
+
+    // Auth + carga de perfil
+    onAuthStateChanged(auth, async (u)=>{
+      if (!u){ location.href = "login.html"; return; }
+      miUid = u.uid;
+
+      // Perfil del usuario
+      try{
+        const perfilSnap = await getDoc(doc(db, "usuarios", u.uid));
+        const perfil = perfilSnap.exists() ? perfilSnap.data() : {};
+        esAdmin = (perfil.rol || "").toLowerCase() === "admin";
+
+        // Patentes: admite "patentes" (array) o "patente" (string)
+        if (Array.isArray(perfil.patentes)) {
+          misPatentes = perfil.patentes.map(x => (x||"").toUpperCase()).filter(Boolean);
+        } else if (perfil.patente) {
+          misPatentes = [ String(perfil.patente).toUpperCase() ];
+        } else {
+          misPatentes = [];
+        }
+      }catch(e){
+        console.warn("No se pudo leer el perfil del usuario:", e);
+        esAdmin = false;
+        misPatentes = [];
+      }
+
+      escuchar();
+    });
+  </script>
+</body>
+</html>
