@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ver cargas de combustible</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { background:#000; color:#fff; font-family: Arial, sans-serif; }
+    header { text-align:center; padding: 16px 0; }
+    h1, h2 { text-transform: uppercase; margin: 8px 0; }
+    .container {
+      background:#111; max-width:900px; margin: 20px auto; padding: 20px;
+      border-radius:12px;
+    }
+    .stats {
+      display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-bottom:16px;
+    }
+    .stat {
+      background:#222; padding:10px 14px; border-radius:8px; font-weight:bold;
+    }
+    .list { display:flex; flex-direction:column; gap:12px; }
+    .item {
+      background:#1b1b1b; padding:14px; border-radius:10px; border:1px solid #2a2a2a;
+    }
+    .item h3 { margin:0 0 8px 0; font-size:18px; text-transform:uppercase; }
+    .grid {
+      display:grid; grid-template-columns: repeat(2, minmax(0,1fr));
+      gap:6px 16px; font-size:14px;
+    }
+    .muted { color:#bbb; }
+    .btn {
+      display:inline-block; border:none; border-radius:8px; padding:10px 14px;
+      background:#FFD700; color:#000; font-weight:bold; text-transform:uppercase;
+      cursor:pointer; margin-top:18px;
+    }
+    .center { text-align:center; }
+    .empty { text-align:center; color:#bbb; padding:24px 8px; }
+    @media (max-width:600px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Transporte Mario Güizzo</h1>
+    <h2>Ver cargas de combustible</h2>
+  </header>
+
+  <div class="container">
+    <!-- Contadores -->
+    <div class="stats" id="stats">
+      <div class="stat">Cargas: <span id="count">0</span></div>
+      <!-- Si luego querés totalizar litros/$, puedo activarlo acá -->
+      <!-- <div class="stat">Litros: <span id="litrosTotal">0</span></div>
+      <div class="stat">Total $: <span id="montoTotal">0</span></div> -->
+    </div>
+
+    <!-- Lista -->
+    <div id="lista" class="list"></div>
+
+    <div class="center">
+      <button class="btn" onclick="location.href='index.html'">Volver</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { 
+      getFirestore, collection, getDocs, query, where 
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
+      authDomain: "transporte-mario-guizzo.firebaseapp.com",
+      projectId: "transporte-mario-guizzo",
+      storageBucket: "transporte-mario-guizzo.appspot.com",
+      messagingSenderId: "465536166890",
+      appId: "1:465536166890:web:f658690629b09eca8fa093"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const listaEl = document.getElementById('lista');
+    const countEl = document.getElementById('count');
+    // const litrosTotalEl = document.getElementById('litrosTotal');
+    // const montoTotalEl = document.getElementById('montoTotal');
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = 'login.html';
+        return;
+      }
+      await cargarCargas(user);
+    });
+
+    function toDateStr(v) {
+      // Acepta 'YYYY-MM-DD' o Timestamp/Date; devuelve string legible
+      try {
+        if (!v) return '';
+        if (typeof v === 'string') return v;
+        if (v?.seconds) return new Date(v.seconds*1000).toISOString().slice(0,10);
+        if (v instanceof Date) return v.toISOString().slice(0,10);
+        return String(v);
+      } catch { return String(v ?? ''); }
+    }
+
+    async function cargarCargas(user) {
+      listaEl.innerHTML = '<div class="empty">Cargando...</div>';
+
+      const col = collection(db, 'cargasCombustible');
+
+      // 1) Buscar por uid
+      let docs = [];
+      try {
+        const q1 = query(col, where('uid', '==', user.uid));
+        const snap1 = await getDocs(q1);
+        snap1.forEach(d => docs.push({id: d.id, ...d.data()}));
+      } catch (e) {
+        console.error('Error trayendo por uid:', e);
+      }
+
+      // 2) Si no hay resultados y usaste email en vez de uid, probar por email (minúsculas)
+      if (docs.length === 0) {
+        try {
+          const emailLower = (user.email || '').toLowerCase();
+          const q2 = query(col, where('email', '==', emailLower));
+          const snap2 = await getDocs(q2);
+          snap2.forEach(d => docs.push({id: d.id, ...d.data()}));
+        } catch (e) {
+          console.error('Error trayendo por email:', e);
+        }
+      }
+
+      if (docs.length === 0) {
+        listaEl.innerHTML = '<div class="empty">No tenés cargas registradas.</div>';
+        countEl.textContent = '0';
+        return;
+      }
+
+      // Ordenar por fecha si existe (desc)
+      docs.sort((a,b) => {
+        const fa = new Date(toDateStr(a.fechaCarga || a.fecha)).getTime() || 0;
+        const fb = new Date(toDateStr(b.fechaCarga || b.fecha)).getTime() || 0;
+        return fb - fa;
+      });
+
+      // Contadores
+      countEl.textContent = String(docs.length);
+      // let litrosTotal = 0, montoTotal = 0;
+
+      // Render
+      listaEl.innerHTML = '';
+      docs.forEach(c => {
+        const fecha = toDateStr(c.fechaCarga || c.fecha);
+        const litros = Number(c.litros ?? c.cantidadLitros ?? c.cantidad ?? 0);
+        const precio = Number(c.precioPorLitro ?? c.precio ?? 0);
+        const total = c.total ?? (litros && precio ? (litros * precio) : '');
+
+        // litrosTotal += (isFinite(litros) ? litros : 0);
+        // montoTotal  += (isFinite(total) ? Number(total) : 0);
+
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `
+          <h3>${fecha || 'Sin fecha'}</h3>
+          <div class="grid">
+            <div><span class="muted">Litros:</span> ${litros || '-'}</div>
+            <div><span class="muted">Precio x litro:</span> ${precio ? '$ ' + precio : '-'}</div>
+            <div><span class="muted">Total pagado:</span> ${total ? '$ ' + total : '-'}</div>
+            <div><span class="muted">Estación:</span> ${c.estacion || c.estacionServicio || '-'}</div>
+            <div><span class="muted">Tipo combustible:</span> ${c.tipo || c.tipoCombustible || '-'}</div>
+            <div><span class="muted">Patente camión:</span> ${c.patente || c.patenteCamion || '-'}</div>
+          </div>
+        `;
+        listaEl.appendChild(div);
+      });
+
+      // litrosTotalEl.textContent = String(litrosTotal);
+      // montoTotalEl.textContent  = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(montoTotal);
+    }
+  </script>
+</body>
+</html>
