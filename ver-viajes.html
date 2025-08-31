@@ -50,7 +50,8 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import {
-      getFirestore, collection, onSnapshot, getDocs, query, orderBy, doc, deleteDoc, updateDoc
+      getFirestore, collection, onSnapshot, getDocs, query, orderBy, where,
+      doc, getDoc, deleteDoc, updateDoc
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -67,32 +68,51 @@
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
-    const lista = document.getElementById("lista-viajes");
-    const msg   = document.getElementById("msg");
-    const qInp  = document.getElementById("q");
-    const selOrd= document.getElementById("orden");
+    const lista  = document.getElementById("lista-viajes");
+    const msg    = document.getElementById("msg");
+    const qInp   = document.getElementById("q");
+    const selOrd = document.getElementById("orden");
 
-    let datos = [];      // viajes en memoria (para filtrar por texto)
-    let unsub  = null;   // para re-suscribir al cambiar orden
+    let datos = [];        // viajes en memoria (para filtrar/ordenar)
+    let unsub = null;      // para desuscribir onSnapshot actual
+    let esAdmin = false;   // rol
+    let misPatentes = [];  // patentes del chofer (array)
+    let miUid = null;      // uid para posible filtro por uidCreador
 
     // Helpers
     const safe = v => (v ?? '').toString();
-    const fmt  = s => safe(s).slice(0,10); // fecha YYYY-MM-DD si viene con hora
+    const fmt  = s => safe(s).slice(0,10); // fecha YYYY-MM-DD
     const up   = s => safe(s).toUpperCase();
+
+    function ordenarEnMemoria(arr, clave){
+      const byFecha = (a,b) => (safe(a.fecha)||'').localeCompare(safe(b.fecha)||'');
+      const byTs    = (a,b) => (a.timestamp||0) - (b.timestamp||0);
+      const copy = [...arr];
+      switch (clave){
+        case 'fecha_asc': copy.sort(byFecha); break;
+        case 'fecha_desc': copy.sort(byFecha).reverse(); break;
+        case 'ts_asc': copy.sort(byTs); break;
+        case 'ts_desc': copy.sort(byTs).reverse(); break;
+      }
+      return copy;
+    }
 
     function render(){
       const qtxt = up(qInp.value.trim());
       lista.innerHTML = "";
 
+      // aplicar orden siempre en memoria (robusto para modo chofer)
+      const ordenados = ordenarEnMemoria(datos, selOrd.value);
+
       const fil = qtxt
-        ? datos.filter(v => (
+        ? ordenados.filter(v => (
             up(v.destino).includes(qtxt) ||
             up(v.patente).includes(qtxt) ||
             up(v.chofer).includes(qtxt) ||
             up(v.cuitOrigen).includes(qtxt) ||
             up(v.origen).includes(qtxt)
           ))
-        : datos;
+        : ordenados;
 
       if (!fil.length){
         msg.style.display = "block";
@@ -121,7 +141,7 @@
         lista.appendChild(el);
       }
 
-      // Delegación de eventos para botones
+      // Botones
       lista.querySelectorAll('[data-edit]').forEach(b=>{
         b.onclick = ()=> editarViaje(b.getAttribute('data-edit'));
       });
@@ -130,30 +150,66 @@
       });
     }
 
-    function escuchar(ordenSel){
-      // Cancelo suscripción previa
-      if (unsub) { try{unsub();}catch(_){} unsub=null; }
+    // Suscripción según rol
+    function escuchar(){
+      if (unsub) { try{unsub();}catch(_){} unsub = null; }
 
       const ref = collection(db, "viajes");
-      let qy;
-      switch(ordenSel){
-        case 'fecha_asc': qy = query(ref, orderBy('fecha','asc')); break;
-        case 'ts_desc':   qy = query(ref, orderBy('timestamp','desc')); break;
-        case 'ts_asc':    qy = query(ref, orderBy('timestamp','asc')); break;
-        default:          qy = query(ref, orderBy('fecha','desc')); // fecha_desc
-      }
-
       msg.style.display = "block";
       msg.textContent = "Cargando…";
 
-      unsub = onSnapshot(qy, snap=>{
-        datos = snap.docs.map(d => ({ __id:d.id, ...d.data() }));
-        render();
-      }, err=>{
-        console.error(err);
+      // ---- MODO ADMIN: ve todo (como antes) ----
+      if (esAdmin){
+        // conservamos el orderBy en el query para admins
+        let qy;
+        switch(selOrd.value){
+          case 'fecha_asc': qy = query(ref, orderBy('fecha','asc')); break;
+          case 'ts_desc':   qy = query(ref, orderBy('timestamp','desc')); break;
+          case 'ts_asc':    qy = query(ref, orderBy('timestamp','asc')); break;
+          default:          qy = query(ref, orderBy('fecha','desc')); // fecha_desc
+        }
+        unsub = onSnapshot(qy, snap=>{
+          datos = snap.docs.map(d => ({ __id:d.id, ...d.data() }));
+          render();
+        }, onErr);
+        return;
+      }
+
+      // ---- MODO CHOFER: filtra por sus patentes (o por uidCreador) ----
+      let qyChofer = null;
+
+      // 1) Si tenés una sola patente:
+      if (misPatentes.length === 1){
+        qyChofer = query(ref, where('patente','==', misPatentes[0]));
+      }
+      // 2) Si tenés entre 2 y 10 patentes:
+      else if (misPatentes.length > 1 && misPatentes.length <= 10){
+        qyChofer = query(ref, where('patente','in', misPatentes));
+      }
+      // 3) Alternativa por UID del creador (usá este bloque si guardás uidCreador en cada viaje)
+      else if (miUid){
+        // *** ACTIVA ESTO si tus documentos de viaje tienen el campo 'uidCreador' ***
+        // qyChofer = query(ref, where('uidCreador','==', miUid));
+      }
+
+      if (qyChofer){
+        unsub = onSnapshot(qyChofer, snap=>{
+          datos = snap.docs.map(d => ({ __id:d.id, ...d.data() }));
+          render(); // el orden ya lo aplicamos en memoria
+        }, onErr);
+      } else {
+        // Fallback (no hay patente ni uid configurado): no mostramos nada y avisamos
+        datos = [];
         msg.style.display = "block";
-        msg.textContent = "No se pudieron cargar los viajes ("+(err.code||err.message)+").";
-      });
+        msg.textContent = "Tu usuario no tiene patente asignada. Contactá al administrador.";
+        render();
+      }
+    }
+
+    function onErr(err){
+      console.error(err);
+      msg.style.display = "block";
+      msg.textContent = "No se pudieron cargar los viajes ("+(err.code||err.message)+").";
     }
 
     async function eliminarViaje(id){
@@ -187,14 +243,36 @@
       }
     }
 
-    // Filtros y orden
+    // Eventos UI
     qInp.addEventListener('input', render);
-    selOrd.addEventListener('change', ()=> escuchar(selOrd.value));
+    selOrd.addEventListener('change', escuchar); // re-suscribimos (admin usa orderBy del query)
 
-    // Auth gate (tus reglas requieren usuario autenticado)
-    onAuthStateChanged(auth, u=>{
+    // Auth + carga de perfil
+    onAuthStateChanged(auth, async (u)=>{
       if (!u){ location.href = "login.html"; return; }
-      escuchar(selOrd.value);
+      miUid = u.uid;
+
+      // Perfil del usuario
+      try{
+        const perfilSnap = await getDoc(doc(db, "usuarios", u.uid));
+        const perfil = perfilSnap.exists() ? perfilSnap.data() : {};
+        esAdmin = (perfil.rol || "").toLowerCase() === "admin";
+
+        // Patentes: admite "patentes" (array) o "patente" (string)
+        if (Array.isArray(perfil.patentes)) {
+          misPatentes = perfil.patentes.map(x => (x||"").toUpperCase()).filter(Boolean);
+        } else if (perfil.patente) {
+          misPatentes = [ String(perfil.patente).toUpperCase() ];
+        } else {
+          misPatentes = [];
+        }
+      }catch(e){
+        console.warn("No se pudo leer el perfil del usuario:", e);
+        esAdmin = false;
+        misPatentes = [];
+      }
+
+      escuchar();
     });
   </script>
 </body>
