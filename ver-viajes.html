@@ -77,7 +77,7 @@
     let unsub = null;      // para desuscribir onSnapshot actual
     let esAdmin = false;   // rol
     let misPatentes = [];  // patentes del chofer (array)
-    let miUid = null;      // uid para posible filtro por uidCreador
+    let miUid = null;      // uid para filtro por uidCreador
 
     // Helpers
     const safe = v => (v ?? '').toString();
@@ -150,7 +150,7 @@
       });
     }
 
-    // Suscripción según rol
+    // Suscripción según rol (ADMIN: todo; CHOFER: por uidCreador y también por patentes)
     function escuchar(){
       if (unsub) { try{unsub();}catch(_){} unsub = null; }
 
@@ -158,9 +158,8 @@
       msg.style.display = "block";
       msg.textContent = "Cargando…";
 
-      // ---- MODO ADMIN: ve todo (como antes) ----
+      // ---- MODO ADMIN: ve todo (igual que antes) ----
       if (esAdmin){
-        // conservamos el orderBy en el query para admins
         let qy;
         switch(selOrd.value){
           case 'fecha_asc': qy = query(ref, orderBy('fecha','asc')); break;
@@ -175,35 +174,44 @@
         return;
       }
 
-      // ---- MODO CHOFER: filtra por sus patentes (o por uidCreador) ----
-      let qyChofer = null;
+      // ---- MODO CHOFER: siempre por uidCreador, y además por patente(s) si existen ----
+      const qUid = query(ref, where('uidCreador','==', miUid));
 
-      // 1) Si tenés una sola patente:
+      let qPat = null;
       if (misPatentes.length === 1){
-        qyChofer = query(ref, where('patente','==', misPatentes[0]));
-      }
-      // 2) Si tenés entre 2 y 10 patentes:
-      else if (misPatentes.length > 1 && misPatentes.length <= 10){
-        qyChofer = query(ref, where('patente','in', misPatentes));
-      }
-      // 3) Alternativa por UID del creador (usá este bloque si guardás uidCreador en cada viaje)
-      else if (miUid){
-        // *** ACTIVA ESTO si tus documentos de viaje tienen el campo 'uidCreador' ***
-        // qyChofer = query(ref, where('uidCreador','==', miUid));
+        qPat = query(ref, where('patente','==', misPatentes[0]));
+      } else if (misPatentes.length > 1 && misPatentes.length <= 10){
+        qPat = query(ref, where('patente','in', misPatentes));
       }
 
-      if (qyChofer){
-        unsub = onSnapshot(qyChofer, snap=>{
-          datos = snap.docs.map(d => ({ __id:d.id, ...d.data() }));
-          render(); // el orden ya lo aplicamos en memoria
-        }, onErr);
-      } else {
-        // Fallback (no hay patente ni uid configurado): no mostramos nada y avisamos
-        datos = [];
-        msg.style.display = "block";
-        msg.textContent = "Tu usuario no tiene patente asignada. Contactá al administrador.";
+      let datosUid = [];
+      let datosPat = [];
+
+      const mergeYRender = () => {
+        const map = new Map();
+        [...datosUid, ...datosPat].forEach(d => map.set(d.__id, d)); // sin duplicados
+        datos = Array.from(map.values());
         render();
+      };
+
+      const unsubscribers = [];
+
+      const unsubUid = onSnapshot(qUid, snap=>{
+        datosUid = snap.docs.map(d => ({ __id:d.id, ...d.data() }));
+        mergeYRender();
+      }, onErr);
+      unsubscribers.push(unsubUid);
+
+      if (qPat){
+        const unsubPat = onSnapshot(qPat, snap=>{
+          datosPat = snap.docs.map(d => ({ __id:d.id, ...d.data() }));
+          mergeYRender();
+        }, onErr);
+        unsubscribers.push(unsubPat);
       }
+
+      // función para desuscribir ambas
+      unsub = () => unsubscribers.forEach(fn => { try{fn();}catch(_){ } });
     }
 
     function onErr(err){
