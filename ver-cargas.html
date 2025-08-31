@@ -6,39 +6,53 @@
   <title>Ver cargas de combustible</title>
   <link rel="stylesheet" href="style.css" />
   <style>
-    body { background:#000; color:#fff; font-family: Arial, sans-serif; }
-    header { text-align:center; padding: 16px 0; }
-    h1, h2 { text-transform: uppercase; margin: 8px 0; }
-    .container {
-      background:#111; max-width:900px; margin: 20px auto; padding: 20px;
-      border-radius:12px;
+    /* Forzamos la estética como en index.html */
+    :root{
+      --amarillo:#FFD700;
+      --negro:#000;
+      --gris1:#111;
+      --gris2:#1b1b1b;
+      --gris3:#2a2a2a;
+      --texto:#fff;
     }
-    .stats {
-      display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-bottom:16px;
+    body{ background:var(--negro); color:var(--texto); font-family:Arial, sans-serif; margin:0; }
+    header{ text-align:center; padding:20px 12px; }
+    h1, h2{ text-transform:uppercase; margin:6px 0; }
+    .wrap{
+      max-width:950px; margin:0 auto; padding:20px 14px 40px;
     }
-    .stat {
-      background:#222; padding:10px 14px; border-radius:8px; font-weight:bold;
+    .card{
+      background:var(--gris1); border:1px solid var(--gris3);
+      border-radius:12px; padding:18px; margin:0 auto;
     }
-    .list { display:flex; flex-direction:column; gap:12px; }
-    .item {
-      background:#1b1b1b; padding:14px; border-radius:10px; border:1px solid #2a2a2a;
+    .stats{
+      display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:14px;
     }
-    .item h3 { margin:0 0 8px 0; font-size:18px; text-transform:uppercase; }
-    .grid {
-      display:grid; grid-template-columns: repeat(2, minmax(0,1fr));
-      gap:6px 16px; font-size:14px;
+    .pill{
+      background:var(--amarillo); color:#000; font-weight:bold;
+      border-radius:999px; padding:6px 12px; text-transform:uppercase; font-size:14px;
     }
-    .muted { color:#bbb; }
-    .btn {
+    .list{ display:flex; flex-direction:column; gap:12px; }
+    .item{
+      background:var(--gris2); border:1px solid var(--gris3);
+      border-radius:10px; padding:14px;
+    }
+    .item h3{ margin:0 0 8px 0; font-size:18px; text-transform:uppercase; }
+    .grid{
+      display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:6px 16px; font-size:14px;
+    }
+    .muted{ color:#bbb; }
+    .center{ text-align:center; }
+    .empty{ text-align:center; color:#bbb; padding:24px 8px; }
+
+    /* Botón igual que tus .btn-naranja */
+    .btn-naranja{
       display:inline-block; border:none; border-radius:8px; padding:10px 14px;
-      background:#FFD700; color:#000; font-weight:bold; text-transform:uppercase;
-      cursor:pointer; margin-top:18px;
+      background:var(--amarillo); color:#000; font-weight:bold; text-transform:uppercase;
+      cursor:pointer;
     }
-    .center { text-align:center; }
-    .empty { text-align:center; color:#bbb; padding:24px 8px; }
-    @media (max-width:600px) {
-      .grid { grid-template-columns: 1fr; }
-    }
+
+    @media (max-width:620px){ .grid{ grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
@@ -47,29 +61,31 @@
     <h2>Ver cargas de combustible</h2>
   </header>
 
-  <div class="container">
-    <!-- Contadores -->
-    <div class="stats" id="stats">
-      <div class="stat">Cargas: <span id="count">0</span></div>
-      <!-- Si luego querés totalizar litros/$, puedo activarlo acá -->
-      <!-- <div class="stat">Litros: <span id="litrosTotal">0</span></div>
-      <div class="stat">Total $: <span id="montoTotal">0</span></div> -->
-    </div>
+  <div class="wrap">
+    <div class="card">
+      <!-- Contadores -->
+      <div class="stats">
+        <div class="pill">Cargas: <span id="count">0</span></div>
+        <!-- Si querés, puedo activar estos totales:
+        <div class="pill">Litros: <span id="litrosTotal">0</span></div>
+        <div class="pill">Total $: <span id="montoTotal">0</span></div> -->
+      </div>
 
-    <!-- Lista -->
-    <div id="lista" class="list"></div>
+      <!-- Lista -->
+      <div id="lista" class="list">
+        <div class="empty">Cargando...</div>
+      </div>
 
-    <div class="center">
-      <button class="btn" onclick="location.href='index.html'">Volver</button>
+      <div class="center" style="margin-top:16px;">
+        <button class="btn-naranja" onclick="location.href='index.html'">Volver</button>
+      </div>
     </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { 
-      getFirestore, collection, getDocs, query, where 
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
@@ -90,65 +106,57 @@
     // const montoTotalEl = document.getElementById('montoTotal');
 
     onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        window.location.href = 'login.html';
-        return;
-      }
+      if (!user) { location.href = 'login.html'; return; }
       await cargarCargas(user);
     });
 
-    function toDateStr(v) {
-      // Acepta 'YYYY-MM-DD' o Timestamp/Date; devuelve string legible
-      try {
+    function toDateStr(v){
+      try{
         if (!v) return '';
         if (typeof v === 'string') return v;
         if (v?.seconds) return new Date(v.seconds*1000).toISOString().slice(0,10);
         if (v instanceof Date) return v.toISOString().slice(0,10);
         return String(v);
-      } catch { return String(v ?? ''); }
+      }catch{ return String(v ?? ''); }
     }
 
-    async function cargarCargas(user) {
+    async function cargarCargas(user){
       listaEl.innerHTML = '<div class="empty">Cargando...</div>';
 
-      const col = collection(db, 'cargasCombustible');
-
-      // 1) Buscar por uid
+      const col = collection(db, 'cargasCombustible'); // <-- cambia si tu colección se llama distinto
       let docs = [];
-      try {
-        const q1 = query(col, where('uid', '==', user.uid));
-        const snap1 = await getDocs(q1);
-        snap1.forEach(d => docs.push({id: d.id, ...d.data()}));
-      } catch (e) {
-        console.error('Error trayendo por uid:', e);
-      }
 
-      // 2) Si no hay resultados y usaste email en vez de uid, probar por email (minúsculas)
-      if (docs.length === 0) {
-        try {
+      // 1) Por uid
+      try{
+        const q1 = query(col, where('uid','==', user.uid));
+        const s1 = await getDocs(q1);
+        s1.forEach(d => docs.push({ id:d.id, ...d.data() }));
+      }catch(e){ console.error('uid query', e); }
+
+      // 2) Fallback por email en minúsculas (si guardaste email en vez de uid)
+      if (docs.length === 0){
+        try{
           const emailLower = (user.email || '').toLowerCase();
-          const q2 = query(col, where('email', '==', emailLower));
-          const snap2 = await getDocs(q2);
-          snap2.forEach(d => docs.push({id: d.id, ...d.data()}));
-        } catch (e) {
-          console.error('Error trayendo por email:', e);
-        }
+          const q2 = query(col, where('email','==', emailLower));
+          const s2 = await getDocs(q2);
+          s2.forEach(d => docs.push({ id:d.id, ...d.data() }));
+        }catch(e){ console.error('email query', e); }
       }
 
-      if (docs.length === 0) {
+      if (docs.length === 0){
         listaEl.innerHTML = '<div class="empty">No tenés cargas registradas.</div>';
         countEl.textContent = '0';
         return;
       }
 
-      // Ordenar por fecha si existe (desc)
+      // Ordenar por fecha descendente si existe
       docs.sort((a,b) => {
         const fa = new Date(toDateStr(a.fechaCarga || a.fecha)).getTime() || 0;
         const fb = new Date(toDateStr(b.fechaCarga || b.fecha)).getTime() || 0;
         return fb - fa;
       });
 
-      // Contadores
+      // Totales / contador
       countEl.textContent = String(docs.length);
       // let litrosTotal = 0, montoTotal = 0;
 
@@ -158,10 +166,10 @@
         const fecha = toDateStr(c.fechaCarga || c.fecha);
         const litros = Number(c.litros ?? c.cantidadLitros ?? c.cantidad ?? 0);
         const precio = Number(c.precioPorLitro ?? c.precio ?? 0);
-        const total = c.total ?? (litros && precio ? (litros * precio) : '');
+        const total  = c.total ?? (litros && precio ? (litros * precio) : '');
 
-        // litrosTotal += (isFinite(litros) ? litros : 0);
-        // montoTotal  += (isFinite(total) ? Number(total) : 0);
+        // litrosTotal += isFinite(litros) ? litros : 0;
+        // montoTotal  += isFinite(total)  ? Number(total) : 0;
 
         const div = document.createElement('div');
         div.className = 'item';
@@ -180,7 +188,7 @@
       });
 
       // litrosTotalEl.textContent = String(litrosTotal);
-      // montoTotalEl.textContent  = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(montoTotal);
+      // montoTotalEl.textContent  = new Intl.NumberFormat('es-AR',{minimumFractionDigits:2}).format(montoTotal);
     }
   </script>
 </body>
