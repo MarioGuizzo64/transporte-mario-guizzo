@@ -7,7 +7,7 @@
   <style>
     body{
       margin:0;
-      background:#FFD700; /* podés dejarlo negro (#000) si lo querés uniforme */
+      background:#FFD700; /* si querés todo negro, cambiá a #000 */
       font-family:Arial,sans-serif;
       color:white;
       text-transform:uppercase;
@@ -78,7 +78,7 @@
   <div class="container">
     <h1>GESTIÓN DE USUARIOS</h1>
 
-    <!-- Formulario creación con campos extra -->
+    <!-- Formulario creación -->
     <form id="formUsuario">
       <input type="text" id="nombre" name="nombre" placeholder="Nombre" required />
       <input type="text" id="apellido" name="apellido" placeholder="Apellido" required />
@@ -110,7 +110,7 @@
         <input type="date" id="editFechaIngreso" placeholder="Fecha de ingreso" required />
         <input type="text" id="editCuil" placeholder="CUIL" required />
         <input type="email" id="editEmail" placeholder="Correo electrónico" required />
-        <input type="password" id="editPassword" placeholder="Contraseña actual (no se modifica aquí)" disabled />
+        <input type="password" id="editPassword" placeholder="Contraseña (no se modifica aquí)" disabled />
         <div style="text-align:right;">
           <button type="button" class="btn-eliminar" onclick="cerrarModal()">Cancelar</button>
           <button type="submit" class="btn-guardar">Guardar Cambios</button>
@@ -121,8 +121,12 @@
 
   <script type="module">
     import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, getDocs, deleteDoc, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { 
+      getAuth, createUserWithEmailAndPassword, onAuthStateChanged, fetchSignInMethodsForEmail 
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { 
+      getFirestore, collection, getDocs, deleteDoc, doc, updateDoc, setDoc 
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
@@ -191,7 +195,7 @@
       }
     };
 
-    // Crear usuario sin cerrar la sesión del admin (APP SECUNDARIA)
+    // Crear usuario (soporta caso de email ya existente en Auth)
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
@@ -207,30 +211,45 @@
 
       if (!data.rol) { alert('Seleccioná un rol.'); return; }
 
+      const emailLower = data.email.toLowerCase();
+      let uid = null;
+
       try {
-        // 1) Inicializar app secundaria para crear el usuario sin tocar auth del admin
-        const auxApp = initializeApp(firebaseConfig, 'aux');
-        const auxAuth = getAuth(auxApp);
+        // ¿El email ya existe en Auth?
+        const methods = await fetchSignInMethodsForEmail(getAuth(), data.email);
 
-        // 2) Crear usuario en Auth (la sesión queda en auxAuth, no en la principal)
-        const cred = await createUserWithEmailAndPassword(auxAuth, data.email, password);
+        if (methods.length === 0) {
+          // NO existe en Auth => crear con app secundaria (no afecta sesión del admin)
+          const auxApp = initializeApp(firebaseConfig, 'aux');
+          const auxAuth = getAuth(auxApp);
 
-        // 3) Guardar documento en Firestore con ID = uid
-        await setDoc(doc(db, 'usuarios', cred.user.uid), { uid: cred.user.uid, ...data });
+          const cred = await createUserWithEmailAndPassword(auxAuth, data.email, password);
+          uid = cred.user.uid;
 
-        // 4) Cerrar y limpiar app secundaria
-        await deleteApp(auxApp);
+          // Guardar en Firestore con ID = uid
+          await setDoc(doc(db, 'usuarios', uid), { uid, ...data, email: emailLower });
+
+          await deleteApp(auxApp);
+          alert('Usuario creado correctamente.');
+        } else {
+          // SÍ existe en Auth => solo sincronizar/crear perfil en Firestore por email
+          await setDoc(
+            doc(db, 'usuarios', emailLower),
+            { uid: null, ...data, email: emailLower },
+            { merge: true }
+          );
+          alert('El correo ya existía en Auth. Se actualizó/creó el perfil en Firestore.');
+        }
 
         form.reset();
         cargarUsuarios();
-        alert('Usuario creado correctamente.');
       } catch (err) {
         console.error(err);
-        alert('Error creando usuario: ' + err.message);
+        alert('Error creando/sincronizando usuario: ' + err.message);
       }
     });
 
-    // Abrir modal con datos (NOTA: aquí NO se actualiza email ni contraseña en Auth)
+    // Abrir modal con datos (edita SOLO Firestore, no Auth)
     window.abrirModal = (id, u) => {
       editId = id;
       formEdit.editNombre.value = u.nombre ?? '';
@@ -256,7 +275,7 @@
         apellido: formEdit.editApellido.value.trim(),
         fechaIngreso: formEdit.editFechaIngreso.value,
         cuil: formEdit.editCuil.value.trim(),
-        email: formEdit.editEmail.value.trim() // OJO: esto no cambia el email en Auth
+        email: formEdit.editEmail.value.trim() // NO cambia el email en Auth
       };
 
       try {
