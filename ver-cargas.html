@@ -1,195 +1,299 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ver cargas de combustible</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <title>Ver cargas</title>
   <style>
-    /* Forzamos la estética como en index.html */
-    :root{
-      --amarillo:#FFD700;
-      --negro:#000;
-      --gris1:#111;
-      --gris2:#1b1b1b;
-      --gris3:#2a2a2a;
-      --texto:#fff;
-    }
-    body{ background:var(--negro); color:var(--texto); font-family:Arial, sans-serif; margin:0; }
-    header{ text-align:center; padding:20px 12px; }
-    h1, h2{ text-transform:uppercase; margin:6px 0; }
-    .wrap{
-      max-width:950px; margin:0 auto; padding:20px 14px 40px;
-    }
-    .card{
-      background:var(--gris1); border:1px solid var(--gris3);
-      border-radius:12px; padding:18px; margin:0 auto;
-    }
-    .stats{
-      display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:14px;
-    }
-    .pill{
-      background:var(--amarillo); color:#000; font-weight:bold;
-      border-radius:999px; padding:6px 12px; text-transform:uppercase; font-size:14px;
-    }
-    .list{ display:flex; flex-direction:column; gap:12px; }
-    .item{
-      background:var(--gris2); border:1px solid var(--gris3);
-      border-radius:10px; padding:14px;
-    }
-    .item h3{ margin:0 0 8px 0; font-size:18px; text-transform:uppercase; }
-    .grid{
-      display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:6px 16px; font-size:14px;
-    }
-    .muted{ color:#bbb; }
-    .center{ text-align:center; }
-    .empty{ text-align:center; color:#bbb; padding:24px 8px; }
-
-    /* Botón igual que tus .btn-naranja */
-    .btn-naranja{
-      display:inline-block; border:none; border-radius:8px; padding:10px 14px;
-      background:var(--amarillo); color:#000; font-weight:bold; text-transform:uppercase;
-      cursor:pointer;
-    }
-
-    @media (max-width:620px){ .grid{ grid-template-columns:1fr; } }
+    /* MISMO ESTILO QUE ver-viajes.html */
+    body{margin:0;background:#FFD700;font-family:Arial,sans-serif;color:#fff}
+    .contenedor{background:#111;margin:50px auto;padding:20px;border-radius:10px;max-width:900px}
+    h1{text-align:center;text-decoration:underline;color:#fff;margin-top:0}
+    .bar{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+    .bar input,.bar select{padding:8px;border:1px solid #000;border-radius:6px;background:#fff;color:#000}
+    .item{background:#222;margin:10px 0;padding:14px;border-radius:10px}
+    .item p{margin:4px 0}
+    .muted{opacity:.75}
+    .boton{padding:8px 14px;margin:4px 6px 0 0;border:none;border-radius:6px;cursor:pointer;font-weight:bold}
+    .editar{background:#2e7d32;color:#fff}
+    .eliminar{background:#d32f2f;color:#fff}
+    .volver{background:orange;color:#000}
+    .tag{display:inline-block;background:#333;border:1px solid #444;border-radius:999px;padding:2px 8px;margin-left:6px;font-size:12px}
+    .empty{padding:16px;background:#1a1a1a;border:1px dashed #333;border-radius:8px;text-align:center}
   </style>
 </head>
 <body>
-  <header>
-    <h1>Transporte Mario Güizzo</h1>
-    <h2>Ver cargas de combustible</h2>
-  </header>
+  <div class="contenedor">
+    <h1>Cargas de combustible</h1>
 
-  <div class="wrap">
-    <div class="card">
-      <!-- Contadores -->
-      <div class="stats">
-        <div class="pill">Cargas: <span id="count">0</span></div>
-        <!-- Si querés, puedo activar estos totales:
-        <div class="pill">Litros: <span id="litrosTotal">0</span></div>
-        <div class="pill">Total $: <span id="montoTotal">0</span></div> -->
+    <div class="bar">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div>
+          <label class="muted">Buscar:</label>
+          <input id="q" placeholder="estación, patente, tipo, chofer, CUIL…" />
+        </div>
+        <!-- contador como pill, igual estilo que ver-viajes -->
+        <span class="tag" id="countTag">Cargas: 0</span>
       </div>
 
-      <!-- Lista -->
-      <div id="lista" class="list">
-        <div class="empty">Cargando...</div>
+      <div>
+        <label class="muted">Ordenar por:</label>
+        <select id="orden">
+          <option value="fecha_desc">Fecha ↓</option>
+          <option value="fecha_asc">Fecha ↑</option>
+          <option value="ts_desc">Creación ↓</option>
+          <option value="ts_asc">Creación ↑</option>
+        </select>
       </div>
 
-      <div class="center" style="margin-top:16px;">
-        <button class="btn-naranja" onclick="location.href='index.html'">Volver</button>
-      </div>
+      <button class="boton volver" onclick="location.href='index.html'">Volver</button>
     </div>
+
+    <div id="lista-cargas"></div>
+    <div id="msg" class="empty" style="display:none">Cargando…</div>
   </div>
 
   <script type="module">
+    /* === Firebase (copiado al estilo de ver-viajes.html) === */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import {
+      getFirestore, collection, onSnapshot, getDocs, query, orderBy, where,
+      doc, getDoc
+      // , deleteDoc, updateDoc  // si luego querés eliminar/editar
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
       authDomain: "transporte-mario-guizzo.firebaseapp.com",
       projectId: "transporte-mario-guizzo",
-      storageBucket: "transporte-mario-guizzo.appspot.com",
+      storageBucket: "transporte-mario-guizzo.firebasestorage.app",
       messagingSenderId: "465536166890",
-      appId: "1:465536166890:web:f658690629b09eca8fa093"
+      appId: "1:465536166890:web:f658690629b09eca8fa093",
+      measurementId: "G-187MCQ2XPW"
     };
 
-    const app = initializeApp(firebaseConfig);
+    const app  = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
+    const db   = getFirestore(app);
 
-    const listaEl = document.getElementById('lista');
-    const countEl = document.getElementById('count');
-    // const litrosTotalEl = document.getElementById('litrosTotal');
-    // const montoTotalEl = document.getElementById('montoTotal');
+    const lista  = document.getElementById("lista-cargas");
+    const msg    = document.getElementById("msg");
+    const qInp   = document.getElementById("q");
+    const selOrd = document.getElementById("orden");
+    const countTag = document.getElementById("countTag");
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) { location.href = 'login.html'; return; }
-      await cargarCargas(user);
-    });
+    let datos = [];        // cargas en memoria (para filtrar/ordenar)
+    let unsub = null;      // para desuscribir onSnapshot actual
+    let esAdmin = false;   // rol
+    let miUid = null;      // uid logueado
+    let miEmailLower = ""; // email en minúsculas (fallback si no guardaste uid en cargas)
 
-    function toDateStr(v){
-      try{
-        if (!v) return '';
-        if (typeof v === 'string') return v;
-        if (v?.seconds) return new Date(v.seconds*1000).toISOString().slice(0,10);
-        if (v instanceof Date) return v.toISOString().slice(0,10);
-        return String(v);
-      }catch{ return String(v ?? ''); }
+    // Helpers
+    const safe = v => (v ?? '').toString();
+    const fmt  = s => {
+      const v = s?.seconds ? new Date(s.seconds*1000).toISOString().slice(0,10) : safe(s).slice(0,10);
+      return v;
+    };
+    const up   = s => safe(s).toUpperCase();
+    const toNum = v => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    function ordenarEnMemoria(arr, clave){
+      const getFechaStr = (c) => {
+        // fecha campo preferente: fechaCarga, fallback: fecha
+        return safe(c.fechaCarga ?? c.fecha) || '';
+      };
+      const getTs = (c) => toNum(c.timestamp);
+
+      const byFecha = (a,b) => getFechaStr(a).localeCompare(getFechaStr(b));
+      const byTs    = (a,b) => getTs(a) - getTs(b);
+
+      const copy = [...arr];
+      switch (clave){
+        case 'fecha_asc': copy.sort(byFecha); break;
+        case 'fecha_desc': copy.sort(byFecha).reverse(); break;
+        case 'ts_asc': copy.sort(byTs); break;
+        case 'ts_desc': copy.sort(byTs).reverse(); break;
+      }
+      return copy;
     }
 
-    async function cargarCargas(user){
-      listaEl.innerHTML = '<div class="empty">Cargando...</div>';
+    function render(){
+      const qtxt = up(qInp.value.trim());
+      lista.innerHTML = "";
 
-      const col = collection(db, 'cargasCombustible'); // <-- cambia si tu colección se llama distinto
-      let docs = [];
+      // ordenar primero en memoria (como hiciste en ver-viajes para modo chofer)
+      const ordenados = ordenarEnMemoria(datos, selOrd.value);
 
-      // 1) Por uid
-      try{
-        const q1 = query(col, where('uid','==', user.uid));
-        const s1 = await getDocs(q1);
-        s1.forEach(d => docs.push({ id:d.id, ...d.data() }));
-      }catch(e){ console.error('uid query', e); }
+      const fil = qtxt
+        ? ordenados.filter(c => (
+            up(c.estacion || c.estacionServicio).includes(qtxt) ||
+            up(c.patente || c.patenteCamion).includes(qtxt) ||
+            up(c.tipo || c.tipoCombustible).includes(qtxt) ||
+            up(c.chofer).includes(qtxt) ||
+            up(c.cuil || c.cuit || c.cuitOrigen).includes(qtxt)
+          ))
+        : ordenados;
 
-      // 2) Fallback por email en minúsculas (si guardaste email en vez de uid)
-      if (docs.length === 0){
-        try{
-          const emailLower = (user.email || '').toLowerCase();
-          const q2 = query(col, where('email','==', emailLower));
-          const s2 = await getDocs(q2);
-          s2.forEach(d => docs.push({ id:d.id, ...d.data() }));
-        }catch(e){ console.error('email query', e); }
+      // contador
+      countTag.textContent = `Cargas: ${fil.length}`;
+
+      if (!fil.length){
+        msg.style.display = "block";
+        msg.textContent = "No hay cargas para mostrar.";
+        return;
+      } else {
+        msg.style.display = "none";
       }
 
-      if (docs.length === 0){
-        listaEl.innerHTML = '<div class="empty">No tenés cargas registradas.</div>';
-        countEl.textContent = '0';
+      for (const c of fil){
+        const fecha = fmt(c.fechaCarga ?? c.fecha);
+        const litros = toNum(c.litros ?? c.cantidadLitros ?? c.cantidad);
+        const pxl = toNum(c.precioPorLitro ?? c.precio);
+        const total = c.total ?? (litros && pxl ? (litros*pxl) : 0);
+
+        const el = document.createElement("div");
+        el.className = "item";
+        el.innerHTML = `
+          <p><strong>Fecha:</strong> ${fecha || "-"}</p>
+          <p><strong>Litros:</strong> ${litros || "-"}</p>
+          <p><strong>Precio x litro:</strong> ${pxl ? ('$ ' + pxl) : "-"}</p>
+          <p><strong>Total pagado:</strong> ${total ? ('$ ' + total) : "-"}</p>
+          <p><strong>Estación:</strong> ${safe(c.estacion || c.estacionServicio) || "-"}</p>
+          <p><strong>Tipo:</strong> ${safe(c.tipo || c.tipoCombustible) || "-"}</p>
+          <p><strong>Patente:</strong> ${safe(c.patente || c.patenteCamion) || "-"}</p>
+          <p class="muted">
+            <span class="tag">Chofer: ${safe(c.chofer)||"-"}</span>
+            ${c.uid ? `<span class="tag">UID: ${c.uid}</span>` : ``}
+          </p>
+          <!-- Si más adelante querés edición/eliminación, activás estos botones:
+          <button class="boton editar" data-edit="${c.__id}">Editar</button>
+          <button class="boton eliminar" data-del="${c.__id}">Eliminar</button>
+          -->
+        `;
+        lista.appendChild(el);
+      }
+
+      // listeners si activás edición/eliminación
+      // lista.querySelectorAll('[data-edit]').forEach(b=>{
+      //   b.onclick = ()=> editarCarga(b.getAttribute('data-edit'));
+      // });
+      // lista.querySelectorAll('[data-del]').forEach(b=>{
+      //   b.onclick = ()=> eliminarCarga(b.getAttribute('data-del'));
+      // });
+    }
+
+    // Suscripción según rol (misma idea que ver-viajes)
+    function escuchar(){
+      if (unsub) { try{unsub();}catch(_){} unsub = null; }
+
+      const ref = collection(db, "cargasCombustible");
+      msg.style.display = "block";
+      msg.textContent = "Cargando…";
+
+      // ---- ADMIN: ve todo, con orderBy en el query ----
+      if (esAdmin){
+        let qy;
+        switch(selOrd.value){
+          case 'fecha_asc': qy = query(ref, orderBy('fechaCarga','asc')); break;
+          case 'ts_desc':   qy = query(ref, orderBy('timestamp','desc')); break;
+          case 'ts_asc':    qy = query(ref, orderBy('timestamp','asc')); break;
+          default:          qy = query(ref, orderBy('fechaCarga','desc')); // fecha_desc
+        }
+        unsub = onSnapshot(qy, snap=>{
+          datos = snap.docs.map(d => ({ __id:d.id, ...d.data() }));
+          render();
+        }, onErr);
         return;
       }
 
-      // Ordenar por fecha descendente si existe
-      docs.sort((a,b) => {
-        const fa = new Date(toDateStr(a.fechaCarga || a.fecha)).getTime() || 0;
-        const fb = new Date(toDateStr(b.fechaCarga || b.fecha)).getTime() || 0;
-        return fb - fa;
-      });
+      // ---- CHOFER: filtra por uid; si no hay, por emailLower ----
+      let qyChofer = null;
 
-      // Totales / contador
-      countEl.textContent = String(docs.length);
-      // let litrosTotal = 0, montoTotal = 0;
+      if (miUid){
+        qyChofer = query(ref, where('uid','==', miUid));
+      }
 
-      // Render
-      listaEl.innerHTML = '';
-      docs.forEach(c => {
-        const fecha = toDateStr(c.fechaCarga || c.fecha);
-        const litros = Number(c.litros ?? c.cantidadLitros ?? c.cantidad ?? 0);
-        const precio = Number(c.precioPorLitro ?? c.precio ?? 0);
-        const total  = c.total ?? (litros && precio ? (litros * precio) : '');
+      const subscribeChofer = (qy) => {
+        unsub = onSnapshot(qy, async snap=>{
+          let arr = snap.docs.map(d => ({ __id:d.id, ...d.data() }));
 
-        // litrosTotal += isFinite(litros) ? litros : 0;
-        // montoTotal  += isFinite(total)  ? Number(total) : 0;
+          // Si por UID no trajo nada y tenemos emailLower guardado en docs, intento fallback
+          if (!arr.length && miEmailLower){
+            const q2 = query(ref, where('email','==', miEmailLower));
+            const s2 = await getDocs(q2);
+            arr = s2.docs.map(d => ({ __id:d.id, ...d.data() }));
+          }
 
-        const div = document.createElement('div');
-        div.className = 'item';
-        div.innerHTML = `
-          <h3>${fecha || 'Sin fecha'}</h3>
-          <div class="grid">
-            <div><span class="muted">Litros:</span> ${litros || '-'}</div>
-            <div><span class="muted">Precio x litro:</span> ${precio ? '$ ' + precio : '-'}</div>
-            <div><span class="muted">Total pagado:</span> ${total ? '$ ' + total : '-'}</div>
-            <div><span class="muted">Estación:</span> ${c.estacion || c.estacionServicio || '-'}</div>
-            <div><span class="muted">Tipo combustible:</span> ${c.tipo || c.tipoCombustible || '-'}</div>
-            <div><span class="muted">Patente camión:</span> ${c.patente || c.patenteCamion || '-'}</div>
-          </div>
-        `;
-        listaEl.appendChild(div);
-      });
+          datos = arr;
+          render(); // el orden ya lo aplicamos en memoria
+        }, onErr);
+      };
 
-      // litrosTotalEl.textContent = String(litrosTotal);
-      // montoTotalEl.textContent  = new Intl.NumberFormat('es-AR',{minimumFractionDigits:2}).format(montoTotal);
+      if (qyChofer) subscribeChofer(qyChofer);
+      else {
+        // Si no tenemos uid por algún motivo, intentamos directo por email
+        if (miEmailLower){
+          const q2 = query(ref, where('email','==', miEmailLower));
+          subscribeChofer(q2);
+        } else {
+          datos = [];
+          msg.style.display = "block";
+          msg.textContent = "No hay cargas para mostrar.";
+          render();
+        }
+      }
     }
+
+    function onErr(err){
+      console.error(err);
+      msg.style.display = "block";
+      msg.textContent = "No se pudieron cargar las cargas ("+(err.code||err.message)+").";
+    }
+
+    // Eventos UI
+    qInp.addEventListener('input', render);
+    selOrd.addEventListener('change', escuchar); // re-suscribimos (admin usa orderBy del query)
+
+    // Auth + rol (igual lógica que ver-viajes)
+    onAuthStateChanged(auth, async (u)=>{
+      if (!u){ location.href = "login.html"; return; }
+      miUid = u.uid;
+      miEmailLower = (u.email || "").toLowerCase();
+
+      try{
+        // Perfil del usuario en 'usuarios' por UID (como haces en ver-viajes)
+        const perfilSnap = await getDoc(doc(db, "usuarios", u.uid));
+        const perfil = perfilSnap.exists() ? perfilSnap.data() : {};
+        esAdmin = (perfil.rol || "").toLowerCase() === "admin";
+      }catch(e){
+        console.warn("No se pudo leer el perfil del usuario:", e);
+        esAdmin = false;
+      }
+
+      escuchar();
+    });
+
+    // Si más adelante activás edición/eliminación:
+    // async function eliminarCarga(id){
+    //   if (!confirm("¿Eliminar la carga?")) return;
+    //   try{ await deleteDoc(doc(db,"cargasCombustible",id)); }
+    //   catch(e){ alert("No se pudo eliminar: " + (e.code||e.message)); }
+    // }
+    // async function editarCarga(id){
+    //   const c = datos.find(x=>x.__id===id); if (!c) return;
+    //   const nf = prompt("Fecha (YYYY-MM-DD):", fmt(c.fechaCarga || c.fecha)); if (nf===null) return;
+    //   const nl = prompt("Litros:", c.litros ?? c.cantidadLitros ?? ""); if (nl===null) return;
+    //   const np = prompt("Precio x litro:", c.precioPorLitro ?? c.precio ?? ""); if (np===null) return;
+    //   try{
+    //     await updateDoc(doc(db,"cargasCombustible",id), {
+    //       fechaCarga: nf.trim(), litros: Number(nl), precioPorLitro: Number(np),
+    //       total: Number(nl) && Number(np) ? Number(nl)*Number(np) : null
+    //     });
+    //   }catch(e){ alert("No se pudo actualizar: " + (e.code||e.message)); }
+    // }
   </script>
 </body>
 </html>
