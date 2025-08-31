@@ -237,6 +237,45 @@ const titPat2 = document.getElementById('titPatente2');
 
 const fmt = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
 
+/* ==================== Normalizadores ==================== */
+// Fecha → 'YYYY-MM-DD' (acepta string, Date, Timestamp, {seconds}, etc.)
+function fechaStr(x){
+  if (!x) return '';
+  if (typeof x === 'string') return x.slice(0,10);
+  if (x instanceof Date) return x.toISOString().slice(0,10);
+  if (typeof x === 'object'){
+    if (typeof x.toDate === 'function') return x.toDate().toISOString().slice(0,10); // Firestore Timestamp
+    if (typeof x.seconds === 'number') return new Date(x.seconds*1000).toISOString().slice(0,10);
+  }
+  return String(x).slice(0,10);
+}
+// Combustible (nombres alternativos)
+const combPatente  = (c) => (c.patenteCamion || c.patente || '').trim();
+const combEstacion = (c) => c.estacionServicio || c.estacion || '';
+const combMetodo   = (c) => c.metodoPago || c.metodo || '';
+const combTipo     = (c) => c.tipoCombustible || c.tipo || '';
+const combFecha    = (c) => fechaStr(c.fecha || c.fechaCarga || c.fechaCompra || null);
+const combTotal    = (c) => {
+  const cand = [c.totalPagado, c.total, (Number(c.litros||0) * Number(c.precioPorLitro || c.sl || 0))];
+  for (const v of cand){ const n = Number(v); if (!isNaN(n) && n>0) return n; }
+  return 0;
+};
+// Ingresos viaje (campos alternativos)
+function ingresoViaje(v){
+  const cand = [v.importeCobrado, v.totalCobrado, v.importe, v.ingreso, v.total];
+  for (const val of cand){
+    const n = Number(val);
+    if (!isNaN(n) && n>0) return n;
+  }
+  // Tarifa por tonelada / kg
+  const kg = Number(v.kgDescargados||0);
+  const tTon = Number(v.tarifaPorTon ?? NaN);
+  if (!isNaN(tTon) && tTon>0) return (kg/1000)*tTon;
+  const tKg = Number(v.tarifaPorKg ?? NaN);
+  if (!isNaN(tKg) && tKg>0) return kg*tKg;
+  return 0;
+}
+
 /* ==================== Lectura de colecciones ==================== */
 onSnapshot(collection(db,'usuarios'), qs=>{
   usuarios = qs.docs.map(d => ({id:d.id, ...d.data()}))
@@ -248,16 +287,16 @@ onSnapshot(collection(db,'usuarios'), qs=>{
 onSnapshot(collection(db,'viajes'), qs=>{
   viajes = qs.docs.map(d => ({id:d.id, ...d.data()}));
   viajes.forEach(v=>{
-    if (v.patente) patSet.add((v.patente||'').trim());
+    const p = (v.patente||'').trim();
+    if (p) patSet.add(p);
     if (v.chofer)  choSet.add((v.chofer||'').trim());
   });
   poblarPatentes(); poblarChoferes(); render();
 });
 onSnapshot(collection(db,'cargas-combustible'), qs=>{
   combustible = qs.docs.map(d => ({id:d.id, ...d.data()}));
-  // CAMBIO: tomar patente desde patenteCamion (o patente legacy)
   combustible.forEach(c=> {
-    const p = (c.patenteCamion || c.patente || '').trim();
+    const p = combPatente(c);
     if (p) patSet.add(p);
   });
   poblarPatentes(); render();
@@ -268,7 +307,7 @@ onSnapshot(collection(db,'mantenimientos'), qs=>{
   poblarPatentes(); render();
 });
 
-/* ==================== Helpers ==================== */
+/* ==================== Helpers UI ==================== */
 function poblarPatentes(){
   const prev = fPatente.value;
   const arr = Array.from(patSet).filter(Boolean).sort();
@@ -283,7 +322,7 @@ function poblarChoferes(){
   if (arr.includes(prev)) fChofer.value = prev;
 }
 function buildChips(arr){
-  const pats = arr.slice(0,20); // por si hay muchísimas, mostramos 20
+  const pats = arr.slice(0,20);
   let html = `<button class="chip ${selectedPatChip===''?'active':''}" data-pt="">Total</button>`;
   html += pats.map(p => `<button class="chip ${selectedPatChip===p?'active':''}" data-pt="${p}">${p}</button>`).join('');
   chipsPat.innerHTML = html;
@@ -292,17 +331,17 @@ function buildChips(arr){
       selectedPatChip = b.dataset.pt || '';
       chipsPat.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
       b.classList.add('active');
-      renderCharts(movs); // sólo rehace gráficos
+      renderCharts(movs);
     };
   });
 }
-function inRange(fecha, d, h){
-  if (!fecha) return false;
-  const f = String(fecha).slice(0,10);
-  if (d && f < d) return false;
-  if (h && f > h) return false;
+function inRangeFechaStr(fstr, d, h){
+  if (!fstr) return false;
+  if (d && fstr < d) return false;
+  if (h && fstr > h) return false;
   return true;
 }
+function inRange(fecha, d, h){ return inRangeFechaStr(fechaStr(fecha), d, h); }
 function pasaTexto(q, ...campos){
   q = (q||'').trim().toLowerCase();
   if (!q) return true;
@@ -315,31 +354,6 @@ function getPctChofer(nombre, patente){
   if (u2 && Number(u2.porcentaje)>=0) return Number(u2.porcentaje)/100;
   return DEFAULT_COMMISSION;
 }
-function ingresoViaje(v){
-  const imp = Number(v.importeCobrado ?? NaN);
-  if (!isNaN(imp) && imp>0) return imp;
-  const kg = Number(v.kgDescargados||0);
-  const tTon = Number(v.tarifaPorTon ?? NaN);
-  if (!isNaN(tTon) && tTon>0) return (kg/1000)*tTon;
-  const tKg = Number(v.tarifaPorKg ?? NaN);
-  if (!isNaN(tKg) && tKg>0) return kg*tKg;
-  return 0;
-}
-
-// ====== NORMALIZADORES DE COMBUSTIBLE ======
-// CAMBIO: helpers para campos con nombres distintos según pantalla/versión
-const combPatente  = (c) => c.patenteCamion || c.patente || '';
-const combEstacion = (c) => c.estacionServicio || c.estacion || '';
-const combMetodo   = (c) => c.metodoPago || c.metodo || '';
-const combTipo     = (c) => c.tipoCombustible || c.tipo || '';
-const combTotal    = (c) => {
-  // prioriza totalPagado o total; si no, litros * precioPorLitro/sl
-  if (c.totalPagado !== undefined && c.totalPagado !== null && c.totalPagado !== '') return Number(c.totalPagado);
-  if (c.total !== undefined && c.total !== null && c.total !== '') return Number(c.total);
-  const L = Number(c.litros || 0);
-  const P = Number(c.precioPorLitro || c.sl || 0);
-  return L * P;
-};
 
 /* ==================== Render principal ==================== */
 let chrtPat = null, chrtEgr = null;
@@ -353,7 +367,8 @@ function render(){
 
   // VIAJES
   const viajesFiltrados = viajes.filter(v=>{
-    if (!inRange(v.fecha, d, h)) return false;
+    const f = fechaStr(v.fecha);
+    if (!inRangeFechaStr(f, d, h)) return false;
     if (ch && (v.chofer||'') !== ch) return false;
     if (pt && (v.patente||'') !== pt) return false;
     if (!pasaTexto(q, v.origen, v.destino, v.cuitOrigen, v.observaciones, v.chofer, v.patente)) return false;
@@ -363,43 +378,50 @@ function render(){
   for (const v of viajesFiltrados){
     const ingreso = ingresoViaje(v);
     if (ingreso>0){
-      movs.push({fecha:v.fecha,tipo:'Ingreso',detalle:`${v.origen||''} → ${v.destino||''}`,chofer:v.chofer||'',patente:v.patente||'',importe:ingreso});
+      movs.push({
+        fecha: fechaStr(v.fecha),
+        tipo:'Ingreso',
+        detalle:`${v.origen||''} → ${v.destino||''}`,
+        chofer:v.chofer||'',
+        patente:v.patente||'',
+        importe:ingreso
+      });
     }
     if (v.peajeAplica && Number(v.peajeMonto)>0){
-      movs.push({fecha:v.fecha,tipo:'Peaje',detalle:'Peaje',chofer:v.chofer||'',patente:v.patente||'',importe:Number(v.peajeMonto||0)});
+      movs.push({fecha:fechaStr(v.fecha),tipo:'Peaje',detalle:'Peaje',chofer:v.chofer||'',patente:v.patente||'',importe:Number(v.peajeMonto||0)});
     }
     if (v.entradaAplica && Number(v.entradaMonto)>0){
-      movs.push({fecha:v.fecha,tipo:'Entrada',detalle:'Entrada',chofer:v.chofer||'',patente:v.patente||'',importe:Number(v.entradaMonto||0)});
+      movs.push({fecha:fechaStr(v.fecha),tipo:'Entrada',detalle:'Entrada',chofer:v.chofer||'',patente:v.patente||'',importe:Number(v.entradaMonto||0)});
     }
     if (v.adelantoAplica && Number(v.adelantoMonto)>0){
-      movs.push({fecha:v.fecha,tipo:'Adelanto',detalle:'Adelanto chofer',chofer:v.chofer||'',patente:v.patente||'',importe:Number(v.adelantoMonto||0)});
+      movs.push({fecha:fechaStr(v.fecha),tipo:'Adelanto',detalle:'Adelanto chofer',chofer:v.chofer||'',patente:v.patente||'',importe:Number(v.adelantoMonto||0)});
     }
   }
 
   // COMBUSTIBLE
   combustible.filter(c=>{
-    if (!inRange(c.fecha, d, h)) return false;
-    // CAMBIO: usar patenteCamion normalizada
+    const f = combFecha(c);
+    if (!inRangeFechaStr(f, d, h)) return false;
     if (pt && (combPatente(c) !== pt)) return false;
     if (ch && (c.chofer||'') !== ch) return false;
-    // CAMBIO: buscar por campos normalizados
     if (!pasaTexto(q, combEstacion(c), combTipo(c), combMetodo(c), combPatente(c))) return false;
     return true;
   }).forEach(c=>{
-    const tot = combTotal(c); // CAMBIO
+    const tot = combTotal(c);
     if (tot>0) movs.push({
-      fecha: c.fecha,
+      fecha: combFecha(c),
       tipo: 'Combustible',
-      detalle: `${combEstacion(c) || '-'} — ${combTipo(c) || ''}`, // CAMBIO
+      detalle: `${combEstacion(c) || '-'} — ${combTipo(c) || ''}`,
       chofer: c.chofer || '',
-      patente: combPatente(c), // CAMBIO
+      patente: combPatente(c),
       importe: tot
     });
   });
 
   // MANTENIMIENTO
   mant.filter(m=>{
-    if (!inRange(m.fecha, d, h)) return false;
+    const f = fechaStr(m.fecha);
+    if (!inRangeFechaStr(f, d, h)) return false;
     if (pt && (m.patente||'') !== pt) return false;
     if (est==='pagado'   && !(m.pagado===true || m.pagado==='si')) return false;
     if (est==='adeudado' &&  (m.pagado===true || m.pagado==='si')) return false;
@@ -407,10 +429,18 @@ function render(){
     return true;
   }).forEach(m=>{
     const tot = Number(m.total||0);
-    if (tot>0) movs.push({fecha:m.fecha,tipo:'Mantenimiento',detalle:`${m.tipo||''} — ${m.proveedor||''}`,chofer:'',patente:m.patente||'',importe:tot});
+    if (tot>0) movs.push({
+      fecha: fechaStr(m.fecha),
+      tipo:'Mantenimiento',
+      detalle:`${m.tipo||''} — ${m.proveedor||''}`,
+      chofer:'',
+      patente:m.patente||'',
+      importe:tot
+    });
   });
 
-  movs.sort((a,b)=> String(b.fecha).localeCompare(String(a.fecha)));
+  // Ordenar por fecha ya normalizada
+  movs.sort((a,b)=> b.fecha.localeCompare(a.fecha));
 
   const sum = (tipo) => movs.filter(x=>x.tipo===tipo).reduce((a,b)=>a+Number(b.importe||0),0);
   const ingresos   = sum('Ingreso');
@@ -434,7 +464,7 @@ function render(){
   // Tabla
   tbody.innerHTML = movs.length ? movs.map(m=>`
     <tr>
-      <td>${(m.fecha||'').slice(0,10)}</td>
+      <td>${m.fecha}</td>
       <td>${m.tipo}</td>
       <td>${m.detalle||''}</td>
       <td>${m.chofer||''}</td>
@@ -448,7 +478,6 @@ function render(){
 
 /* ---- Liquidación por chofer ---- */
 function renderChofer(viajesFiltrados){
-  // por Chofer (total)
   const map = new Map();
   for (const v of viajesFiltrados){
     const key = v.chofer||'(Sin chofer)';
@@ -518,6 +547,8 @@ function renderChofer(viajesFiltrados){
 
 /* ---- Charts (Total / por camión con chips) ---- */
 function renderCharts(movsAll){
+  if (!window.Chart){ return; } // si no cargó Chart.js, no rompemos nada
+
   // filtrar por chip seleccionado
   const mm = selectedPatChip ? movsAll.filter(m=>m.patente===selectedPatChip) : movsAll;
   titPat1.textContent = selectedPatChip ? `— ${selectedPatChip}` : '— Total';
@@ -527,14 +558,13 @@ function renderCharts(movsAll){
   const pats = [...new Set(mm.map(m=>m.patente).filter(Boolean))].sort();
   const ing = pats.map(p=> mm.filter(m=>m.patente===p && m.tipo==='Ingreso').reduce((a,b)=>a+Number(b.importe||0),0));
   const egr = pats.map(p=> mm.filter(m=>m.patente===p && m.tipo!=='Ingreso').reduce((a,b)=>a+Number(b.importe||0),0));
-  // Si no hay patentes (porque filtraste una sola), mostramos una barra “Único”
   const labels = pats.length ? pats : [ selectedPatChip || 'Total' ];
   const ingV   = pats.length ? ing : [ mm.filter(m=>m.tipo==='Ingreso').reduce((a,b)=>a+Number(b.importe||0),0) ];
   const egrV   = pats.length ? egr : [ mm.filter(m=>m.tipo!=='Ingreso').reduce((a,b)=>a+Number(b.importe||0),0) ];
 
   const ctx1 = document.getElementById('chartPatentes').getContext('2d');
   chrtPat && chrtPat.destroy();
-  chrtPat = new Chart(ctx1,{
+  chrtPat = new window.Chart(ctx1,{
     type:'bar',
     data:{labels, datasets:[
       {label:'Ingresos', data:ingV, backgroundColor:'#4FC3F7', borderColor:'#4FC3F7', borderWidth:1},
@@ -558,7 +588,7 @@ function renderCharts(movsAll){
   const vals = comp.map(t=> mm.filter(m=>m.tipo===t).reduce((a,b)=>a+Number(b.importe||0),0));
   const ctx2 = document.getElementById('chartEgresos').getContext('2d');
   chrtEgr && chrtEgr.destroy();
-  chrtEgr = new Chart(ctx2,{
+  chrtEgr = new window.Chart(ctx2,{
     type:'doughnut',
     data:{
       labels:comp,
@@ -601,7 +631,7 @@ tabs.forEach(b=>{
 document.getElementById('btnCSV').addEventListener('click', ()=>{
   if (!movs.length){ alert('No hay datos.'); return; }
   const head = ['Fecha','Tipo','Detalle','Chofer','Patente','Importe'];
-  const rows = movs.map(m => [ (m.fecha||'').slice(0,10), m.tipo, (m.detalle||'').replace(/[\r\n]+/g,' '), m.chofer||'', m.patente||'', String(m.importe||0).replace('.',',') ]);
+  const rows = movs.map(m => [ m.fecha, m.tipo, (m.detalle||'').replace(/[\r\n]+/g,' '), m.chofer||'', m.patente||'', String(m.importe||0).replace('.',',') ]);
   const csv = [head, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
@@ -610,14 +640,14 @@ document.getElementById('btnCSV').addEventListener('click', ()=>{
   URL.revokeObjectURL(url);
 });
 
-/* Print tabla: primero muestra la vista si no estás en ella */
+/* Print tabla */
 document.getElementById('btnPrintTabla').addEventListener('click', ()=>{
   if (activeTab !== 'tabla'){
     document.querySelector('.tab[data-tab="tabla"]').click();
-    return; // vista previa primero
+    return;
   }
   const rows = movs.map(m => `
-    <tr><td>${(m.fecha||'').slice(0,10)}</td><td>${m.tipo}</td><td>${m.detalle||''}</td><td>${m.chofer||''}</td><td>${m.patente||''}</td><td class="r">${fmt(m.importe||0)}</td></tr>
+    <tr><td>${m.fecha}</td><td>${m.tipo}</td><td>${m.detalle||''}</td><td>${m.chofer||''}</td><td>${m.patente||''}</td><td class="r">${fmt(m.importe||0)}</td></tr>
   `).join('');
   const html = `
 <!DOCTYPE html><html><head><meta charset="utf-8"><title>Movimientos</title>
@@ -636,7 +666,7 @@ document.getElementById('btnPrintTabla').addEventListener('click', ()=>{
   w.document.write(html); w.document.close(); w.focus();
 });
 
-/* Print liquidación: primero muestra “Por chofer” */
+/* Print liquidación */
 document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
   if (activeTab !== 'chofer'){
     document.querySelector('.tab[data-tab="chofer"]').click();
