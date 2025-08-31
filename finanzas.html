@@ -255,7 +255,11 @@ onSnapshot(collection(db,'viajes'), qs=>{
 });
 onSnapshot(collection(db,'cargas-combustible'), qs=>{
   combustible = qs.docs.map(d => ({id:d.id, ...d.data()}));
-  combustible.forEach(c=> { if (c.patente) patSet.add((c.patente||'').trim()); });
+  // CAMBIO: tomar patente desde patenteCamion (o patente legacy)
+  combustible.forEach(c=> {
+    const p = (c.patenteCamion || c.patente || '').trim();
+    if (p) patSet.add(p);
+  });
   poblarPatentes(); render();
 });
 onSnapshot(collection(db,'mantenimientos'), qs=>{
@@ -321,11 +325,21 @@ function ingresoViaje(v){
   if (!isNaN(tKg) && tKg>0) return kg*tKg;
   return 0;
 }
-function totalComb(c){
-  const tot = Number(c.total ?? NaN);
-  if (!isNaN(tot)) return tot;
-  return Number(c.litros||0) * Number(c.sl||c.precioPorLitro||0);
-}
+
+// ====== NORMALIZADORES DE COMBUSTIBLE ======
+// CAMBIO: helpers para campos con nombres distintos según pantalla/versión
+const combPatente  = (c) => c.patenteCamion || c.patente || '';
+const combEstacion = (c) => c.estacionServicio || c.estacion || '';
+const combMetodo   = (c) => c.metodoPago || c.metodo || '';
+const combTipo     = (c) => c.tipoCombustible || c.tipo || '';
+const combTotal    = (c) => {
+  // prioriza totalPagado o total; si no, litros * precioPorLitro/sl
+  if (c.totalPagado !== undefined && c.totalPagado !== null && c.totalPagado !== '') return Number(c.totalPagado);
+  if (c.total !== undefined && c.total !== null && c.total !== '') return Number(c.total);
+  const L = Number(c.litros || 0);
+  const P = Number(c.precioPorLitro || c.sl || 0);
+  return L * P;
+};
 
 /* ==================== Render principal ==================== */
 let chrtPat = null, chrtEgr = null;
@@ -365,13 +379,22 @@ function render(){
   // COMBUSTIBLE
   combustible.filter(c=>{
     if (!inRange(c.fecha, d, h)) return false;
-    if (pt && (c.patente||'') !== pt) return false;
+    // CAMBIO: usar patenteCamion normalizada
+    if (pt && (combPatente(c) !== pt)) return false;
     if (ch && (c.chofer||'') !== ch) return false;
-    if (!pasaTexto(q, c.estacion, c.tipoCombustible||c.tipo, c.metodo, c.patente)) return false;
+    // CAMBIO: buscar por campos normalizados
+    if (!pasaTexto(q, combEstacion(c), combTipo(c), combMetodo(c), combPatente(c))) return false;
     return true;
   }).forEach(c=>{
-    const tot = totalComb(c);
-    if (tot>0) movs.push({fecha:c.fecha,tipo:'Combustible',detalle:`${c.estacion||'-'} — ${c.tipoCombustible||c.tipo||''}`,chofer:c.chofer||'',patente:c.patente||'',importe:tot});
+    const tot = combTotal(c); // CAMBIO
+    if (tot>0) movs.push({
+      fecha: c.fecha,
+      tipo: 'Combustible',
+      detalle: `${combEstacion(c) || '-'} — ${combTipo(c) || ''}`, // CAMBIO
+      chofer: c.chofer || '',
+      patente: combPatente(c), // CAMBIO
+      importe: tot
+    });
   });
 
   // MANTENIMIENTO
@@ -391,16 +414,16 @@ function render(){
 
   const sum = (tipo) => movs.filter(x=>x.tipo===tipo).reduce((a,b)=>a+Number(b.importe||0),0);
   const ingresos   = sum('Ingreso');
-  const combTotal  = sum('Combustible');
+  const combTotal$ = sum('Combustible');
   const mantTotal  = sum('Mantenimiento');
   const peajeTotal = sum('Peaje');
   const adelTotal  = sum('Adelanto');
   const entTotal   = sum('Entrada');
-  const gastos     = combTotal + mantTotal + peajeTotal + adelTotal + entTotal;
+  const gastos     = combTotal$ + mantTotal + peajeTotal + adelTotal + entTotal;
   const margen     = ingresos - gastos;
 
   kIng.textContent    = fmt(ingresos);
-  kComb.textContent   = fmt(combTotal);
+  kComb.textContent   = fmt(combTotal$);
   kMant.textContent   = fmt(mantTotal);
   kPeaje.textContent  = fmt(peajeTotal);
   kAdel.textContent   = fmt(adelTotal);
