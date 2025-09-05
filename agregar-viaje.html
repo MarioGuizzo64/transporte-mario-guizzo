@@ -19,10 +19,11 @@
     .btn-volver{background:orange;color:#000}
     .btn-guardar{background:green;color:#fff}
     .mant-box{border:1px dashed #444;border-radius:8px;padding:12px;margin-top:4px}
+    .mant-box > label{display:flex;align-items:center;gap:10px} /* alineado izquierda */
     .mant-extra{display:none;margin-top:8px}
     .mant-extra.show{display:block}
-    /* Checkbox más grande */
-    #reqMant{transform:scale(1.4); transform-origin:left center; margin-right:8px}
+    /* Checkbox GRANDE y alineado */
+    #reqMant{width:22px;height:22px;accent-color:#FFD700;cursor:pointer}
     #modalExito{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;color:green;padding:18px 22px;border:2px solid green;border-radius:10px;z-index:1000;text-align:center;font-weight:bold}
     .ayuda{font-size:12px;color:#bbb;margin-top:-4px;text-transform:none}
   </style>
@@ -48,15 +49,9 @@
       <label for="destino">Destino</label>
       <input type="text" id="destino" required>
 
-      <!-- 5) TARIFA -->
-      <label>Tarifa</label>
-      <div class="fila">
-        <input type="number" id="tarifaValor" step="0.01" min="0" placeholder="Ej: 15000">
-        <select id="tarifaUnidad">
-          <option value="tn">/ tn</option>
-          <option value="kg">/ kg</option>
-        </select>
-      </div>
+      <!-- 5) TARIFA por tonelada (OBLIGATORIA) -->
+      <label for="tarifaValor">Tarifa por tonelada ($/tn)</label>
+      <input type="number" id="tarifaValor" step="0.01" min="0" placeholder="Ej: 14500" required>
 
       <!-- 6) PATENTE -->
       <label for="patente">Patente</label>
@@ -66,7 +61,7 @@
       <label for="tipoCereal">Tipo de cereal</label>
       <input type="text" id="tipoCereal" placeholder="Soja, Maíz, Trigo..." required>
 
-      <!-- 7-8) KG -->
+      <!-- 7-8) KG (en la práctica son toneladas) -->
       <div class="fila">
         <div>
           <label for="kgLlevados">Kg cargados</label>
@@ -181,7 +176,6 @@
     onAuthStateChanged(auth, (u) => {
       if (!u) { window.location.href = "login.html"; return; }
       currentUser = u;
-      // Fecha por defecto
       const f = document.getElementById('fecha');
       if (f && !f.value) f.value = new Date().toISOString().slice(0,10);
     });
@@ -211,7 +205,7 @@
     const mantExtra = document.getElementById('mantExtra');
     reqMant.addEventListener('change', ()=> mantExtra.classList.toggle('show', reqMant.checked));
 
-    // Patente siempre en mayúsculas mientras se escribe
+    // Patente siempre en mayúsculas
     const patenteInput = document.getElementById('patente');
     patenteInput.addEventListener('input', e => e.target.value = e.target.value.toUpperCase());
 
@@ -220,10 +214,11 @@
       e.preventDefault();
       if (!currentUser) { alert("No hay sesión. Volvé a iniciar sesión."); return; }
 
-      // Validación básica
-      const obligatorios = ["fecha","cuitOrigen","origen","destino","patente","tipoCereal","kgLlevados","kgDescargados"];
+      // Validación básica (incluye TARIFA obligatoria)
+      const obligatorios = ["fecha","cuitOrigen","origen","destino","tarifaValor","patente","tipoCereal","kgLlevados","kgDescargados"];
       for (const id of obligatorios) {
-        if (!document.getElementById(id).value) {
+        const el = document.getElementById(id);
+        if (!el || !el.value) {
           alert("Por favor, complete todos los campos obligatorios.");
           return;
         }
@@ -242,15 +237,7 @@
       const patenteUP = document.getElementById("patente").value.trim().toUpperCase();
       document.getElementById("patente").value = patenteUP;
 
-      // Tarifa → guardar en el campo correcto según unidad
-      const tarifaVal = parseFloat(document.getElementById("tarifaValor").value || 0);
-      const tarifaUni = document.getElementById("tarifaUnidad").value; // 'tn' | 'kg'
-      const tarifaObj = {};
-      if (tarifaVal > 0) {
-        if (tarifaUni === 'tn') tarifaObj.tarifaPorTon = tarifaVal;
-        if (tarifaUni === 'kg') tarifaObj.tarifaPorKg  = tarifaVal;
-      }
-
+      const tarifaVal = parseFloat(document.getElementById("tarifaValor").value || 0); // $/tn (obligatoria)
       const cargoCombustible = document.getElementById("cargoCombustible").value === "si";
       const mantRequiere     = document.getElementById('reqMant').checked;
       const mantTipoSugerido = (document.getElementById("mantTipo").value || "").trim();
@@ -260,13 +247,16 @@
         uidCreador: currentUser.uid,
 
         fecha: document.getElementById("fecha").value,
-        cuitOrigen: document.getElementById("cuitOrigen").value.trim(),   // Titular carta de porte (CUIT)
-        origen: document.getElementById("origen").value.trim(),           // Lugar de origen
+        cuitOrigen: document.getElementById("cuitOrigen").value.trim(),
+        origen: document.getElementById("origen").value.trim(),
         destino: document.getElementById("destino").value.trim(),
         patente: patenteUP,
         tipoCereal: document.getElementById("tipoCereal").value.trim(),
         kgLlevados: parseFloat(document.getElementById("kgLlevados").value) || 0,
         kgDescargados: parseFloat(document.getElementById("kgDescargados").value) || 0,
+
+        // tarifa por tonelada
+        tarifaPorTon: tarifaVal,
 
         cargoCombustible,
 
@@ -286,8 +276,7 @@
         mantTipoSugerido,
         mantDescripcion,
 
-        timestamp: serverTimestamp(),
-        ...tarifaObj
+        timestamp: serverTimestamp()
       };
 
       try {
