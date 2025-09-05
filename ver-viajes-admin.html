@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -17,7 +16,6 @@
     .btn-rojo{background:red;color:#fff}
     .btn-volver{margin-top:16px}
 
-    /* Filtros en grilla (incluye Agregar e Imprimir) */
     .filtros{
       display:grid;
       grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));
@@ -41,7 +39,7 @@
 
     .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);justify-content:center;align-items:center}
     .modal-content{
-      background:#000;border-radius:12px;padding:16px;width:95%;max-width:600px;
+      background:#000;border-radius:12px;padding:16px;width:95%;max-width:620px;
       max-height:90vh;overflow-y:auto;box-shadow:0 10px 30px rgba(0,0,0,.5)
     }
     .edit-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -86,14 +84,14 @@
       <h2 style="text-transform:uppercase;text-decoration:underline;margin-top:0">Detalle / Editar Viaje</h2>
       <form id="formEdit" class="edit-form">
         <label>Fecha</label><input type="date" id="e_fecha"/>
-        <label>Origen</label><input type="text" id="e_origen"/>
+        <label>Titular carta de porte (CUIT)</label><input type="text" id="e_cuit"/>
+        <label>Lugar de origen del viaje</label><input type="text" id="e_origen"/>
         <label>Destino</label><input type="text" id="e_destino"/>
+        <label>Tarifa $/tn</label><input type="text" id="e_tarifaTon"/>
         <label>Patente del camión</label><input type="text" id="e_patente"/>
-        <!-- Chofer fuera del modal -->
         <label>Tipo de carga</label><input type="text" id="e_tipoCarga"/>
-        <label>Peso / Kg cargados</label><input type="text" id="e_peso"/>
+        <label>Kg cargados</label><input type="text" id="e_peso"/>
         <label>Kg descargados</label><input type="text" id="e_kgDescargados"/>
-        <label>CUIT origen</label><input type="text" id="e_cuit"/>
         <label>Adelanto ($)</label><input type="text" id="e_adelanto"/>
         <label>Peaje ($)</label><input type="text" id="e_peaje"/>
         <label>Entrada ($)</label><input type="text" id="e_entrada"/>
@@ -147,12 +145,13 @@
       if (obj[base + 'Monto'] !== undefined && obj[base + 'Monto'] !== null) return obj[base + 'Monto'];
       return '';
     };
+
     const tarifaLabel = (v) => {
       const tTon = toNum(v.tarifaPorTon);
-      const tKg  = toNum(v.tarifaPorKg);
       if (tTon>0) return `${fmtInt(tTon)} / tn`;
-      if (tKg>0)  return `${fmtInt(tKg)} / kg`;
-      return '—';
+      // compat. si hubiera viejo tarifaPorKg
+      const tKg  = toNum(v.tarifaPorKg);
+      return tKg>0 ? `${fmtInt(tKg)} / kg` : '—';
     };
 
     /* ===== Auth gate ===== */
@@ -175,7 +174,7 @@
       const btnImprimir = document.getElementById("btnImprimir");
       const btnNuevo = document.getElementById("btnNuevo");
 
-      const modal = document.getElementById('modal');
+      const modal = document.getElementById("modal");
       const get = id => document.getElementById(id);
 
       let todos = [];
@@ -273,13 +272,14 @@
         isNew = false; actualId = id;
         abrirModal();
         get('e_fecha').value = v.fecha || '';
+        get('e_cuit').value = (v.cuitOrigen || v.cuit || '');
         get('e_origen').value = v.origen || '';
         get('e_destino').value = v.destino || '';
+        get('e_tarifaTon').value = (toNum(v.tarifaPorTon) || '');
         get('e_patente').value = v.patente || '';
         get('e_tipoCarga').value = (v.tipoCereal || v.tipoCarga || '');
         get('e_peso').value = (v.kgLlevados ?? v.peso ?? '');
         get('e_kgDescargados').value = (v.kgDescargados ?? '');
-        get('e_cuit').value = (v.cuitOrigen || v.cuit || '');
         get('e_adelanto').value = readMoneyField(v,'adelanto');
         get('e_peaje').value    = readMoneyField(v,'peaje');
         get('e_entrada').value  = readMoneyField(v,'entrada');
@@ -289,11 +289,10 @@
       btnNuevo.addEventListener('click', ()=>{
         isNew = true; actualId = null;
         get('e_fecha').value = new Date().toISOString().slice(0,10);
-        get('e_origen').value = ''; get('e_destino').value = '';
-        get('e_patente').value = ''; get('e_tipoCarga').value = '';
+        get('e_cuit').value = ''; get('e_origen').value = ''; get('e_destino').value = '';
+        get('e_tarifaTon').value = ''; get('e_patente').value = ''; get('e_tipoCarga').value = '';
         get('e_peso').value = ''; get('e_kgDescargados').value = '';
-        get('e_cuit').value = ''; get('e_adelanto').value = '';
-        get('e_peaje').value = ''; get('e_entrada').value = '';
+        get('e_adelanto').value = ''; get('e_peaje').value = ''; get('e_entrada').value = '';
         get('e_observaciones').value = '';
         abrirModal();
       });
@@ -304,17 +303,17 @@
         const entrada  = toNum(get('e_entrada').value);
         const data = {
           fecha: get('e_fecha').value || null,
+          cuitOrigen: get('e_cuit').value.trim(),
+          cuit: get('e_cuit').value.trim(),
           origen: get('e_origen').value.trim(),
           destino: get('e_destino').value.trim(),
+          tarifaPorTon: toNum(get('e_tarifaTon').value),
           patente: get('e_patente').value.trim(),
           tipoCereal: get('e_tipoCarga').value.trim(),
           tipoCarga: get('e_tipoCarga').value.trim(),
           kgLlevados: toNum(get('e_peso').value),
           peso: toNum(get('e_peso').value),
           kgDescargados: toNum(get('e_kgDescargados').value),
-          cuitOrigen: get('e_cuit').value.trim(),
-          cuit: get('e_cuit').value.trim(),
-          // Espejo de nombres + flags
           adelanto: adelanto, adelantoMonto: adelanto, adelantoAplica: adelanto > 0,
           peaje: peaje,       peajeMonto: peaje,       peajeAplica: peaje > 0,
           entrada: entrada,   entradaMonto: entrada,   entradaAplica: entrada > 0,
@@ -344,7 +343,7 @@
         window.location.href = 'agregar-combustible.html?' + q.toString();
       };
 
-      /* ====== Imprimir (con totales y tarifa) ====== */
+      /* ====== Imprimir ====== */
       btnImprimir.addEventListener('click', ()=>{
         const sum = (arr, fn) => arr.reduce((a,v)=> a + toNum(fn(v)), 0);
         const totalKgDesc = sum(_ultimos, v => v.kgDescargados);
@@ -352,11 +351,7 @@
         const totalPeaje  = sum(_ultimos, v => readMoneyField(v,'peaje'));
         const totalEntr   = sum(_ultimos, v => readMoneyField(v,'entrada'));
 
-        const rows = _ultimos.map(v=>{
-          const adel = readMoneyField(v,'adelanto');
-          const peaj = readMoneyField(v,'peaje');
-          const entr = readMoneyField(v,'entrada');
-          return `
+        const rows = _ultimos.map(v=>`
             <tr>
               <td>${fmtDMY(v.fecha)}</td>
               <td>${v.chofer || '-'}</td>
@@ -365,11 +360,10 @@
               <td>${tarifaLabel(v)}</td>
               <td style="text-align:right">${fmtInt(v.kgLlevados ?? v.peso ?? 0)}</td>
               <td style="text-align:right">${fmtInt(v.kgDescargados ?? 0)}</td>
-              <td style="text-align:right">${fmtInt(adel || 0)}</td>
-              <td style="text-align:right">${fmtInt(peaj || 0)}</td>
-              <td style="text-align:right">${fmtInt(entr || 0)}</td>
-            </tr>`;
-        }).join('');
+              <td style="text-align:right">${fmtInt(readMoneyField(v,'adelanto') || 0)}</td>
+              <td style="text-align:right">${fmtInt(readMoneyField(v,'peaje') || 0)}</td>
+              <td style="text-align:right">${fmtInt(readMoneyField(v,'entrada') || 0)}</td>
+            </tr>`).join('');
 
         const html = `
 <!DOCTYPE html><html><head><meta charset="utf-8"><title>Viajes</title>
