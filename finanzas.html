@@ -1,3 +1,6 @@
+Acá tenés **finanzas.html** completo y corregido (espera a `onAuthStateChanged`, reconoce admin, y lee combustible de **ambas** colecciones: `cargasCombustible` y `cargas-combustible`):
+
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -36,12 +39,9 @@
   .right{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
   .volver{margin-top:14px}
   .note{font-size:12px;opacity:.75}
-
-  /* Chips de patentes */
   .chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
   .chip{background:#151515;border:1px solid #333;color:#fff;padding:6px 10px;border-radius:20px;cursor:pointer;font-size:12px}
   .chip.active{background:#1976d2;border-color:#1976d2}
-
   @media (max-width:1000px){.cards{grid-template-columns:1fr 1fr 1fr}.grid2{grid-template-columns:1fr}}
   @media (max-width:640px){.cards{grid-template-columns:1fr 1fr}}
 </style>
@@ -97,7 +97,6 @@
 
   <!-- RESUMEN -->
   <section id="tab-resumen">
-    <!-- chips de patentes (Total + cada camión del rango) -->
     <div id="chipsPat" class="chips"></div>
 
     <div class="grid2">
@@ -192,6 +191,7 @@ const DEFAULT_COMMISSION = 0.20;
 /* ==================== Firebase ==================== */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
@@ -203,9 +203,11 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
+const auth = getAuth(app);
 
 /* ==================== Estado ==================== */
 let viajes = [], combustible = [], mant = [], usuarios = [];
+let combustibleA = [], combustibleB = []; // para las dos colecciones
 let movs = [];
 let patSet = new Set(), choSet = new Set();
 let activeTab = 'resumen';
@@ -251,7 +253,6 @@ const showDbg = (extra='')=>{
 };
 
 /* ==================== Normalizadores ==================== */
-// Fecha → 'YYYY-MM-DD' (acepta string, Date, Timestamp, {seconds}, etc.)
 function fechaStr(x){
   if (!x) return '';
   if (typeof x === 'string') return x.slice(0,10);
@@ -262,10 +263,9 @@ function fechaStr(x){
   }
   return String(x).slice(0,10);
 }
-// Viajes: aceptar nombres alternativos
 const fechaViaje = (v) => fechaStr(v.fecha || v.fechaViaje || v.fechaSalida || v.fechaCarga || v.createdAt || null);
 
-// Combustible (nombres alternativos)
+// Combustible
 const combPatente  = (c) => (c.patenteCamion || c.patente || '').trim();
 const combEstacion = (c) => c.estacionServicio || c.estacion || '';
 const combMetodo   = (c) => c.metodoPago || c.metodo || '';
@@ -276,7 +276,7 @@ const combTotal    = (c) => {
   for (const v of cand){ const n = Number(v); if (!isNaN(n) && n>0) return n; }
   return 0;
 };
-// Ingreso de viaje (varios campos)
+// Ingreso de viaje
 function ingresoViaje(v){
   const cand = [v.importeCobrado, v.totalCobrado, v.importe, v.ingreso, v.total];
   for (const val of cand){
@@ -290,39 +290,6 @@ function ingresoViaje(v){
   if (!isNaN(tKg) && tKg>0) return kg*tKg;
   return 0;
 }
-
-/* ==================== Lectura de colecciones ==================== */
-const onErr = (col) => (err)=>{ console.error(col, err); showDbg(`ERROR ${col}: ${err.code||''}`); };
-
-onSnapshot(collection(db,'usuarios'), qs=>{
-  usuarios = qs.docs.map(d => ({id:d.id, ...d.data()}))
-    .filter(u => (u.rol||'').toLowerCase()==='chofer');
-  choSet.clear();
-  usuarios.forEach(u => choSet.add( (u.nombre||u.displayName||u.email||'').trim() ));
-  poblarChoferes(); showDbg(); render();
-}, onErr('usuarios'));
-
-onSnapshot(collection(db,'viajes'), qs=>{
-  viajes = qs.docs.map(d => ({id:d.id, ...d.data()}));
-  viajes.forEach(v=>{
-    const p = (v.patente||'').trim();
-    if (p) patSet.add(p);
-    if (v.chofer)  choSet.add((v.chofer||'').trim());
-  });
-  poblarPatentes(); poblarChoferes(); showDbg(); render();
-}, onErr('viajes'));
-
-onSnapshot(collection(db,'cargas-combustible'), qs=>{
-  combustible = qs.docs.map(d => ({id:d.id, ...d.data()}));
-  combustible.forEach(c=> { const p = combPatente(c); if (p) patSet.add(p); });
-  poblarPatentes(); showDbg(); render();
-}, onErr('cargas-combustible'));
-
-onSnapshot(collection(db,'mantenimientos'), qs=>{
-  mant = qs.docs.map(d => ({id:d.id, ...d.data()}));
-  mant.forEach(m=> { if (m.patente) patSet.add((m.patente||'').trim()); });
-  poblarPatentes(); showDbg(); render();
-}, onErr('mantenimientos'));
 
 /* ==================== Helpers UI ==================== */
 function poblarPatentes(){
@@ -353,7 +320,6 @@ function buildChips(arr){
   });
 }
 function inRangeFechaStr(fstr, d, h){
-  // ⚠️ si no hay rango, NO filtrar nada
   if (!d && !h) return true;
   if (!fstr) return false;
   if (d && fstr < d) return false;
@@ -374,8 +340,6 @@ function getPctChofer(nombre, patente){
 }
 
 /* ==================== Render principal ==================== */
-let chrtPat = null, chrtEgr = null;
-
 function render(){
   const d = fDesde.value||'', h = fHasta.value||'';
   const ch = fChofer.value||'', pt = fPatente.value||'';
@@ -410,8 +374,9 @@ function render(){
     }
   }
 
-  // COMBUSTIBLE
-  combustible.filter(c=>{
+  // COMBUSTIBLE (merge de ambas colecciones)
+  const combustiblesAll = combustible;
+  combustiblesAll.filter(c=>{
     const f = combFecha(c);
     if (!inRangeFechaStr(f, d, h)) return false;
     if (pt && (combPatente(c) !== pt)) return false;
@@ -489,13 +454,6 @@ function render(){
 }
 
 /* ---- Liquidación por chofer ---- */
-function getPctChofer(nombre, patente){
-  const u = usuarios.find(u => (u.nombre||u.displayName||'').trim() === (nombre||'').trim());
-  if (u && Number(u.porcentaje)>=0) return Number(u.porcentaje)/100;
-  const u2 = usuarios.find(u => Array.isArray(u.patentes) && u.patentes.includes(patente));
-  if (u2 && Number(u2.porcentaje)>=0) return Number(u2.porcentaje)/100;
-  return DEFAULT_COMMISSION;
-}
 function renderChofer(viajesFiltrados){
   const map = new Map();
   for (const v of viajesFiltrados){
@@ -605,6 +563,53 @@ function renderCharts(movsAll){
   });
 }
 
+/* ==================== Suscripciones (tras login) ==================== */
+const onErr = (col) => (err)=>{ console.error(col, err); showDbg(`ERROR ${col}: ${err.code||''}`); };
+
+function mergeCombustibleAndRender() {
+  combustible = [...combustibleA, ...combustibleB];
+  combustible.forEach(c=> { const p = combPatente(c); if (p) patSet.add(p); });
+  poblarPatentes(); showDbg(); render();
+}
+
+function subscribeAfterLogin(){
+  onSnapshot(collection(db,'usuarios'), qs=>{
+    usuarios = qs.docs.map(d => ({id:d.id, ...d.data()}))
+      .filter(u => (u.rol||'').toLowerCase()==='chofer');
+    choSet.clear();
+    usuarios.forEach(u => choSet.add( (u.nombre||u.displayName||u.email||'').trim() ));
+    poblarChoferes(); showDbg(); render();
+  }, onErr('usuarios'));
+
+  onSnapshot(collection(db,'viajes'), qs=>{
+    viajes = qs.docs.map(d => ({id:d.id, ...d.data()}));
+    viajes.forEach(v=>{
+      const p = (v.patente||'').trim();
+      if (p) patSet.add(p);
+      if (v.chofer)  choSet.add((v.chofer||'').trim());
+    });
+    poblarPatentes(); poblarChoferes(); showDbg(); render();
+  }, onErr('viajes'));
+
+  // Colección camelCase
+  onSnapshot(collection(db,'cargasCombustible'), qs=>{
+    combustibleA = qs.docs.map(d => ({id:d.id, ...d.data()}));
+    mergeCombustibleAndRender();
+  }, onErr('cargasCombustible'));
+
+  // Colección con guión (compatibilidad)
+  onSnapshot(collection(db,'cargas-combustible'), qs=>{
+    combustibleB = qs.docs.map(d => ({id:d.id, ...d.data()}));
+    mergeCombustibleAndRender();
+  }, onErr('cargas-combustible'));
+
+  onSnapshot(collection(db,'mantenimientos'), qs=>{
+    mant = qs.docs.map(d => ({id:d.id, ...d.data()}));
+    mant.forEach(m=> { if (m.patente) patSet.add((m.patente||'').trim()); });
+    poblarPatentes(); showDbg(); render();
+  }, onErr('mantenimientos'));
+}
+
 /* ==================== Eventos ==================== */
 [fDesde,fHasta,fChofer,fPatente,fEstadoMant,fQ].forEach(el => el.addEventListener('input', render));
 document.getElementById('btnLimpiar').addEventListener('click', ()=>{
@@ -670,7 +675,19 @@ document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
 </body></html>`;
   const w = window.open('', '_blank', 'width=900,height=1000'); w.document.write(html); w.document.close(); w.focus();
 });
+
+/* ====== Esperar login antes de suscribir ====== */
+onAuthStateChanged(auth, (user)=>{
+  if (user){
+    showDbg(`uid:${user.uid} · email:${user.email||'-'}`);
+    subscribeAfterLogin();
+  } else {
+    showDbg('No autenticado. Iniciá sesión.');
+  }
+});
 </script>
 
 </body>
 </html>
+```
+
