@@ -1,3 +1,14 @@
+¡Listo! Acá tenés **`ver-combustible-admin.html` completo**, con:
+
+* Fechas mostradas en **dd/mm/aaaa**.
+* Botón **“NUEVA CARGA”** para agregar manualmente una carga (crea en `cargas-combustible`).
+* Editor para **ver/editar/eliminar** como antes.
+* Compatibilidad leyendo **ambas colecciones**: `cargas-combustible` y `cargasCombustible`.
+* Cálculo correcto de **Total = Litros × \$/l** con números en formato AR.
+
+Copiá y pegá:
+
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -15,6 +26,7 @@
       box-shadow:0 10px 30px rgba(0,0,0,.35)
     }
     h1{text-align:center;text-transform:uppercase;text-decoration:underline;margin:0 0 16px}
+    .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
     .filtros{display:grid;grid-template-columns:repeat(auto-fit, minmax(160px,1fr));gap:8px;margin:0 0 16px 0;}
     .filtros input,.filtros select{padding:8px;border:1px solid #000;border-radius:4px;color:#000;background:#fff}
     .btn{padding:10px;border:1px solid #000;border-radius:6px;font-weight:bold;cursor:pointer;text-transform:uppercase}
@@ -45,6 +57,10 @@
 <body>
   <div class="container">
     <h1>Ver Combustible</h1>
+
+    <div class="toolbar">
+      <button class="btn btn-verde" id="btnNuevo">Nueva carga</button>
+    </div>
 
     <!-- FILTROS -->
     <form class="filtros" id="formFiltros">
@@ -119,7 +135,9 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import {
+      getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     // Config
     const firebaseConfig = {
@@ -155,6 +173,15 @@
       const d = new Date(f); return isNaN(d) ? null : d;
     };
     const toISO = (d) => d ? d.toISOString().slice(0,10) : '';
+    // Mostrar como dd/mm/aaaa
+    const fmtDMY = (f) => {
+      const d = parseFecha(f);
+      if (!d) return '-';
+      const dd = String(d.getDate()).padStart(2,'0');
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const yy = d.getFullYear();
+      return `${dd}/${mm}/${yy}`;
+    };
 
     // ===== Getters normalizados de campos =====
     const getFecha   = (c) => c.fecha || c.fechaCarga || c.fechaCompra || '';
@@ -182,6 +209,7 @@
     // --------------------- APP ---------------------
     function start(user){
       // UI refs
+      const btnNuevo = document.getElementById("btnNuevo");
       const lista = document.getElementById("lista");
       const fDesde = document.getElementById("desde");
       const fHasta = document.getElementById("hasta");
@@ -218,6 +246,7 @@
       let colB = [];      // cargasCombustible
       let todas = [];     // merge
       let actual = null;  // {id, col, ...}
+      let isNew  = false; // modo "nuevo"
 
       // Subs a AMBAS colecciones (compatibilidad)
       onSnapshot(collection(db, "cargas-combustible"), (qs) => {
@@ -319,7 +348,7 @@
           div.className = 'item';
           div.innerHTML = `
             <div class="row">
-              <div><strong>Fecha:</strong> ${getFecha(c) || '-' } ${obsPill}</div>
+              <div><strong>Fecha:</strong> ${fmtDMY(getFecha(c))} ${obsPill}</div>
               <div><strong>Patente:</strong> ${getPatente(c) || '-'}</div>
             </div>
             <p><strong>Estación:</strong> ${getEstacion(c) || '-'}
@@ -362,8 +391,25 @@
         render();
       });
 
-      // ---- Modal abrir / cargar datos ----
+      // ---- Abrir modal en modo NUEVO ----
+      btnNuevo.addEventListener('click', ()=>{
+        isNew = true;
+        actual = { id: null, col: 'cargas-combustible' }; // creamos en esta colección por defecto
+        e_fecha.value = toISO(new Date());
+        e_patente.value = '';
+        e_litros.value = '';
+        e_precioLitro.value = '';
+        e_total.value = '';
+        e_estacion.value = '';
+        e_tipo.value = '';
+        e_metodo.value = '';
+        e_obs.value = '';
+        modal.style.display = 'flex';
+      });
+
+      // ---- Modal abrir / cargar datos (modo editar) ----
       window._abrir = (id, col)=>{
+        isNew = false;
         actual = (todas.find(x => x.id === id && x.col === col) || null);
         if (!actual) return;
         const d = parseFecha(getFecha(actual));
@@ -382,35 +428,40 @@
       };
       btnCerrar.addEventListener('click', ()=> modal.style.display='none');
 
-      // ---- Guardar edición ----
+      // ---- Guardar (crear o actualizar) ----
       btnGuardar.addEventListener('click', async ()=>{
-        if (!actual) return;
         const L = toNum(e_litros.value);
         const P = toNum(e_precioLitro.value);
         let   T = toNum(e_total.value);
         if (L && P != null) T = L * P;
 
         const data = {
-          fecha: e_fecha.value || null,
+          fecha: e_fecha.value || null,                   // YYYY-MM-DD
           patenteCamion: (e_patente.value||'').trim(),
-          patente: (e_patente.value||'').trim(), // compat
+          patente: (e_patente.value||'').trim(),         // compat
           litros: L ?? null,
           precioPorLitro: P ?? null,
           totalPagado: T ?? null,
           estacionServicio: (e_estacion.value||'').trim(),
           tipoCombustible: e_tipo.value || '',
-          tipo: e_tipo.value || '', // compat
+          tipo: e_tipo.value || '',                       // compat
           metodoPago: e_metodo.value || '',
-          metodo: e_metodo.value || '', // compat
-          observaciones: e_obs.value || ''
+          metodo: e_metodo.value || '',                   // compat
+          observaciones: e_obs.value || '',
+          timestamp: serverTimestamp()
         };
-        await updateDoc(doc(db, actual.col, actual.id), data);
+
+        if (isNew){
+          await addDoc(collection(db, actual.col), data);
+        } else {
+          await updateDoc(doc(db, actual.col, actual.id), data);
+        }
         modal.style.display='none';
       });
 
       // ---- Eliminar ----
       btnEliminar.addEventListener('click', async ()=>{
-        if (!actual) return;
+        if (!actual || isNew) return;
         if (!confirm('¿Eliminar esta carga de combustible?')) return;
         await deleteDoc(doc(db, actual.col, actual.id));
         modal.style.display='none';
@@ -424,3 +475,4 @@
 
 </body>
 </html>
+```
