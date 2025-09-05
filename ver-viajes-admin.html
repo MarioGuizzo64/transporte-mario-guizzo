@@ -30,7 +30,6 @@
     .filtros input,.filtros select {
       padding:10px;border:1px solid #000;border-radius:6px;color:#000;background:#fff;box-sizing:border-box;font-weight:600;
     }
-    .filtros .full{grid-column:1 / -1} /* util por si lo necesitás */
 
     .lista{display:grid;gap:10px}
     .item{background:#191919;border-radius:10px;padding:12px}
@@ -63,7 +62,7 @@
   <div class="container">
     <h1>Ver Viajes</h1>
 
-    <!-- FILTROS (con Agregar e Imprimir en la misma línea, como Mantenimiento) -->
+    <!-- FILTROS -->
     <form class="filtros" id="formFiltros">
       <button type="button" class="btn btn-verde" id="btnNuevo">Agregar viaje</button>
       <input type="date" id="desde" />
@@ -90,7 +89,7 @@
         <label>Origen</label><input type="text" id="e_origen"/>
         <label>Destino</label><input type="text" id="e_destino"/>
         <label>Patente del camión</label><input type="text" id="e_patente"/>
-        <!-- Chofer fuera del modal (lo seguimos mostrando en la lista) -->
+        <!-- Chofer fuera del modal -->
         <label>Tipo de carga</label><input type="text" id="e_tipoCarga"/>
         <label>Peso / Kg cargados</label><input type="text" id="e_peso"/>
         <label>Kg descargados</label><input type="text" id="e_kgDescargados"/>
@@ -129,18 +128,17 @@
     const db   = getFirestore(app);
 
     /* ===== Helpers ===== */
-    // Acepta "1.234,56" o "1234.56" o "1234"
     const toNum = (v) => {
       if (v === null || v === undefined || v === '') return 0;
       if (typeof v === 'number' && isFinite(v)) return v;
       if (typeof v === 'string'){ const s = v.replace(/\./g,'').replace(',','.'); const n = parseFloat(s); return isNaN(n)?0:n; }
       return 0;
     };
-    const fmtInt  = (n)=> Number(n||0).toLocaleString('es-AR',{maximumFractionDigits:0});
-    const fmtDMY  = (f) => {
-      if (!f) return '-';
+    const fmtInt = (n)=> Number(n||0).toLocaleString('es-AR',{maximumFractionDigits:0});
+    const fmtDMY = (f) => {
+      if (!f) return '—';
       const d = (typeof f==='string' && f.includes('-')) ? new Date(f) : new Date(f);
-      if (isNaN(d)) return '-';
+      if (isNaN(d)) return '—';
       const dd=String(d.getDate()).padStart(2,'0'), mm=String(d.getMonth()+1).padStart(2,'0'), yy=d.getFullYear();
       return `${dd}/${mm}/${yy}`;
     };
@@ -148,6 +146,13 @@
       if (obj[base] !== undefined && obj[base] !== null) return obj[base];
       if (obj[base + 'Monto'] !== undefined && obj[base + 'Monto'] !== null) return obj[base + 'Monto'];
       return '';
+    };
+    const tarifaLabel = (v) => {
+      const tTon = toNum(v.tarifaPorTon);
+      const tKg  = toNum(v.tarifaPorKg);
+      if (tTon>0) return `${fmtInt(tTon)} / tn`;
+      if (tKg>0)  return `${fmtInt(tKg)} / kg`;
+      return '—';
     };
 
     /* ===== Auth gate ===== */
@@ -160,7 +165,6 @@
       const col = collection(db, "viajes");
       const lista = document.getElementById("lista");
 
-      // filtros
       const fDesde = document.getElementById("desde");
       const fHasta = document.getElementById("hasta");
       const fChofer = document.getElementById("fChofer");
@@ -171,13 +175,13 @@
       const btnImprimir = document.getElementById("btnImprimir");
       const btnNuevo = document.getElementById("btnNuevo");
 
-      // modal
       const modal = document.getElementById('modal');
       const get = id => document.getElementById(id);
 
       let todos = [];
       let actualId = null;
       let isNew = false;
+      let _ultimos = [];
 
       onSnapshot(col, (qs) => {
         todos = qs.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -218,7 +222,6 @@
         return true;
       }
 
-      let _ultimos = []; // guardo últimos filtrados para imprimir
       function render(){
         const datos = todos.filter(pasaFiltros);
         _ultimos = datos;
@@ -235,12 +238,13 @@
           div.className = 'item';
           div.innerHTML = `
             <div class="topline">
-              <p style="margin:0"><strong>Fecha:</strong> ${fmtDMY(v.fecha) }</p>
+              <p style="margin:0"><strong>Fecha:</strong> ${fmtDMY(v.fecha)}</p>
               ${hayObs ? '<span class="badge badge-rojo">OBSERVACIONES</span>' : ''}
             </div>
             <p><strong>Chofer:</strong> ${v.chofer || '-'}</p>
             <p><strong>Patente:</strong> ${v.patente || '-'}</p>
             <p><strong>Origen → Destino:</strong> ${v.origen || '-'} → ${v.destino || '-'}</p>
+            <p><strong>Tarifa:</strong> ${tarifaLabel(v)}</p>
             <p><strong>Kg cargados:</strong> ${kgCargados} &nbsp; | &nbsp; <strong>Kg descargados:</strong> ${kgDesc}</p>
             <div class="acciones">
               <button class="btn btn-verde" onclick="window._abrir('${v.id}')">Ver / Editar</button>
@@ -256,7 +260,7 @@
         render();
       });
 
-      // ====== Modal ======
+      /* ===== Modal ===== */
       const abrirModal = () => { modal.style.display='flex'; document.body.classList.add('modal-open'); };
       const cerrarModal = () => { modal.style.display='none'; document.body.classList.remove('modal-open'); };
       modal.addEventListener('wheel', (e)=>{ if (e.target===modal) e.preventDefault(); }, {passive:false});
@@ -264,67 +268,57 @@
       modal.addEventListener('click', (e)=>{ if (e.target===modal) cerrarModal(); });
       document.getElementById('btnCerrar').onclick = cerrarModal;
 
-      // Abrir en modo EDITAR
       window._abrir = (id) => {
         const v = todos.find(x => x.id === id); if (!v) return;
         isNew = false; actualId = id;
         abrirModal();
-        // Set form
-        document.getElementById('e_fecha').value = v.fecha || '';
-        document.getElementById('e_origen').value = v.origen || '';
-        document.getElementById('e_destino').value = v.destino || '';
-        document.getElementById('e_patente').value = v.patente || '';
-        document.getElementById('e_tipoCarga').value = (v.tipoCereal || v.tipoCarga || '');
-        document.getElementById('e_peso').value = (v.kgLlevados ?? v.peso ?? '');
-        document.getElementById('e_kgDescargados').value = (v.kgDescargados ?? '');
-        document.getElementById('e_cuit').value = (v.cuitOrigen || v.cuit || '');
-        // Importes: leer cualquiera de los nombres
-        document.getElementById('e_adelanto').value = readMoneyField(v,'adelanto');
-        document.getElementById('e_peaje').value    = readMoneyField(v,'peaje');
-        document.getElementById('e_entrada').value  = readMoneyField(v,'entrada');
-        document.getElementById('e_observaciones').value = v.observaciones || '';
+        get('e_fecha').value = v.fecha || '';
+        get('e_origen').value = v.origen || '';
+        get('e_destino').value = v.destino || '';
+        get('e_patente').value = v.patente || '';
+        get('e_tipoCarga').value = (v.tipoCereal || v.tipoCarga || '');
+        get('e_peso').value = (v.kgLlevados ?? v.peso ?? '');
+        get('e_kgDescargados').value = (v.kgDescargados ?? '');
+        get('e_cuit').value = (v.cuitOrigen || v.cuit || '');
+        get('e_adelanto').value = readMoneyField(v,'adelanto');
+        get('e_peaje').value    = readMoneyField(v,'peaje');
+        get('e_entrada').value  = readMoneyField(v,'entrada');
+        get('e_observaciones').value = v.observaciones || '';
       };
 
-      // Agregar viaje (modo NUEVO)
       btnNuevo.addEventListener('click', ()=>{
         isNew = true; actualId = null;
-        document.getElementById('e_fecha').value = new Date().toISOString().slice(0,10);
-        document.getElementById('e_origen').value = '';
-        document.getElementById('e_destino').value = '';
-        document.getElementById('e_patente').value = '';
-        document.getElementById('e_tipoCarga').value = '';
-        document.getElementById('e_peso').value = '';
-        document.getElementById('e_kgDescargados').value = '';
-        document.getElementById('e_cuit').value = '';
-        document.getElementById('e_adelanto').value = '';
-        document.getElementById('e_peaje').value = '';
-        document.getElementById('e_entrada').value = '';
-        document.getElementById('e_observaciones').value = '';
+        get('e_fecha').value = new Date().toISOString().slice(0,10);
+        get('e_origen').value = ''; get('e_destino').value = '';
+        get('e_patente').value = ''; get('e_tipoCarga').value = '';
+        get('e_peso').value = ''; get('e_kgDescargados').value = '';
+        get('e_cuit').value = ''; get('e_adelanto').value = '';
+        get('e_peaje').value = ''; get('e_entrada').value = '';
+        get('e_observaciones').value = '';
         abrirModal();
       });
 
-      // Guardar (crear o actualizar)
       document.getElementById('btnGuardar').onclick = async () => {
-        const adelanto = toNum(document.getElementById('e_adelanto').value);
-        const peaje    = toNum(document.getElementById('e_peaje').value);
-        const entrada  = toNum(document.getElementById('e_entrada').value);
+        const adelanto = toNum(get('e_adelanto').value);
+        const peaje    = toNum(get('e_peaje').value);
+        const entrada  = toNum(get('e_entrada').value);
         const data = {
-          fecha: document.getElementById('e_fecha').value || null,
-          origen: document.getElementById('e_origen').value.trim(),
-          destino: document.getElementById('e_destino').value.trim(),
-          patente: document.getElementById('e_patente').value.trim(),
-          tipoCereal: document.getElementById('e_tipoCarga').value.trim(),
-          tipoCarga: document.getElementById('e_tipoCarga').value.trim(),
-          kgLlevados: toNum(document.getElementById('e_peso').value),
-          peso: toNum(document.getElementById('e_peso').value),
-          kgDescargados: toNum(document.getElementById('e_kgDescargados').value),
-          cuitOrigen: document.getElementById('e_cuit').value.trim(),
-          cuit: document.getElementById('e_cuit').value.trim(),
-          // Ambos nombres + flags para compatibilidad con Finanzas
+          fecha: get('e_fecha').value || null,
+          origen: get('e_origen').value.trim(),
+          destino: get('e_destino').value.trim(),
+          patente: get('e_patente').value.trim(),
+          tipoCereal: get('e_tipoCarga').value.trim(),
+          tipoCarga: get('e_tipoCarga').value.trim(),
+          kgLlevados: toNum(get('e_peso').value),
+          peso: toNum(get('e_peso').value),
+          kgDescargados: toNum(get('e_kgDescargados').value),
+          cuitOrigen: get('e_cuit').value.trim(),
+          cuit: get('e_cuit').value.trim(),
+          // Espejo de nombres + flags
           adelanto: adelanto, adelantoMonto: adelanto, adelantoAplica: adelanto > 0,
           peaje: peaje,       peajeMonto: peaje,       peajeAplica: peaje > 0,
           entrada: entrada,   entradaMonto: entrada,   entradaAplica: entrada > 0,
-          observaciones: document.getElementById('e_observaciones').value.trim(),
+          observaciones: get('e_observaciones').value.trim(),
         };
         try{
           if (isNew){
@@ -338,7 +332,6 @@
         }catch(err){ alert('Error al guardar: ' + err.message); }
       };
 
-      // Eliminar
       document.getElementById('btnEliminar').onclick = async () => {
         if (isNew) { cerrarModal(); return; }
         if (!confirm('¿Eliminar este viaje?')) return;
@@ -346,14 +339,19 @@
         catch(err){ alert('Error al eliminar: ' + err.message); }
       };
 
-      // Ir a registrar combustible
       document.getElementById('btnCombustible').onclick = () => {
-        const q = new URLSearchParams({ patente: document.getElementById('e_patente').value, fecha: document.getElementById('e_fecha').value });
+        const q = new URLSearchParams({ patente: get('e_patente').value, fecha: get('e_fecha').value });
         window.location.href = 'agregar-combustible.html?' + q.toString();
       };
 
-      // ====== Imprimir (según filtros actuales) ======
+      /* ====== Imprimir (con totales y tarifa) ====== */
       btnImprimir.addEventListener('click', ()=>{
+        const sum = (arr, fn) => arr.reduce((a,v)=> a + toNum(fn(v)), 0);
+        const totalKgDesc = sum(_ultimos, v => v.kgDescargados);
+        const totalAdel   = sum(_ultimos, v => readMoneyField(v,'adelanto'));
+        const totalPeaje  = sum(_ultimos, v => readMoneyField(v,'peaje'));
+        const totalEntr   = sum(_ultimos, v => readMoneyField(v,'entrada'));
+
         const rows = _ultimos.map(v=>{
           const adel = readMoneyField(v,'adelanto');
           const peaj = readMoneyField(v,'peaje');
@@ -364,6 +362,7 @@
               <td>${v.chofer || '-'}</td>
               <td>${v.patente || '-'}</td>
               <td>${(v.origen||'-')} → ${(v.destino||'-')}</td>
+              <td>${tarifaLabel(v)}</td>
               <td style="text-align:right">${fmtInt(v.kgLlevados ?? v.peso ?? 0)}</td>
               <td style="text-align:right">${fmtInt(v.kgDescargados ?? 0)}</td>
               <td style="text-align:right">${fmtInt(adel || 0)}</td>
@@ -371,6 +370,7 @@
               <td style="text-align:right">${fmtInt(entr || 0)}</td>
             </tr>`;
         }).join('');
+
         const html = `
 <!DOCTYPE html><html><head><meta charset="utf-8"><title>Viajes</title>
 <style>
@@ -378,28 +378,40 @@
   h2{margin:0 0 10px}
   .note{font-size:12px;color:#555;margin-bottom:8px}
   table{width:100%;border-collapse:collapse}
-  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
   th{background:#f5f5f5}
+  tfoot td{font-weight:bold;background:#fafafa}
+  .r{text-align:right}
 </style>
 </head>
 <body onload="window.print()">
   <h2>Viajes</h2>
   <div class="note">
-    Rango: ${fDesde.value||'—'} a ${fHasta.value||'—'} · Chofer: ${fChofer.value||'Todos'} ·
-    Patente: ${fPatente.value||'Todas'} · CUIT: ${fCuit.value||'—'} · Búsqueda: ${fBuscar.value||'—'}
+    Rango: ${fmtDMY(fDesde.value)||'—'} a ${fmtDMY(fHasta.value)||'—'} ·
+    Chofer: ${fChofer.value||'Todos'} · Patente: ${fPatente.value||'Todas'} ·
+    CUIT: ${fCuit.value||'—'} · Búsqueda: ${fBuscar.value||'—'}
   </div>
   <table>
     <thead>
       <tr>
-        <th>Fecha</th><th>Chofer</th><th>Patente</th><th>Origen → Destino</th>
-        <th style="text-align:right">Kg cargados</th>
-        <th style="text-align:right">Kg descargados</th>
-        <th style="text-align:right">Adelanto</th>
-        <th style="text-align:right">Peaje</th>
-        <th style="text-align:right">Entrada</th>
+        <th>Fecha</th><th>Chofer</th><th>Patente</th><th>Origen → Destino</th><th>Tarifa</th>
+        <th class="r">Kg cargados</th>
+        <th class="r">Kg descargados</th>
+        <th class="r">Adelanto</th>
+        <th class="r">Peaje</th>
+        <th class="r">Entrada</th>
       </tr>
     </thead>
-    <tbody>${rows || '<tr><td colspan="9">Sin datos</td></tr>'}</tbody>
+    <tbody>${rows || '<tr><td colspan="10">Sin datos</td></tr>'}</tbody>
+    <tfoot>
+      <tr>
+        <td colspan="6">Totales</td>
+        <td class="r">${fmtInt(totalKgDesc)}</td>
+        <td class="r">${fmtInt(totalAdel)}</td>
+        <td class="r">${fmtInt(totalPeaje)}</td>
+        <td class="r">${fmtInt(totalEntr)}</td>
+      </tr>
+    </tfoot>
   </table>
 </body></html>`;
         const w = window.open('', '_blank', 'width=900,height=1000');
