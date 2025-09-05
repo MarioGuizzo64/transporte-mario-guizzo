@@ -39,12 +39,20 @@
     .btn-volver{margin-top:16px}
 
     .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);justify-content:center;align-items:center}
-    .modal-content{background:#000;border-radius:12px;padding:16px;width:95%;max-width:600px}
+    /* >>> permite scroll con la ruedita dentro del modal y evita alejarnos del zoom */
+    .modal-content{
+      background:#000;border-radius:12px;padding:16px;width:95%;max-width:600px;
+      max-height:90vh;overflow-y:auto; /* <- clave */
+      box-shadow:0 10px 30px rgba(0,0,0,.5)
+    }
     .edit-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .edit-form label{grid-column:span 2;font-weight:bold;text-transform:uppercase}
     .edit-form input,.edit-form textarea{padding:8px;border:1px solid #000;border-radius:4px;background:#fff;color:#000}
     .edit-form textarea{grid-column:span 2;height:70px;resize:vertical}
     .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+
+    /* Evitar que el fondo haga scroll cuando el modal está abierto */
+    body.modal-open{overflow:hidden}
 
     @media (max-width:900px){ .filtros{grid-template-columns:repeat(3,1fr)} }
     @media (max-width:600px){
@@ -80,14 +88,14 @@
         <label>Origen</label><input type="text" id="e_origen"/>
         <label>Destino</label><input type="text" id="e_destino"/>
         <label>Patente del camión</label><input type="text" id="e_patente"/>
-        <label>Chofer</label><input type="text" id="e_chofer"/>
+        <!-- Campo Chofer removido a pedido -->
         <label>Tipo de carga</label><input type="text" id="e_tipoCarga"/>
         <label>Peso / Kg cargados</label><input type="number" id="e_peso"/>
         <label>Kg descargados</label><input type="number" id="e_kgDescargados"/>
         <label>CUIT origen</label><input type="text" id="e_cuit"/>
-        <label>Adelanto ($)</label><input type="number" id="e_adelanto"/>
-        <label>Peaje ($)</label><input type="number" id="e_peaje"/>
-        <label>Entrada ($)</label><input type="number" id="e_entrada"/>
+        <label>Adelanto ($)</label><input type="text" id="e_adelanto"/>
+        <label>Peaje ($)</label><input type="text" id="e_peaje"/>
+        <label>Entrada ($)</label><input type="text" id="e_entrada"/>
         <label>Observaciones</label><textarea id="e_observaciones"></textarea>
       </form>
 
@@ -115,13 +123,26 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);          // <<<<<< INICIALIZAR AUTH
+    const auth = getAuth(app);
     const db   = getFirestore(app);
+
+    // ===== helpers =====
+    // Acepta "1.234,56" o "1234.56" -> Number
+    const toNum = (v) => {
+      if (v === null || v === undefined) return 0;
+      if (typeof v === 'number' && isFinite(v)) return v;
+      if (typeof v === 'string'){
+        const s = v.replace(/\./g,'').replace(',','.');
+        const n = parseFloat(s);
+        return isNaN(n) ? 0 : n;
+      }
+      return 0;
+    };
 
     // ======= AUTH GATE =======
     onAuthStateChanged(auth, (user) => {
       if (!user) { window.location.href = "login.html"; return; }
-      start(user);                      // Sólo arrancamos Firestore cuando hay auth
+      start(user);
     });
     // =========================
 
@@ -231,47 +252,69 @@
         const v = todos.find(x => x.id === id);
         if (!v) return;
         actualId = id; actual = v;
+
+        // abrir modal y bloquear scroll del fondo
+        modal.style.display = 'flex';
+        document.body.classList.add('modal-open');
+
         get('e_fecha').value = v.fecha || '';
         get('e_origen').value = v.origen || '';
         get('e_destino').value = v.destino || '';
         get('e_patente').value = v.patente || '';
-        get('e_chofer').value = v.chofer || '';
+        // Chofer removido
         get('e_tipoCarga').value = (v.tipoCereal || v.tipoCarga || '');
         get('e_peso').value = (v.kgLlevados ?? v.peso ?? '');
         get('e_kgDescargados').value = (v.kgDescargados ?? '');
         get('e_cuit').value = (v.cuitOrigen || v.cuit || '');
-        get('e_adelanto').value = v.adelanto || '';
-        get('e_peaje').value = v.peaje || '';
-        get('e_entrada').value = v.entrada || '';
+
+        // >>> Traer importes desde cualquiera de los nombres usados
+        const adel = (v.adelanto ?? v.adelantoMonto ?? '');
+        const peaj = (v.peaje ?? v.peajeMonto ?? '');
+        const entr = (v.entrada ?? v.entradaMonto ?? '');
+        get('e_adelanto').value = adel;
+        get('e_peaje').value = peaj;
+        get('e_entrada').value = entr;
+
         get('e_observaciones').value = v.observaciones || '';
-        modal.style.display = 'flex';
       };
 
-      get('btnCerrar').onclick = () => modal.style.display = 'none';
+      const cerrarModal = () => {
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+      };
+
+      get('btnCerrar').onclick = cerrarModal;
 
       get('btnGuardar').onclick = async () => {
+        const adelanto = toNum(get('e_adelanto').value);
+        const peaje    = toNum(get('e_peaje').value);
+        const entrada  = toNum(get('e_entrada').value);
+
         const data = {
           fecha: get('e_fecha').value || null,
           origen: get('e_origen').value.trim(),
           destino: get('e_destino').value.trim(),
           patente: get('e_patente').value.trim(),
-          chofer: get('e_chofer').value.trim(),
+          // chofer: REMOVIDO (no lo tocamos)
           tipoCereal: get('e_tipoCarga').value.trim(),
           tipoCarga: get('e_tipoCarga').value.trim(),
-          kgLlevados: Number(get('e_peso').value || 0),
-          peso: Number(get('e_peso').value || 0),
-          kgDescargados: Number(get('e_kgDescargados').value || 0),
+          kgLlevados: toNum(get('e_peso').value),
+          peso: toNum(get('e_peso').value),
+          kgDescargados: toNum(get('e_kgDescargados').value),
           cuitOrigen: get('e_cuit').value.trim(),
           cuit: get('e_cuit').value.trim(),
-          adelanto: Number(get('e_adelanto').value || 0),
-          peaje: Number(get('e_peaje').value || 0),
-          entrada: Number(get('e_entrada').value || 0),
+
+          // Guardar con ambos nombres + flags, para compatibilidad con Finanzas
+          adelanto: adelanto,              adelantoMonto: adelanto,  adelantoAplica: adelanto > 0,
+          peaje: peaje,                    peajeMonto: peaje,        peajeAplica: peaje > 0,
+          entrada: entrada,                entradaMonto: entrada,    entradaAplica: entrada > 0,
+
           observaciones: get('e_observaciones').value.trim(),
         };
         try{
           await updateDoc(doc(db,'viajes', actualId), data);
           alert('Viaje actualizado');
-          modal.style.display = 'none';
+          cerrarModal();
         }catch(err){
           alert('Error al guardar: ' + err.message);
         }
@@ -281,7 +324,7 @@
         if (!confirm('¿Eliminar este viaje?')) return;
         try{
           await deleteDoc(doc(db,'viajes', actualId));
-          modal.style.display = 'none';
+          cerrarModal();
         }catch(err){
           alert('Error al eliminar: ' + err.message);
         }
@@ -291,6 +334,10 @@
         const q = new URLSearchParams({ patente: get('e_patente').value, fecha: get('e_fecha').value });
         window.location.href = 'agregar-combustible.html?' + q.toString();
       };
+
+      // Cerrar modal con ESC o click fuera
+      window.addEventListener('keydown', (e)=>{ if (e.key==='Escape') cerrarModal(); });
+      modal.addEventListener('click', (e)=>{ if (e.target===modal) cerrarModal(); });
     }
   </script>
 </body>
