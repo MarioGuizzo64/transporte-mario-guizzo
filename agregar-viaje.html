@@ -21,6 +21,8 @@
     .mant-box{border:1px dashed #444;border-radius:8px;padding:12px;margin-top:4px}
     .mant-extra{display:none;margin-top:8px}
     .mant-extra.show{display:block}
+    /* Checkbox más grande */
+    #reqMant{transform:scale(1.4); transform-origin:left center; margin-right:8px}
     #modalExito{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;color:green;padding:18px 22px;border:2px solid green;border-radius:10px;z-index:1000;text-align:center;font-weight:bold}
     .ayuda{font-size:12px;color:#bbb;margin-top:-4px;text-transform:none}
   </style>
@@ -30,24 +32,44 @@
     <h2>Agregar viaje</h2>
 
     <form id="formViaje">
+      <!-- 1) FECHA -->
       <label for="fecha">Fecha</label>
       <input type="date" id="fecha" required>
 
-      <label for="cuitOrigen">CUIT Origen</label>
+      <!-- 2) TITULAR CARTA DE PORTE (CUIT) -->
+      <label for="cuitOrigen">Titular carta de porte (CUIT)</label>
       <input type="text" id="cuitOrigen" placeholder="Ej: 20-12345678-9" required>
 
+      <!-- 3) LUGAR DE ORIGEN DEL VIAJE -->
+      <label for="origen">Lugar de origen del viaje</label>
+      <input type="text" id="origen" placeholder="Campo/Planta/Localidad" required>
+
+      <!-- 4) DESTINO -->
       <label for="destino">Destino</label>
       <input type="text" id="destino" required>
 
+      <!-- 5) TARIFA -->
+      <label>Tarifa</label>
+      <div class="fila">
+        <input type="number" id="tarifaValor" step="0.01" min="0" placeholder="Ej: 15000">
+        <select id="tarifaUnidad">
+          <option value="tn">/ tn</option>
+          <option value="kg">/ kg</option>
+        </select>
+      </div>
+
+      <!-- 6) PATENTE -->
       <label for="patente">Patente</label>
       <input type="text" id="patente" placeholder="ABC123 / AB123CD" required>
 
+      <!-- (se mantiene) TIPO DE CEREAL -->
       <label for="tipoCereal">Tipo de cereal</label>
       <input type="text" id="tipoCereal" placeholder="Soja, Maíz, Trigo..." required>
 
+      <!-- 7-8) KG -->
       <div class="fila">
         <div>
-          <label for="kgLlevados">Kg llevados</label>
+          <label for="kgLlevados">Kg cargados</label>
           <input type="number" id="kgLlevados" step="0.01" min="0" required>
         </div>
         <div>
@@ -56,6 +78,7 @@
         </div>
       </div>
 
+      <!-- ¿CARGÓ COMBUSTIBLE? -->
       <label for="cargoCombustible">¿Cargó combustible?</label>
       <select id="cargoCombustible">
         <option value="no" selected>No</option>
@@ -95,10 +118,11 @@
         <input type="number" id="entradaMonto" step="0.01" min="0">
       </div>
 
+      <!-- 12) OBSERVACIONES -->
       <label for="observaciones">Observaciones</label>
       <textarea id="observaciones" placeholder="Notas adicionales..."></textarea>
 
-      <!-- Sección mantenimiento -->
+      <!-- 13) Mantenimiento -->
       <div class="mant-box">
         <label><input type="checkbox" id="reqMant"> ¿Requiere mantenimiento?</label>
         <div id="mantExtra" class="mant-extra">
@@ -123,7 +147,6 @@
           </div>
         </div>
       </div>
-      <!-- FIN mantenimiento -->
 
       <div class="botones">
         <button type="button" class="btn-volver" onclick="window.location.href='index.html'">Volver</button>
@@ -198,7 +221,7 @@
       if (!currentUser) { alert("No hay sesión. Volvé a iniciar sesión."); return; }
 
       // Validación básica
-      const obligatorios = ["fecha","cuitOrigen","destino","patente","tipoCereal","kgLlevados","kgDescargados"];
+      const obligatorios = ["fecha","cuitOrigen","origen","destino","patente","tipoCereal","kgLlevados","kgDescargados"];
       for (const id of obligatorios) {
         if (!document.getElementById(id).value) {
           alert("Por favor, complete todos los campos obligatorios.");
@@ -215,9 +238,18 @@
         }
       }
 
-      // Normalización de campos
+      // Normalización
       const patenteUP = document.getElementById("patente").value.trim().toUpperCase();
-      document.getElementById("patente").value = patenteUP; // por si se muestra luego
+      document.getElementById("patente").value = patenteUP;
+
+      // Tarifa → guardar en el campo correcto según unidad
+      const tarifaVal = parseFloat(document.getElementById("tarifaValor").value || 0);
+      const tarifaUni = document.getElementById("tarifaUnidad").value; // 'tn' | 'kg'
+      const tarifaObj = {};
+      if (tarifaVal > 0) {
+        if (tarifaUni === 'tn') tarifaObj.tarifaPorTon = tarifaVal;
+        if (tarifaUni === 'kg') tarifaObj.tarifaPorKg  = tarifaVal;
+      }
 
       const cargoCombustible = document.getElementById("cargoCombustible").value === "si";
       const mantRequiere     = document.getElementById('reqMant').checked;
@@ -225,11 +257,11 @@
       const mantDescripcion  = (document.getElementById("mantDesc").value || "").trim();
 
       const viaje = {
-        // filtro servidor: o patente del usuario o uidCreador === uid
         uidCreador: currentUser.uid,
 
         fecha: document.getElementById("fecha").value,
-        cuitOrigen: document.getElementById("cuitOrigen").value.trim(),
+        cuitOrigen: document.getElementById("cuitOrigen").value.trim(),   // Titular carta de porte (CUIT)
+        origen: document.getElementById("origen").value.trim(),           // Lugar de origen
         destino: document.getElementById("destino").value.trim(),
         patente: patenteUP,
         tipoCereal: document.getElementById("tipoCereal").value.trim(),
@@ -254,7 +286,8 @@
         mantTipoSugerido,
         mantDescripcion,
 
-        timestamp: serverTimestamp()
+        timestamp: serverTimestamp(),
+        ...tarifaObj
       };
 
       try {
