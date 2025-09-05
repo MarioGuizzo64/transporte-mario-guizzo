@@ -9,6 +9,13 @@
     .container{background:#000;max-width:900px;margin:40px auto;padding:24px;border-radius:12px;}
     h1{text-align:center;text-transform:uppercase;text-decoration:underline;margin:0 0 16px}
 
+    .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
+    .btn{padding:10px;border:1px solid #000;border-radius:6px;font-weight:bold;cursor:pointer;text-transform:uppercase}
+    .btn-verde{background:green;color:#fff}
+    .btn-naranja{background:orange;color:#000}
+    .btn-rojo{background:red;color:#fff}
+    .btn-volver{margin-top:16px}
+
     .filtros{
       display:grid;
       grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));
@@ -20,12 +27,6 @@
     .filtros input,.filtros select {
       padding:10px;border:1px solid #000;border-radius:6px;color:#000;background:#fff;box-sizing:border-box;font-weight:600;
     }
-
-    .btn{padding:10px;border:1px solid #000;border-radius:6px;font-weight:bold;cursor:pointer;text-transform:uppercase}
-    .btn-verde{background:green;color:#fff}
-    .btn-naranja{background:orange;color:#000}
-    .btn-rojo{background:red;color:#fff}
-    .btn-volver{margin-top:16px}
     
     .lista{display:grid;gap:10px}
     .item{background:#191919;border-radius:10px;padding:12px}
@@ -36,13 +37,12 @@
     .badge-amarillo{background:#ffbf00;color:#000;border:1px solid #000}
 
     .acciones{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
-    .btn-volver{margin-top:16px}
 
     .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);justify-content:center;align-items:center}
-    /* >>> permite scroll con la ruedita dentro del modal y evita alejarnos del zoom */
+    /* Scrolleable y sin mover el fondo */
     .modal-content{
       background:#000;border-radius:12px;padding:16px;width:95%;max-width:600px;
-      max-height:90vh;overflow-y:auto; /* <- clave */
+      max-height:90vh;overflow-y:auto;
       box-shadow:0 10px 30px rgba(0,0,0,.5)
     }
     .edit-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -51,7 +51,7 @@
     .edit-form textarea{grid-column:span 2;height:70px;resize:vertical}
     .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
 
-    /* Evitar que el fondo haga scroll cuando el modal está abierto */
+    /* Evitar scroll del fondo cuando el modal está abierto */
     body.modal-open{overflow:hidden}
 
     @media (max-width:900px){ .filtros{grid-template-columns:repeat(3,1fr)} }
@@ -64,6 +64,10 @@
 <body>
   <div class="container">
     <h1>Ver Viajes</h1>
+
+    <div class="toolbar">
+      <button class="btn btn-verde" id="btnNuevo">Agregar viaje</button>
+    </div>
 
     <form class="filtros" id="formFiltros">
       <input type="date" id="desde" />
@@ -88,10 +92,10 @@
         <label>Origen</label><input type="text" id="e_origen"/>
         <label>Destino</label><input type="text" id="e_destino"/>
         <label>Patente del camión</label><input type="text" id="e_patente"/>
-        <!-- Campo Chofer removido a pedido -->
+        <!-- Chofer removido del modal -->
         <label>Tipo de carga</label><input type="text" id="e_tipoCarga"/>
-        <label>Peso / Kg cargados</label><input type="number" id="e_peso"/>
-        <label>Kg descargados</label><input type="number" id="e_kgDescargados"/>
+        <label>Peso / Kg cargados</label><input type="text" id="e_peso"/>
+        <label>Kg descargados</label><input type="text" id="e_kgDescargados"/>
         <label>CUIT origen</label><input type="text" id="e_cuit"/>
         <label>Adelanto ($)</label><input type="text" id="e_adelanto"/>
         <label>Peaje ($)</label><input type="text" id="e_peaje"/>
@@ -111,7 +115,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
@@ -126,10 +130,10 @@
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
-    // ===== helpers =====
-    // Acepta "1.234,56" o "1234.56" -> Number
+    // ---- Helpers ----
+    // Acepta "1.234,56" o "1234.56" o "1234" -> Number
     const toNum = (v) => {
-      if (v === null || v === undefined) return 0;
+      if (v === null || v === undefined || v === '') return 0;
       if (typeof v === 'number' && isFinite(v)) return v;
       if (typeof v === 'string'){
         const s = v.replace(/\./g,'').replace(',','.');
@@ -138,13 +142,13 @@
       }
       return 0;
     };
+    const moneyOrEmpty = (v) => (v===undefined || v===null || v==='') ? '' : String(v);
 
     // ======= AUTH GATE =======
     onAuthStateChanged(auth, (user) => {
       if (!user) { window.location.href = "login.html"; return; }
       start(user);
     });
-    // =========================
 
     function start(user){
       const col = collection(db, "viajes");
@@ -157,10 +161,12 @@
       const fCuit = document.getElementById("fCuit");
       const fBuscar = document.getElementById("buscar");
       const btnLimpiar = document.getElementById("btnLimpiar");
+      const btnNuevo = document.getElementById("btnNuevo");
 
       let todos = [];
       let actualId = null;
       let actual = null;
+      let isNew = false;
 
       onSnapshot(col, (qs) => {
         todos = qs.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -245,57 +251,86 @@
         render();
       });
 
+      // ---- Modal ----
       const modal = document.getElementById('modal');
       const get = id => document.getElementById(id);
 
+      // Evitar scroll del fondo y evitar que el overlay mueva la página
+      const abrirModal = () => {
+        modal.style.display = 'flex';
+        document.body.classList.add('modal-open');
+      };
+      const cerrarModal = () => {
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+      };
+      // Si se hace wheel sobre el overlay (no sobre el contenido), no scrollear el body
+      modal.addEventListener('wheel', (e)=>{
+        if (e.target === modal){ e.preventDefault(); }
+      }, {passive:false});
+
+      // ---- Abrir en modo EDITAR ----
       window._abrir = (id) => {
         const v = todos.find(x => x.id === id);
         if (!v) return;
-        actualId = id; actual = v;
+        actualId = id; actual = v; isNew = false;
 
-        // abrir modal y bloquear scroll del fondo
-        modal.style.display = 'flex';
-        document.body.classList.add('modal-open');
+        abrirModal();
 
         get('e_fecha').value = v.fecha || '';
         get('e_origen').value = v.origen || '';
         get('e_destino').value = v.destino || '';
         get('e_patente').value = v.patente || '';
-        // Chofer removido
         get('e_tipoCarga').value = (v.tipoCereal || v.tipoCarga || '');
-        get('e_peso').value = (v.kgLlevados ?? v.peso ?? '');
-        get('e_kgDescargados').value = (v.kgDescargados ?? '');
+        get('e_peso').value = moneyOrEmpty(v.kgLlevados ?? v.peso);
+        get('e_kgDescargados').value = moneyOrEmpty(v.kgDescargados);
         get('e_cuit').value = (v.cuitOrigen || v.cuit || '');
 
-        // >>> Traer importes desde cualquiera de los nombres usados
-        const adel = (v.adelanto ?? v.adelantoMonto ?? '');
-        const peaj = (v.peaje ?? v.peajeMonto ?? '');
-        const entr = (v.entrada ?? v.entradaMonto ?? '');
-        get('e_adelanto').value = adel;
-        get('e_peaje').value = peaj;
-        get('e_entrada').value = entr;
+        // Importes desde cualquier nombre
+        const readMoney = (obj, base) => {
+          if (obj[base] !== undefined && obj[base] !== null) return obj[base];
+          if (obj[base + 'Monto'] !== undefined && obj[base + 'Monto'] !== null) return obj[base + 'Monto'];
+          return '';
+        };
+        get('e_adelanto').value = moneyOrEmpty(readMoney(v,'adelanto'));
+        get('e_peaje').value    = moneyOrEmpty(readMoney(v,'peaje'));
+        get('e_entrada').value  = moneyOrEmpty(readMoney(v,'entrada'));
 
         get('e_observaciones').value = v.observaciones || '';
       };
 
-      const cerrarModal = () => {
-        modal.style.display = 'none';
-        document.body.classList.remove('modal-open');
-      };
+      // ---- Abrir en modo NUEVO ----
+      btnNuevo.addEventListener('click', ()=>{
+        isNew = true; actualId = null; actual = null;
+        get('e_fecha').value = new Date().toISOString().slice(0,10);
+        get('e_origen').value = '';
+        get('e_destino').value = '';
+        get('e_patente').value = '';
+        get('e_tipoCarga').value = '';
+        get('e_peso').value = '';
+        get('e_kgDescargados').value = '';
+        get('e_cuit').value = '';
+        get('e_adelanto').value = '';
+        get('e_peaje').value = '';
+        get('e_entrada').value = '';
+        get('e_observaciones').value = '';
+        abrirModal();
+      });
 
       get('btnCerrar').onclick = cerrarModal;
 
+      // ---- Guardar (crear o actualizar) ----
       get('btnGuardar').onclick = async () => {
         const adelanto = toNum(get('e_adelanto').value);
         const peaje    = toNum(get('e_peaje').value);
         const entrada  = toNum(get('e_entrada').value);
 
-        const data = {
+        const baseData = {
           fecha: get('e_fecha').value || null,
           origen: get('e_origen').value.trim(),
           destino: get('e_destino').value.trim(),
           patente: get('e_patente').value.trim(),
-          // chofer: REMOVIDO (no lo tocamos)
+          // chofer no se toca (fuera del modal)
           tipoCereal: get('e_tipoCarga').value.trim(),
           tipoCarga: get('e_tipoCarga').value.trim(),
           kgLlevados: toNum(get('e_peso').value),
@@ -304,23 +339,31 @@
           cuitOrigen: get('e_cuit').value.trim(),
           cuit: get('e_cuit').value.trim(),
 
-          // Guardar con ambos nombres + flags, para compatibilidad con Finanzas
+          // Escribir ambos nombres + flags
           adelanto: adelanto,              adelantoMonto: adelanto,  adelantoAplica: adelanto > 0,
           peaje: peaje,                    peajeMonto: peaje,        peajeAplica: peaje > 0,
           entrada: entrada,                entradaMonto: entrada,    entradaAplica: entrada > 0,
 
           observaciones: get('e_observaciones').value.trim(),
         };
+
         try{
-          await updateDoc(doc(db,'viajes', actualId), data);
-          alert('Viaje actualizado');
+          if (isNew){
+            await addDoc(col, { ...baseData, uidCreador: auth.currentUser?.uid || null, timestamp: serverTimestamp() });
+            alert('Viaje creado');
+          }else{
+            await updateDoc(doc(db,'viajes', actualId), baseData);
+            alert('Viaje actualizado');
+          }
           cerrarModal();
         }catch(err){
           alert('Error al guardar: ' + err.message);
         }
       };
 
+      // ---- Eliminar ----
       get('btnEliminar').onclick = async () => {
+        if (isNew) { cerrarModal(); return; }
         if (!confirm('¿Eliminar este viaje?')) return;
         try{
           await deleteDoc(doc(db,'viajes', actualId));
@@ -330,6 +373,7 @@
         }
       };
 
+      // ---- Ir a registrar combustible con datos precargados ----
       get('btnCombustible').onclick = () => {
         const q = new URLSearchParams({ patente: get('e_patente').value, fecha: get('e_fecha').value });
         window.location.href = 'agregar-combustible.html?' + q.toString();
