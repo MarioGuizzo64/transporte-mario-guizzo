@@ -5,272 +5,240 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>VER CARGAS</title>
   <style>
-    :root{--yellow:#FFD700;--black:#0b0b0b;--panel:#151515;--soft:#1e1e1e;--line:#2a2a2a;--green:#2e7d32;--red:#c62828;--blue:#1976d2;}
-    body{margin:0;background:var(--yellow);font-family:Arial,Helvetica,sans-serif;color:#fff}
-    .wrap{max-width:900px;margin:42px auto;background:#000;border-radius:14px;box-shadow:0 14px 32px rgba(0,0,0,.35);padding:22px}
-    h1{margin:0 0 16px;text-align:center;text-transform:uppercase;text-decoration:underline}
-
-    .topbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 12px}
-    .search{flex:1;min-width:220px;display:flex;gap:8px;align-items:center}
-    .search input{flex:1;padding:10px;border-radius:8px;border:1px solid #000;background:#fff;color:#000}
-    .order{display:flex;gap:8px;align-items:center}
-    .order select{padding:10px;border-radius:8px;border:1px solid #000;background:#fff;color:#000}
-    .btn{padding:10px 12px;border:1px solid #000;border-radius:8px;background:orange;color:#000;font-weight:bold;cursor:pointer}
-
-    /* Resumen */
-    .resumen{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:6px 0 16px}
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center}
-    .card small{opacity:.8}
-    .card b{display:block;margin-top:6px;font-size:18px}
-
-    /* Lista */
+    body{margin:0;background:#FFD700;font-family:Arial,Helvetica,sans-serif;color:#fff}
+    .wrap{max-width:900px;margin:36px auto;background:#000;border-radius:12px;padding:20px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+    h1{margin:0 0 14px;text-align:center;text-transform:uppercase;text-decoration:underline}
+    .top{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center}
+    .top input,.top select{padding:9px;border:1px solid #000;border-radius:6px;background:#fff;color:#000}
+    .btn{padding:10px 12px;border:1px solid #000;border-radius:8px;font-weight:bold;cursor:pointer}
+    .btn-naranja{background:orange;color:#000}
+    .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}
+    .card{background:#0f1a0f;border:1px solid #1f3d1f;border-radius:8px;padding:10px;text-align:center}
+    .card small{display:block;font-size:12px;opacity:.8}
+    .card b{font-size:18px}
     .lista{display:grid;gap:10px}
-    .item{background:#191919;border:1px solid #232323;border-radius:12px;padding:12px}
-    .item h3{margin:0 0 6px;font-size:16px}
-    .meta{display:flex;gap:14px;flex-wrap:wrap;opacity:.9}
-    .row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-    .pill{display:inline-block;padding:3px 8px;border-radius:999px;background:#2d2d2d;font-size:12px;margin-right:6px;border:1px solid #000}
-    .pill.warn{background:#8d2323}
-    .note{font-size:12px;opacity:.8;margin-top:8px}
-    .volver{margin-top:14px}
-    @media (max-width:720px){ .resumen{grid-template-columns:1fr 1fr} }
-    @media (max-width:460px){ .resumen{grid-template-columns:1fr} }
+    .item{background:#171717;border:1px solid #222;border-radius:10px;padding:12px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between}
+    .pill{display:inline-block;background:#333;border-radius:999px;padding:2px 8px;font-size:12px;margin-left:6px}
+    .foot{margin-top:6px;font-size:12px;opacity:.75}
+    @media (max-width:720px){ .cards{grid-template-columns:1fr 1fr} .top{grid-template-columns:1fr 1fr;gap:6px} }
+    @media (max-width:480px){ .cards{grid-template-columns:1fr} .top{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>Viajes cargados — Combustible</h1>
+    <h1>Viajes cargados — combustible</h1>
 
-    <div class="topbar">
-      <div class="search">
-        <label for="q" style="opacity:.85">Buscar:</label>
-        <input id="q" placeholder="estación, patente, tipo, método, obs"/>
-      </div>
-      <div class="order">
-        <label for="orden" style="opacity:.85">Ordenar por:</label>
-        <select id="orden">
-          <option value="fecha-desc">Fecha ↓</option>
-          <option value="fecha-asc">Fecha ↑</option>
-          <option value="total-desc">Total $ ↓</option>
-          <option value="total-asc">Total $ ↑</option>
-          <option value="litros-desc">Litros ↓</option>
-          <option value="litros-asc">Litros ↑</option>
-        </select>
-        <button class="btn" id="btnVolver">Volver</button>
-      </div>
+    <div class="top">
+      <input id="buscar" placeholder="estación, patente, tipo, método, obs" />
+      <select id="orden">
+        <option value="fecha-desc">Fecha ↓</option>
+        <option value="fecha-asc">Fecha ↑</option>
+      </select>
+      <button class="btn btn-naranja" onclick="location.href='index.html'">Volver</button>
     </div>
 
-    <!-- RESUMEN -->
-    <div class="resumen">
-      <div class="card"><small>Litros</small>      <b id="kLitros">-</b></div>
-      <div class="card"><small>Total $</small>     <b id="kTotal">$ -</b></div>
-      <div class="card"><small>$/litro prom.</small><b id="kProm">-</b></div>
-      <div class="card"><small>Cargas</small>      <b id="kCargas">-</b></div>
+    <div class="cards">
+      <div class="card"><small>Litros</small> <b id="kLitros">0</b></div>
+      <div class="card"><small>Total $</small> <b id="kTotal">$ 0</b></div>
+      <div class="card"><small>$/litro prom.</small> <b id="kProm">-</b></div>
+      <div class="card"><small>Cargas</small> <b id="kCargas">0</b></div>
     </div>
 
-    <div class="lista" id="lista"></div>
+    <div id="lista" class="lista"></div>
 
-    <button class="btn volver" onclick="location.href='index.html'">Volver</button>
-
-    <div class="note" id="dbg" style="margin-top:10px;opacity:.7"></div>
+    <div id="dbg" class="foot"></div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, onSnapshot, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    /* ========= Firebase ========= */
-    const firebaseConfig = {
-      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
-      authDomain: "transporte-mario-guizzo.firebaseapp.com",
-      projectId: "transporte-mario-guizzo",
-      storageBucket: "transporte-mario-guizzo.appspot.com",
-      messagingSenderId: "465536166890",
-      appId: "1:465536166890:web:f658690629b09eca8fa093"
-    };
-    const app  = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db   = getFirestore(app);
+const firebaseConfig = {
+  apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
+  authDomain: "transporte-mario-guizzo.firebaseapp.com",
+  projectId: "transporte-mario-guizzo",
+  storageBucket: "transporte-mario-guizzo.appspot.com",
+  messagingSenderId: "465536166890",
+  appId: "1:465536166890:web:f658690629b09eca8fa093"
+};
 
-    /* ========= Utils ========= */
-    const $ = (id)=> document.getElementById(id);
-    const fmtMoney = (n)=> new Intl.NumberFormat("es-AR",{style:"currency",currency:"ARS",maximumFractionDigits:0}).format(Number(n||0));
-    const fmtInt   = (n)=> new Intl.NumberFormat("es-AR",{maximumFractionDigits:0}).format(Number(n||0));
-    function toNumber(v){
-      if (typeof v === "number") return v;
-      if (v==null || v==="")   return 0;
-      // "1.450"->1450 ; "499.356"->499356 ; "1,50"->1.5
-      const s = String(v).trim().replace(/\./g,"").replace(/,/g,".");
-      const n = Number(s);
-      return isNaN(n) ? 0 : n;
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// ---------- helpers ----------
+const fmt$ = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
+const fmtN = n => new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(Number(n||0));
+const canonPat = (p) => (p||'').toString().toUpperCase().replace(/[\s-]/g,'').trim();
+
+function toISO(d){
+  if (!d) return '';
+  if (typeof d === 'string') {
+    // acepta YYYY-MM-DD o DD/MM/AAAA
+    if (/^\d{4}-\d{2}-\d{2}/.test(d)) return d.slice(0,10);
+    const m = d.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (m) { const [_,dd,mm,aa]=m; return new Date(+aa,+mm-1,+dd).toISOString().slice(0,10); }
+    const t = Date.parse(d); return isNaN(t) ? '' : new Date(t).toISOString().slice(0,10);
+  }
+  if (d.seconds) return new Date(d.seconds*1000).toISOString().slice(0,10);
+  try{ return d.toDate().toISOString().slice(0,10); }catch{ return ''; }
+}
+const toDMY = iso => iso ? `${iso.slice(8,10)}/${iso.slice(5,7)}/${iso.slice(0,4)}` : '-';
+
+// Unificar doc → objeto común
+function mapCarga(raw){
+  const fechaISO = toISO(raw.fecha || raw.fechaCarga || raw.createdAt || raw.timestamp);
+  const litros   = Number(raw.litros || 0);
+  const precio   = Number(raw.precioPorLitro || raw.sl || 0);
+  // Siempre priorizamos cálculo para evitar “00 de más”
+  const total    = Math.round(litros * precio);
+  return {
+    id: raw.id || '',
+    fechaISO,
+    ts: fechaISO ? Date.parse(fechaISO) : (raw.timestamp?.seconds ? raw.timestamp.seconds*1000 : 0),
+    estacion: raw.estacionServicio || raw.estacion || '',
+    tipo: raw.tipoCombustible || raw.tipo || '',
+    metodo: raw.metodoPago || raw.metodo || '',
+    litros, precio, total,
+    patente: (raw.patenteCamion || raw.patente || '').trim(),
+    canon: canonPat(raw.patenteCamion || raw.patente || ''),
+    obs: raw.observaciones || '',
+    uid: raw.uid || raw.uidCreador || raw.usuarioUid || ''
+  };
+}
+
+// ---------- estado UI ----------
+const $lista  = document.getElementById('lista');
+const $buscar = document.getElementById('buscar');
+const $orden  = document.getElementById('orden');
+const $kL     = document.getElementById('kLitros');
+const $kT     = document.getElementById('kTotal');
+const $kP     = document.getElementById('kProm');
+const $kC     = document.getElementById('kCargas');
+const $dbg    = document.getElementById('dbg');
+
+let all = [];        // todas las cargas (de ambas colecciones)
+let mine = [];       // filtradas por usuario
+let myCanonPats = []; // patentes del usuario (normalizadas)
+let me = null;
+
+// ---------- auth gate ----------
+onAuthStateChanged(auth, async (user)=>{
+  if (!user){ location.href='login.html'; return; }
+  me = user;
+
+  // leer usuario → patentes asignadas
+  try{
+    const du = await getDoc(doc(db,'usuarios', user.uid));
+    if (du.exists()){
+      const d = du.data();
+      const pats = [];
+      if (Array.isArray(d.patentes)) pats.push(...d.patentes);
+      if (d.patente) pats.push(d.patente);
+      myCanonPats = [...new Set(pats.map(canonPat))].filter(Boolean);
+    }else{
+      myCanonPats = [];
     }
-    function parseFecha(f){
-      if (!f) return null;
-      if (typeof f === "string"){
-        if (/^\d{4}-\d{2}-\d{2}/.test(f)) return new Date(f);
-        if (/^\d{2}\/\d{2}\/\d{4}/.test(f)){ const [dd,mm,aa]=f.split("/"); return new Date(+aa,+mm-1,+dd); }
-      }
-      if (f.seconds) return new Date(f.seconds*1000);
-      const d = new Date(f); return isNaN(d) ? null : d;
-    }
-    const dmy = (f)=>{
-      const d = parseFecha(f); if (!d) return "-";
-      const dd = String(d.getDate()).padStart(2,"0");
-      const mm = String(d.getMonth()+1).padStart(2,"0");
-      const aa = d.getFullYear();
-      return `${dd}/${mm}/${aa}`;
-    };
+  }catch{ myCanonPats = []; }
 
-    // Normalizadores (ambas colecciones)
-    const combPatente  = (c) => (c.patenteCamion || c.patente || "").trim();
-    const combEstacion = (c) => c.estacionServicio || c.estacion || "";
-    const combMetodo   = (c) => c.metodoPago || c.metodo || "";
-    const combTipo     = (c) => c.tipoCombustible || c.tipo || "";
-    const combFecha    = (c) => c.fecha || c.fechaCarga || c.fechaCompra || "";
-    const combLitros   = (c) => toNumber(c.litros);
-    const combTotal    = (c) => {
-      // Si hay totalPagado válido lo uso, si no, Litros * PrecioPorLitro
-      const L = combLitros(c);
-      const P = toNumber(c.precioPorLitro ?? c.sl);
-      const T = (c.totalPagado==="" || c.totalPagado==null) ? (L>0 && P>0 ? L*P : 0) : toNumber(c.totalPagado);
-      return T;
-    };
+  // escuchar ambas colecciones
+  const stop1 = onSnapshot(collection(db,'cargas-combustible'),
+    qs => {
+      const arr = qs.docs.map(d => mapCarga({id:d.id, ...d.data()}));
+      markAndMerge('cargas-combustible', arr);
+    },
+    err => markAndMerge('cargas-combustible', [], err)
+  );
 
-    /* ========= Estado ========= */
-    let MIS_PATENTES = new Set();  // desde usuarios/{uid}
-    let todas = [];                // merge de ambas colecciones
-    let cargadasA = false, cargadasB = false;
-    let lastErr = "";
+  const stop2 = onSnapshot(collection(db,'cargasCombustible'),
+    qs => {
+      const arr = qs.docs.map(d => mapCarga({id:d.id, ...d.data()}));
+      markAndMerge('cargasCombustible', arr);
+    },
+    err => markAndMerge('cargasCombustible', [], err)
+  );
+});
 
-    /* ========= UI refs ========= */
-    const q = $("q");
-    const orden = $("orden");
-    const kLitros=$("kLitros"), kTotal=$("kTotal"), kProm=$("kProm"), kCargas=$("kCargas");
-    const lista = $("lista");
-    const dbg = $("dbg");
-    $("btnVolver").onclick = ()=> history.back();
+const colState = { 'cargas-combustible': '…', 'cargasCombustible': '…' };
+function markAndMerge(col, arr, err){
+  colState[col] = err ? `error:${err.code||'x'}` : `ok:${arr.length}`;
+  // reemplazar lo de esa colección
+  const others = all.filter(x => x._from !== col);
+  all = [...others, ...arr.map(x=>({...x, _from:col}))];
+  render();
+}
 
-    /* ========= Auth ========= */
-    onAuthStateChanged(auth, async (user) => {
-      if (!user){ location.href = "login.html"; return; }
+function passesOwner(c){
+  // es mío si:
+  // - uid del doc es mi uid
+  // - o la patente del doc coincide con alguna asignada al usuario
+  if (c.uid && me && c.uid === me.uid) return true;
+  if (myCanonPats.length && c.canon && myCanonPats.includes(c.canon)) return true;
+  // si no hay patentes definidas para el usuario, dejamos pasar SOLO por uid
+  return false;
+}
 
-      // Traer patentes asignadas al chofer
-      try{
-        const snap = await getDoc(doc(db, "usuarios", user.uid));
-        if (snap.exists()){
-          const u = snap.data();
-          if (Array.isArray(u.patentes)) u.patentes.forEach(p=>MIS_PATENTES.add(String(p).trim()));
-          if (u.patente) MIS_PATENTES.add(String(u.patente).trim());
-        }
-      }catch(e){ console.warn("usuarios/{uid} no disponible", e); }
+function render(){
+  const q = ($buscar.value||'').trim().toLowerCase();
+  mine = all.filter(passesOwner);
 
-      // Suscribirse a ambas colecciones
-      onSnapshot(collection(db,"cargas-combustible"), (qs)=>{
-        cargadasA = true;
-        const arr = qs.docs.map(d => ({id:d.id, src:"a", ...d.data()}));
-        todas = [ ...arr, ...todas.filter(x => x.src!=="a") ];
-        sortAndRender();
-      }, (err)=>{ lastErr = err.code||err.message; sortAndRender(); });
+  // ordenar
+  const ord = $orden.value;
+  mine.sort((a,b)=> ord==='fecha-asc' ? (a.ts - b.ts) : (b.ts - a.ts));
 
-      onSnapshot(collection(db,"cargasCombustible"), (qs)=>{
-        cargadasB = true;
-        const arr = qs.docs.map(d => ({id:d.id, src:"b", ...d.data()}));
-        todas = [ ...todas.filter(x => x.src!=="b"), ...arr ];
-        sortAndRender();
-      }, (err)=>{ lastErr = err.code||err.message; sortAndRender(); });
-    });
+  // buscar
+  const rows = mine.filter(c=>{
+    if (!q) return true;
+    const blob = [
+      c.estacion, c.tipo, c.metodo, c.patente, c.obs,
+      toDMY(c.fechaISO)
+    ].join(' ').toLowerCase();
+    return blob.includes(q);
+  });
 
-    /* ========= Render ========= */
-    function pasaFiltroTexto(c){
-      const s = (q.value||"").trim().toLowerCase();
-      if (!s) return true;
-      const blob = [
-        combEstacion(c), combTipo(c), combMetodo(c), combPatente(c), c.observaciones
-      ].map(x => (x||"")+"").join(" ").toLowerCase();
-      return blob.includes(s);
-    }
+  // totales
+  const litros = rows.reduce((a,b)=>a+(b.litros||0),0);
+  const total  = rows.reduce((a,b)=>a+(b.total || 0),0);
+  const prom   = litros>0 ? (total/litros) : 0;
 
-    function datosFiltrados(){
-      // restringir por patentes del chofer (si existen)
-      let arr = todas.filter(c=>{
-        const p = combPatente(c);
-        if (MIS_PATENTES.size && !MIS_PATENTES.has(p)) return false;
-        return true;
-      }).filter(pasaFiltroTexto);
+  $kL.textContent = fmtN(litros);
+  $kT.textContent = fmt$(total);
+  $kP.textContent = litros>0 ? new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(prom) : '-';
+  $kC.textContent = rows.length;
 
-      // ordenar
-      const key = orden.value;
-      arr.sort((a,b)=>{
-        if (key==="fecha-desc") return (parseFecha(combFecha(b))||0) - (parseFecha(combFecha(a))||0);
-        if (key==="fecha-asc")  return (parseFecha(combFecha(a))||0) - (parseFecha(combFecha(b))||0);
-        if (key==="total-desc") return combTotal(b) - combTotal(a);
-        if (key==="total-asc")  return combTotal(a) - combTotal(b);
-        if (key==="litros-desc")return combLitros(b) - combLitros(a);
-        if (key==="litros-asc") return combLitros(a) - combLitros(b);
-        return 0;
-      });
-      return arr;
-    }
+  // lista
+  if (!rows.length){
+    $lista.innerHTML = `<div class="item">No hay cargas para mostrar.</div>`;
+  }else{
+    $lista.innerHTML = rows.map(c=>`
+      <div class="item">
+        <div class="row">
+          <div><b>Fecha:</b> ${toDMY(c.fechaISO)}</div>
+          <div><b>Patente:</b> ${c.patente || '-'}</div>
+        </div>
+        <div><b>Estación:</b> ${c.estacion || '-'}
+             <span class="pill"><b>Tipo:</b> ${c.tipo || '-'}</span>
+             <span class="pill"><b>Método:</b> ${c.metodo || '-'}</span>
+        </div>
+        <div style="margin-top:4px">
+          <b>Litros:</b> ${fmtN(c.litros)} &nbsp;|&nbsp;
+          <b>$/l:</b> ${fmtN(c.precio)} &nbsp;|&nbsp;
+          <b>Total:</b> ${fmt$(c.total)}
+        </div>
+        ${c.obs ? `<div class="foot"><b>Obs:</b> ${c.obs}</div>` : ``}
+      </div>
+    `).join('');
+  }
 
-    function actualizarResumen(arr){
-      const cargas = arr.length;
-      let litros = 0, total = 0;
-      for (const c of arr){ litros += combLitros(c); total += combTotal(c); }
-      const prom = litros>0 ? total/litros : 0;
-      kLitros.textContent = fmtInt(litros) + " l";
-      kTotal.textContent  = fmtMoney(total);
-      kProm.textContent   = litros>0 ? fmtInt(prom) : "-";
-      kCargas.textContent = String(cargas);
-    }
+  // debug de colecciones leídas
+  const dbgTxt = `colecciones → cargas-combustible: ${colState['cargas-combustible']} · cargasCombustible: ${colState['cargasCombustible']}`;
+  $dbg.textContent = dbgTxt;
+}
 
-    function renderLista(arr){
-      lista.innerHTML = "";
-      if (!arr.length){
-        const m = document.createElement("div");
-        m.className = "item";
-        m.innerHTML = "<p>No hay cargas para mostrar.</p>";
-        lista.appendChild(m);
-        return;
-      }
-      for (const c of arr){
-        const litros = combLitros(c);
-        const total  = combTotal(c);
-        const pl     = litros>0 ? total/litros : 0;
-        const obs    = (c.observaciones && String(c.observaciones).trim()) ? `<span class="pill warn">OBSERVACIONES</span>` : "";
-
-        const el = document.createElement("div");
-        el.className = "item";
-        el.innerHTML = `
-          <div class="row">
-            <h3>${combEstacion(c) || "—"}</h3>
-            <div class="meta"><span>Fecha: <b>${dmy(combFecha(c))}</b></span> · <span>Patente: <b>${combPatente(c)||"—"}</b></span></div>
-          </div>
-          <div class="meta" style="margin-top:6px">
-            <span>Tipo: <b>${combTipo(c)||"—"}</b></span>
-            <span>Método: <b>${combMetodo(c)||"—"}</b></span>
-          </div>
-          <div style="margin-top:8px">
-            <span class="pill">Litros: ${fmtInt(litros)} l</span>
-            <span class="pill">$/l: ${pl? fmtInt(pl) : "-"}</span>
-            <span class="pill">Total: ${fmtMoney(total)}</span>
-            ${obs}
-          </div>
-        `;
-        lista.appendChild(el);
-      }
-    }
-
-    function sortAndRender(){
-      const arr = datosFiltrados();
-      actualizarResumen(arr);
-      renderLista(arr);
-      const a = cargadasA?"ok":"—", b=cargadasB?"ok":"—";
-      dbg.textContent = `colecciones → cargas-combustible:${a} · cargasCombustible:${b}${lastErr?` · ERROR: ${lastErr}`:""}`;
-    }
-
-    q.addEventListener("input", sortAndRender);
-    orden.addEventListener("change", sortAndRender);
-  </script>
+$buscar.addEventListener('input', render);
+$orden.addEventListener('change', render);
+</script>
 </body>
 </html>
