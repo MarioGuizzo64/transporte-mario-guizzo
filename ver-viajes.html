@@ -5,26 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ver viajes</title>
   <style>
-    :root{
-      --yellow:#FFD700; --panel:#111; --card:#1a1a1a; --mut:#a9b0b6;
-      --green:#2e7d32; --red:#c62828; --orange:#ffa000;
-    }
+    :root{ --yellow:#FFD700; --panel:#000; --card:#181818; --mut:#a9b0b6; --green:#2e7d32; --red:#c62828; --orange:#ffa000; }
     body{margin:0;background:var(--yellow);font-family:Arial,Helvetica,sans-serif;color:#fff}
-    .wrap{max-width:900px;margin:40px auto;background:#000;border-radius:12px;padding:20px;box-shadow:0 12px 28px rgba(0,0,0,.35)}
+    .wrap{max-width:900px;margin:40px auto;background:var(--panel);border-radius:12px;padding:20px;box-shadow:0 12px 28px rgba(0,0,0,.35)}
     h1{margin:0 0 12px;text-align:center;text-transform:uppercase;text-decoration:underline}
     .bar{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center}
     .bar input,.bar select{padding:10px;border:1px solid #000;border-radius:8px;background:#fff;color:#000;font-weight:600}
     .btn{padding:10px 12px;border:1px solid #000;border-radius:8px;font-weight:bold;cursor:pointer;text-transform:uppercase}
     .btn-volver{background:var(--orange);color:#000}
 
-    /* Stats */
-    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0 6px}
+    /* Un solo contador (viajes) */
+    .stats{display:grid;grid-template-columns:1fr;gap:10px;margin:12px 0 6px}
     .card{background:#101010;border:1px solid #222;border-radius:10px;padding:10px;text-align:center}
     .card .label{font-size:12px;color:#b7f1c4;text-transform:uppercase;letter-spacing:.4px}
     .card .value{font-weight:bold;font-size:18px}
 
     .lista{display:grid;gap:10px}
-    .item{background:#181818;border:1px solid #222;border-radius:12px;padding:12px}
+    .item{background:var(--card);border:1px solid #222;border-radius:12px;padding:12px}
     .row{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap}
     .pill{display:inline-block;background:#222;border:1px solid #333;border-radius:999px;padding:2px 8px;margin-right:6px;font-size:12px}
     .acciones{display:flex;gap:8px;margin-top:8px}
@@ -38,15 +35,11 @@
     .modal h2{margin:0 0 10px;text-transform:uppercase;text-decoration:underline}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .grid label{font-weight:bold;text-transform:uppercase}
-    .grid input,.grid textarea,.grid select{padding:8px;border:1px solid #000;border-radius:6px;background:#fff;color:#000}
+    .grid input,.grid textarea{padding:8px;border:1px solid #000;border-radius:6px;background:#fff;color:#000}
     .grid textarea{grid-column:span 2;height:70px;resize:vertical}
     .modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
 
-    @media (max-width:760px){
-      .bar{grid-template-columns:1fr}
-      .grid{grid-template-columns:1fr}
-      .stats{grid-template-columns:1fr}
-    }
+    @media (max-width:760px){ .bar{grid-template-columns:1fr} .grid{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
@@ -64,18 +57,16 @@
       <button class="btn btn-volver" onclick="location.href='index.html'">Volver</button>
     </div>
 
-    <!-- Contadores -->
+    <!-- Solo contador de viajes -->
     <div class="stats">
       <div class="card"><div class="label">Viajes</div><div class="value" id="kViajes">0</div></div>
-      <div class="card"><div class="label">Toneladas cargadas</div><div class="value" id="kKgCarg">0</div></div>
-      <div class="card"><div class="label">Toneladas descargadas</div><div class="value" id="kKgDesc">0</div></div>
     </div>
 
     <div id="lista" class="lista"></div>
     <div id="msg" class="empty" style="display:none">Cargando…</div>
   </div>
 
-  <!-- MODAL EDITAR -->
+  <!-- MODAL EDITAR (agrego CTG) -->
   <div id="modal" class="modal">
     <div class="box">
       <h2>Editar / Eliminar viaje</h2>
@@ -83,24 +74,23 @@
         <label>Fecha</label><input type="date" id="e_fecha"/>
         <label>Patente</label><input id="e_patente"/>
 
+        <label>CTG</label><input id="e_ctg"/>
         <label>Titular carta de porte (CUIT)</label><input id="e_cuitTitular"/>
+
         <label>CUIT origen</label><input id="e_cuitOrigen"/>
-
         <label>Origen</label><input id="e_origen"/>
-        <label>Destino</label><input id="e_destino"/>
 
+        <label>Destino</label><input id="e_destino"/>
         <label>Tipo de cereal</label><input id="e_tipoCereal"/>
 
-        <label>Toneladas cargadas</label><input type="number" step="0.01" id="e_kgCarg"/>
-        <label>Toneladas descargadas</label><input type="number" step="0.01" id="e_kgDesc"/>
+        <label>Tns cargadas</label><input type="number" step="0.01" id="e_kgCarg"/>
+        <label>Tns descargadas</label><input type="number" step="0.01" id="e_kgDesc"/>
 
         <label>Tarifa ($/tn)</label><input type="number" step="0.01" id="e_tarifa"/>
-
         <label>Adelanto ($)</label><input type="number" step="0.01" id="e_adelanto"/>
-        <label>Peaje ($)</label><input type="number" step="0.01" id="e_peaje"/>
 
+        <label>Peaje ($)</label><input type="number" step="0.01" id="e_peaje"/>
         <label>Entrada ($)</label><input type="number" step="0.01" id="e_entrada"/>
-        <label></label><div></div>
 
         <label>Observaciones</label><textarea id="e_obs"></textarea>
       </div>
@@ -115,10 +105,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import {
-      getFirestore, collection, onSnapshot, query, orderBy, where,
-      doc, getDoc, updateDoc, deleteDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, where, doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
@@ -133,57 +120,46 @@
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
-    // UI refs
     const $ = id => document.getElementById(id);
-    const lista = $('lista'), msg = $('msg');
-    const kViajes = $('kViajes'), kKgCarg = $('kKgCarg'), kKgDesc = $('kKgDesc');
+    const lista = $('lista'), msg = $('msg'), kViajes = $('kViajes');
 
     const fechaAR = x => {
       if (!x) return '-';
       if (typeof x === 'string'){
-        if (x.includes('/')) return x; // ya dd/mm/aaaa
+        if (x.includes('/')) return x;
         if (x.includes('-')){ const [y,m,d]=x.split('-'); return `${d}/${m}/${y}`; }
       }
-      try{
-        const d = (x?.seconds) ? new Date(x.seconds*1000) : new Date(x);
-        return d.toLocaleDateString('es-AR',{timeZone:'UTC'});
-      }catch{ return '-'; }
+      try{ const d=(x?.seconds)?new Date(x.seconds*1000):new Date(x); return d.toLocaleDateString('es-AR',{timeZone:'UTC'}); }
+      catch{ return '-'; }
     };
     const toISO = x => {
-      const d = (typeof x==='string') ? new Date(x) : (x?.seconds ? new Date(x.seconds*1000) : new Date(x));
-      return isNaN(d) ? '' : d.toISOString().slice(0,10);
+      const d = (typeof x==='string')? new Date(x) : (x?.seconds? new Date(x.seconds*1000): new Date(x));
+      return isNaN(d)? '' : d.toISOString().slice(0,10);
     };
-    const safe = v => (v ?? '').toString();
-    const up   = s => safe(s).toUpperCase();
+    const up=s=> (s??'').toString().toUpperCase();
+    const safe=s=> (s??'').toString();
 
-    // Normalizadores (acepta nombres viejos/nuevos)
+    // Normalizadores
     const N = {
-      fecha: v => v.fecha || v.fechaViaje || v.createdAt || null,
-      patente: v => (v.patente || '').toUpperCase(),
-      origen: v => v.origenViaje || v.origen || '',
-      destino: v => v.destino || '',
-      chofer: v => v.chofer || '',
-      cuitOrigen: v => v.cuitOrigen || v.cuit || '',
-      cuitTitular: v => v.cuitTitularCartaPorte || v.cuitTitular || '',
-      tipoCereal: v => v.tipoCereal || v.tipoCarga || '',
-      kgCarg: v => Number(v.kgLlevados ?? v.peso ?? 0),
-      kgDesc: v => Number(v.kgDescargados ?? 0),
-      tarifa: v => Number(v.tarifaPorTonelada ?? v.tarifa ?? 0),
-      adelanto: v => Number(v.adelanto ?? 0),
-      peaje: v => Number(v.peaje ?? 0),
-      entrada: v => Number(v.entrada ?? 0),
-      obs: v => v.observaciones || '',
-      uid: v => v.uidCreador || v.uid || v.creadoPor || ''
+      id: v => v.__id, fecha:v=>v.fecha||v.fechaViaje||v.createdAt||null,
+      patente:v=>(v.patente||'').toUpperCase(),
+      ctg:v=>v.ctg||v.nroCTG||v.ctgNumero||'',
+      cuitTitular:v=>v.cuitTitularCartaPorte||v.cuitTitular||'',
+      cuitOrigen:v=>v.cuitOrigen||v.cuit||'',
+      origen:v=>v.origenViaje||v.origen||'',
+      destino:v=>v.destino||'',
+      tipoCereal:v=>v.tipoCereal||v.tipoCarga||'',
+      kgCarg:v=>Number(v.kgLlevados??v.peso??0),
+      kgDesc:v=>Number(v.kgDescargados??0),
+      tarifa:v=>Number(v.tarifaPorTonelada??v.tarifa??0),
+      adelanto:v=>Number(v.adelanto??0), peaje:v=>Number(v.peaje??0), entrada:v=>Number(v.entrada??0),
+      uid:v=>v.uidCreador||v.uid||v.creadoPor||''
     };
 
-    // Estado
-    let esAdmin=false, miUid=null, misPatentes=[];
-    let datos=[], unsub=null;
+    let esAdmin=false, miUid=null, misPatentes=[], datos=[], unsub=null;
 
     function ordenarMem(clave, arr){
-      const a=[...arr];
-      const f = (x)=> (safe(x.fecha)||'');
-      const t = (x)=> (x.timestamp?.seconds || 0);
+      const a=[...arr], f=x=>(safe(x.fecha)||''), t=x=>(x.timestamp?.seconds||0);
       if (clave==='fecha_asc') a.sort((x,y)=>f(x).localeCompare(f(y)));
       if (clave==='fecha_desc') a.sort((x,y)=>f(y).localeCompare(f(x)));
       if (clave==='ts_asc') a.sort((x,y)=>t(x)-t(y));
@@ -194,21 +170,13 @@
     function render(){
       const q = up($('q').value.trim());
       const ord = $('orden').value;
-
       const base = ordenarMem(ord, datos);
       const fil = q ? base.filter(v=>{
-        const blob = [N.origen(v),N.destino(v),N.patente(v),N.cuitOrigen(v),N.obs(v)].join(' ').toUpperCase();
+        const blob = [N.origen(v),N.destino(v),N.patente(v),N.cuitOrigen(v),N.ctg(v)].join(' ').toUpperCase();
         return blob.includes(q);
-      }): base;
+      }) : base;
 
-      // Stats
-      kViajes.textContent = fil.length.toString();
-      const sumC = fil.reduce((s,v)=> s + N.kgCarg(v), 0);
-      const sumD = fil.reduce((s,v)=> s + N.kgDesc(v), 0);
-      kKgCarg.textContent = sumC.toLocaleString('es-AR');
-      kKgDesc.textContent = sumD.toLocaleString('es-AR');
-
-      // Lista
+      kViajes.textContent = String(fil.length);
       lista.innerHTML='';
       if (!fil.length){ msg.style.display='block'; msg.textContent='Sin viajes para mostrar.'; return; }
       msg.style.display='none';
@@ -218,7 +186,7 @@
         el.className='item';
         el.innerHTML = `
           <div class="row">
-            <div><b>Fecha:</b> ${fechaAR(N.fecha(v))}</div>
+            <div><b>Fecha:</b> ${fechaAR(N.fecha(v))}<br><small style="color:#bbb">CTG: ${safe(N.ctg(v)) || '-'}</small></div>
             <div><b>Patente:</b> ${N.patente(v) || '-'}</div>
           </div>
           <div><b>Origen → Destino:</b> ${N.origen(v) || '-'} → ${N.destino(v) || '-'}</div>
@@ -226,16 +194,15 @@
             <span class="pill">Tns carg.: ${N.kgCarg(v).toLocaleString('es-AR')}</span>
             <span class="pill">Tns desc.: ${N.kgDesc(v).toLocaleString('es-AR')}</span>
             <span class="pill">Cereal: ${N.tipoCereal(v) || '-'}</span>
-            ${N.tarifa(v) ? `<span class="pill">Tarifa $/tn: ${N.tarifa(v).toLocaleString('es-AR')}</span>` : ''}
             ${N.cuitOrigen(v) ? `<span class="pill">CUIT origen: ${N.cuitOrigen(v)}</span>` : ''}
           </div>
           <div class="acciones">
-            <button class="btn btn-edit" data-edit="${v.__id}">Editar</button>
-            <button class="btn btn-del" data-del="${v.__id}">Eliminar</button>
+            <button class="btn btn-edit" data-e="${v.__id}">Editar</button>
+            <button class="btn btn-del" data-d="${v.__id}">Eliminar</button>
           </div>
         `;
-        el.querySelector('[data-edit]').onclick = ()=> abrirModal(v);
-        el.querySelector('[data-del]').onclick  = ()=> eliminar(v.__id);
+        el.querySelector('[data-e]').onclick = ()=> abrirModal(v);
+        el.querySelector('[data-d]').onclick = ()=> eliminar(v.__id);
         lista.appendChild(el);
       }
     }
@@ -247,34 +214,30 @@
       if (esAdmin){
         let qy;
         switch($('orden').value){
-          case 'fecha_asc': qy = query(ref, orderBy('fecha','asc')); break;
-          case 'ts_asc':    qy = query(ref, orderBy('timestamp','asc')); break;
-          case 'ts_desc':   qy = query(ref, orderBy('timestamp','desc')); break;
-          default:          qy = query(ref, orderBy('fecha','desc')); // fecha_desc
+          case 'fecha_asc': qy=query(ref,orderBy('fecha','asc')); break;
+          case 'ts_asc':    qy=query(ref,orderBy('timestamp','asc')); break;
+          case 'ts_desc':   qy=query(ref,orderBy('timestamp','desc')); break;
+          default:          qy=query(ref,orderBy('fecha','desc'));
         }
-        unsub = onSnapshot(qy, snap=>{
-          datos = snap.docs.map(d=>({__id:d.id, ...d.data()}));
-          render();
-        }, err=>{msg.style.display='block'; msg.textContent='Error: '+(err.code||err.message);});
+        unsub = onSnapshot(qy,s=>{ datos=s.docs.map(d=>({__id:d.id,...d.data()})); render(); }, err=>{msg.style.display='block'; msg.textContent='Error: '+(err.code||err.message);});
         return;
       }
 
       // Chofer: por uid + por patente(s)
       const qUid = query(ref, where('uidCreador','==',miUid));
+      let qPat=null;
+      if (misPatentes.length===1) qPat=query(ref, where('patente','==',misPatentes[0]));
+      else if (misPatentes.length>1 && misPatentes.length<=10) qPat=query(ref, where('patente','in',misPatentes));
 
-      let qPat = null;
-      if (misPatentes.length===1) qPat = query(ref, where('patente','==', misPatentes[0]));
-      else if (misPatentes.length>1 && misPatentes.length<=10) qPat = query(ref, where('patente','in', misPatentes));
-
-      let a=[], b=[];
-      const merge = ()=>{ const m=new Map(); [...a,...b].forEach(v=>m.set(v.__id,v)); datos=[...m.values()]; render(); };
+      let a=[],b=[];
+      const merge=()=>{ const m=new Map(); [...a,...b].forEach(v=>m.set(v.__id,v)); datos=[...m.values()]; render(); };
 
       const u1 = onSnapshot(qUid, s=>{ a=s.docs.map(d=>({__id:d.id,...d.data()})); merge(); });
       const u2 = qPat ? onSnapshot(qPat, s=>{ b=s.docs.map(d=>({__id:d.id,...d.data()})); merge(); }) : null;
       unsub = ()=>{ try{u1();}catch{} if(u2) try{u2();}catch{} };
     }
 
-    // Modal edición
+    // Modal
     const modal = $('modal');
     $('btnCerrar').onclick = ()=> modal.style.display='none';
     let actualId=null;
@@ -283,6 +246,7 @@
       actualId = v.__id;
       $('e_fecha').value      = toISO(N.fecha(v)) || '';
       $('e_patente').value    = N.patente(v);
+      $('e_ctg').value        = N.ctg(v);
       $('e_cuitTitular').value= N.cuitTitular(v);
       $('e_cuitOrigen').value = N.cuitOrigen(v);
       $('e_origen').value     = N.origen(v);
@@ -294,7 +258,7 @@
       $('e_adelanto').value   = N.adelanto(v) || '';
       $('e_peaje').value      = N.peaje(v) || '';
       $('e_entrada').value    = N.entrada(v) || '';
-      $('e_obs').value        = N.obs(v) || '';
+      $('e_obs').value        = v.observaciones || '';
       modal.style.display='flex';
     }
 
@@ -303,6 +267,7 @@
       const data = {
         fecha: $('e_fecha').value || null,
         patente: up($('e_patente').value.trim()),
+        ctg: $('e_ctg').value.trim(),
         cuitTitularCartaPorte: $('e_cuitTitular').value.trim(),
         cuitOrigen: $('e_cuitOrigen').value.trim(),
         origenViaje: $('e_origen').value.trim(),
@@ -320,22 +285,14 @@
         entrada: Number($('e_entrada').value || 0),
         observaciones: $('e_obs').value.trim()
       };
-      try{
-        await updateDoc(doc(db,'viajes',actualId), data);
-        alert('Viaje actualizado');
-        modal.style.display='none';
-      }catch(err){
-        alert('Error al guardar: ' + (err.code||err.message));
-      }
+      try{ await updateDoc(doc(db,'viajes',actualId), data); alert('Viaje actualizado'); modal.style.display='none'; }
+      catch(err){ alert('Error al guardar: ' + (err.code||err.message)); }
     };
 
     async function eliminar(id){
       if (!confirm('¿Eliminar este viaje?')) return;
-      try{
-        await deleteDoc(doc(db,'viajes',id));
-      }catch(err){
-        alert('No se pudo eliminar: ' + (err.code||err.message));
-      }
+      try{ await deleteDoc(doc(db,'viajes',id)); }
+      catch(err){ alert('No se pudo eliminar: ' + (err.code||err.message)); }
     }
 
     // Eventos
