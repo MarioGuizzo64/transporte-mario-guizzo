@@ -1,394 +1,320 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
   <title>VER CARGAS</title>
   <style>
-    :root{
-      --yellow:#FFD700; --black:#0a0a0a; --panel:#121212; --soft:#1a1a1a;
-      --white:#fff; --muted:#bdbdbd; --green:#2ecc71; --green2:#a5f0c5;
-      --pill:#223322; --red:#c62828; --orange:#ffa000;
-    }
-    body{margin:0;background:var(--yellow);font-family:Arial,Helvetica,sans-serif;color:#fff}
-    .wrap{max-width:900px;margin:36px auto;background:#000;border-radius:14px;padding:22px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
-    h1{margin:0 0 14px;text-align:center;text-transform:uppercase;text-decoration:underline}
-
-    .toolbar{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center}
-    .toolbar input,.toolbar select{padding:10px;border:1px solid #000;border-radius:8px;background:#fff;color:#000;font-weight:600}
-    .btn{padding:10px 12px;border:1px solid #000;border-radius:8px;font-weight:bold;cursor:pointer;text-transform:uppercase}
-    .btn-volver{background:var(--orange);color:#000}
-
-    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}
-    .card{background:var(--soft);border:1px solid #222;border-radius:10px;padding:10px;text-align:center}
-    .card .label{font-size:12px;color:var(--green2);text-transform:uppercase;letter-spacing:.4px}
-    .card .value{font-weight:bold;font-size:18px}
-
-    .lista{display:grid;gap:10px;margin-top:6px}
-    .item{background:#181818;border:1px solid #222;border-radius:12px;padding:12px}
-    .row{display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap}
-    .pill{display:inline-block;background:var(--pill);border:1px solid #355a35;border-radius:999px;padding:2px 8px;margin-right:6px;font-size:12px}
-    .acciones{display:flex;gap:8px;align-items:center}
-    .btn-edit{background:#2e7d32;color:#fff}
-    .btn-del{background:var(--red);color:#fff}
-
-    .hint{font-size:12px;color:#9aa;opacity:.9;margin-top:6px}
-
-    /* Modal */
-    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);justify-content:center;align-items:center;z-index:10}
-    .modal .box{background:#000;border-radius:12px;padding:16px;max-width:640px;width:95%}
-    .modal h2{margin:0 0 10px;text-transform:uppercase;text-decoration:underline}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .grid label{font-weight:bold;text-transform:uppercase}
-    .grid input,.grid select,.grid textarea{padding:8px;border:1px solid #000;border-radius:6px;background:#fff;color:#000}
-    .grid textarea{grid-column:span 2;height:70px;resize:vertical}
-    .modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
-    @media (max-width:760px){ .stats{grid-template-columns:1fr 1fr} .grid{grid-template-columns:1fr} }
+    body{margin:0;background:#FFD700;font-family:Arial,sans-serif;color:#fff}
+    .wrap{max-width:950px;margin:40px auto;background:#0e0e0e;border-radius:12px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    h1{margin:0 0 12px;text-align:center;text-transform:uppercase;text-decoration:underline}
+    .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+    .bar input,.bar select{padding:8px;border:1px solid #000;border-radius:6px;background:#fff;color:#000}
+    .pill-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:10px}
+    .pill{background:#0f1a0f;border:1px solid #1f3d1f;border-radius:10px;padding:10px;text-align:center}
+    .pill .label{font-size:12px;color:#a0d8a0;text-transform:uppercase}
+    .pill .val{font-weight:bold;font-size:18px}
+    .card{background:#1b1b1b;border-radius:12px;padding:12px;margin-top:10px}
+    .row{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+    .tag{display:inline-block;background:#2b2b2b;border:1px solid #3a3a3a;border-radius:999px;padding:2px 8px;margin-right:6px;font-size:12px}
+    .actions{margin-top:8px;display:flex;gap:8px}
+    .btn{padding:8px 12px;border:1px solid #000;border-radius:6px;cursor:pointer;font-weight:bold}
+    .btn-back{background:orange;color:#000}
+    .btn-green{background:#2e7d32;color:#fff}
+    .btn-red{background:#c62828;color:#fff}
+    .muted{opacity:.8}
+    .foot{font-size:12px;color:#bbb;margin-top:6px}
+    .empty{padding:14px;background:#141414;border:1px dashed #333;border-radius:10px;text-align:center}
   </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Viajes cargados — Combustible</h1>
+  <div class="wrap">
+    <h1>Viajes cargados — Combustible</h1>
 
-  <div class="toolbar">
-    <input id="q" placeholder="estación, patente, tipo, método, obs"/>
-    <select id="orden">
-      <option value="fecha_desc">Fecha ↓</option>
-      <option value="fecha_asc">Fecha ↑</option>
-      <option value="total_desc">Total $ ↓</option>
-      <option value="total_asc">Total $ ↑</option>
-      <option value="litros_desc">Litros ↓</option>
-      <option value="litros_asc">Litros ↑</option>
-    </select>
-    <button class="btn btn-volver" onclick="location.href='index.html'">Volver</button>
-  </div>
-
-  <div class="stats">
-    <div class="card"><div class="label">Litros</div><div class="value" id="kLitros">0</div></div>
-    <div class="card"><div class="label">Total $</div><div class="value" id="kTotal">$ 0</div></div>
-    <div class="card"><div class="label">$ / litro prom.</div><div class="value" id="kProm">-</div></div>
-    <div class="card"><div class="label">Cargas</div><div class="value" id="kCargas">0</div></div>
-  </div>
-
-  <div id="lista" class="lista"></div>
-
-  <div class="hint" id="dbg"></div>
-</div>
-
-<!-- MODAL EDITAR -->
-<div id="modal" class="modal">
-  <div class="box">
-    <h2>Editar / Eliminar carga</h2>
-    <div class="grid">
-      <label>Fecha</label><input type="date" id="e_fecha"/>
-
-      <label>Patente del camión</label><input id="e_patente"/>
-
-      <label>Litros</label><input type="number" step="0.01" id="e_litros"/>
-
-      <label>Precio por litro</label><input type="number" step="0.001" id="e_precio"/>
-
-      <label>Total pagado</label><input type="number" step="0.01" id="e_total"/>
-
-      <label>Estación de servicio</label><input id="e_estacion"/>
-
-      <label>Tipo de combustible</label>
-      <select id="e_tipo">
-        <option value="">Seleccionar…</option>
-        <option>Nafta</option>
-        <option>Gasoil</option>
-        <option>Euro</option>
-        <option>Diesel</option>
-        <option>Otro</option>
+    <div class="bar">
+      <input id="q" placeholder="estación, patente, tipo, método, obs">
+      <select id="ord">
+        <option value="fecha_desc">Fecha ↓</option>
+        <option value="fecha_asc">Fecha ↑</option>
+        <option value="ts_desc">Creación ↓</option>
+        <option value="ts_asc">Creación ↑</option>
       </select>
-
-      <label>Método de pago</label>
-      <select id="e_metodo">
-        <option value="">Seleccionar…</option>
-        <option>Efectivo</option>
-        <option>Tarjeta</option>
-        <option>Cuenta corriente</option>
-        <option>Transferencia</option>
-        <option>Otro</option>
-      </select>
-
-      <label>Observaciones</label>
-      <textarea id="e_obs"></textarea>
+      <button class="btn btn-back" onclick="location.href='index.html'">Volver</button>
     </div>
-    <div class="actions">
-      <button class="btn btn-edit" id="btnGuardar">Guardar</button>
-      <button class="btn btn-del" id="btnEliminar">Eliminar</button>
-      <button class="btn btn-volver" id="btnCerrar">Cerrar</button>
+
+    <div class="pill-row">
+      <div class="pill"><div class="label">Litros</div><div id="p_litros" class="val">0</div></div>
+      <div class="pill"><div class="label">Total $</div><div id="p_total" class="val">$ 0</div></div>
+      <div class="pill"><div class="label">$ / litro prom.</div><div id="p_prom" class="val">-</div></div>
+      <div class="pill"><div class="label">Cargas</div><div id="p_cant" class="val">0</div></div>
     </div>
+
+    <div id="lista"></div>
+    <div id="msg" class="empty" style="display:none">Cargando…</div>
+
+    <div class="foot" id="debug"></div>
   </div>
-</div>
 
-<script type="module">
-/* ========== Firebase ========== */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getFirestore, collection, query, where, onSnapshot, getDoc, doc, deleteDoc, updateDoc, orderBy
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
-  authDomain: "transporte-mario-guizzo.firebaseapp.com",
-  projectId: "transporte-mario-guizzo",
-  storageBucket: "transporte-mario-guizzo.appspot.com",
-  messagingSenderId: "465536166890",
-  appId: "1:465536166890:web:f658690629b09eca8fa093"
-};
+    // -------- Firebase --------
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
+      authDomain: "transporte-mario-guizzo.firebaseapp.com",
+      projectId: "transporte-mario-guizzo",
+      storageBucket: "transporte-mario-guizzo.firebasestorage.app",
+      messagingSenderId: "465536166890",
+      appId: "1:465536166890:web:f658690629b09eca8fa093"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
 
-const app  = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db   = getFirestore(app);
+    // -------- UI refs --------
+    const qInp   = document.getElementById('q');
+    const ordSel = document.getElementById('ord');
+    const lista  = document.getElementById('lista');
+    const msg    = document.getElementById('msg');
+    const dbg    = document.getElementById('debug');
+    const pLitros= document.getElementById('p_litros');
+    const pTotal = document.getElementById('p_total');
+    const pProm  = document.getElementById('p_prom');
+    const pCant  = document.getElementById('p_cant');
 
-/* ========== Helpers ========== */
-const $ = id => document.getElementById(id);
-const fmtARS = n => ' $ ' + Number(n||0).toLocaleString('es-AR',{maximumFractionDigits:0});
-const fmtNum = (n, d=3) => (n==null||isNaN(n)) ? '-' : Number(n).toLocaleString('es-AR',{minimumFractionDigits:0, maximumFractionDigits:d});
-const toISO = d => (d instanceof Date ? d : new Date(d)).toISOString().slice(0,10);
+    // -------- Helpers --------
+    const normPat = s => (s||"").toString().toUpperCase().replace(/[^A-Z0-9]/g,''); // saca espacios/guiones
+    const safeStr = v => (v ?? '').toString();
+    const toISO   = f => (f||'').toString().slice(0,10);
+    const nAR = (x) => {
+      // Acepta number, "1450", "1.450", "1,450.50", etc.
+      if (typeof x === 'number') return x;
+      const s = (x ?? '').toString().trim();
+      if (!s) return 0;
+      // quita separadores de miles . o ,
+      const clean = s.replace(/\./g,'').replace(/,/g,'.');
+      const n = Number(clean);
+      return isNaN(n) ? 0 : n;
+    };
+    const money = n => (n||0).toLocaleString('es-AR', {maximumFractionDigits:0});
+    const num2  = n => (n||0).toLocaleString('es-AR', {maximumFractionDigits:2});
 
-function parseFecha(x){
-  if (!x) return null;
-  if (typeof x === 'string'){
-    if (x.includes('-')) return new Date(x+'T00:00:00');
-    if (x.includes('/')){ const [dd,mm,aa] = x.split('/'); return new Date(+aa, +mm-1, +dd); }
-  }
-  if (typeof x === 'object'){
-    if (typeof x.toDate === 'function') return x.toDate();
-    if (typeof x.seconds === 'number') return new Date(x.seconds*1000);
-    if (x.fecha) return parseFecha(x.fecha);
-  }
-  const d = new Date(x); return isNaN(d)? null : d;
-}
-const fechaAR = x => { const d = parseFecha(x); return d ? d.toLocaleDateString('es-AR',{timeZone:'UTC'}) : '-'; };
+    // estado
+    let uid = null;
+    let patentesUser = [];   // normalizadas (sin espacios)
+    let datos = [];          // cargas combinadas
+    let unsubAll = [];       // listeners activos
 
-// Normalizadores (para ambas colecciones)
-const N = {
-  patente:  c => (c.patenteCamion || c.patente || '').trim(),
-  estacion: c => c.estacionServicio || c.estacion || '',
-  tipo:     c => c.tipoCombustible || c.tipo || '',
-  metodo:   c => c.metodoPago || c.metodo || '',
-  litros:   c => Number(c.litros || 0),
-  precio:   c => {
-    const cand = [c.precioPorLitro, c.sl];
-    for (const v of cand){ const n = Number(v); if(!isNaN(n) && n>0) return n; }
-    return 0;
-  },
-  // ⬇⬇ ARREGLADO: priorizamos litros*precio; usamos total/totalPagado sólo si no podemos calcular
-  total:    c => {
-    const L = Number(c.litros||0), P = N.precio(c);
-    if (L>0 && P>0) return L*P;
-    const cand = [c.totalPagado, c.total];
-    for (const v of cand){ const n = Number(v); if(!isNaN(n) && n>0) return n; }
-    return 0;
-  },
-  fecha:    c => c.fecha || c.fechaCarga || c.fechaCompra || c.createdAt || c.timestamp || null
-};
+    function clearListeners(){
+      unsubAll.forEach(fn=>{ try{fn();}catch{} });
+      unsubAll = [];
+    }
 
-function perteneceAUsuario(c, uid){
-  return (c.uid===uid || c.uidCreador===uid || c.choferUid===uid || c.userId===uid || c.creadoPor===uid);
-}
+    function addListener(fn){ unsubAll.push(fn); }
 
-/* ========== Estado ========== */
-let currentUser = null;
-let cargas = [];
-let actual = null;
+    function calcAndRender(){
+      // ordenar en memoria
+      const ord = ordSel.value;
+      const byFecha = (a,b)=> safeStr(a.fecha).localeCompare(safeStr(b.fecha));
+      const byTs = (a,b)=> (a.timestamp?.seconds||0) - (b.timestamp?.seconds||0);
+      let arr = [...datos];
+      if (ord==='fecha_asc') arr.sort(byFecha);
+      if (ord==='fecha_desc') arr.sort(byFecha).reverse();
+      if (ord==='ts_asc') arr.sort(byTs);
+      if (ord==='ts_desc') arr.sort(byTs).reverse();
 
-/* ========== App ========== */
-onAuthStateChanged(auth, (u)=>{
-  if(!u){ window.location.href='login.html'; return; }
-  currentUser = u;
-  start();
-});
+      // filtro de búsqueda
+      const q = qInp.value.trim().toLowerCase();
+      if (q){
+        arr = arr.filter(c=>{
+          const blob = [
+            c.estacion || c.estacionServicio,
+            c.patente, c.patenteCamion, c.tipoCombustible, c.metodoPago,
+            c.observaciones
+          ].map(s=>safeStr(s).toLowerCase()).join(' ');
+          return blob.includes(q);
+        });
+      }
 
-function start(){
-  const arr = [];
-  onSnapshot(collection(db,'cargas-combustible'), qs=>{
-    const own = qs.docs.map(d=>({id:d.id,__col:'hyphen',...d.data()}))
-      .filter(c=> perteneceAUsuario(c, currentUser.uid));
-    arr[0]=own; sync();
-  });
-  onSnapshot(collection(db,'cargasCombustible'), qs=>{
-    const own = qs.docs.map(d=>({id:d.id,__col:'camel',...d.data()}))
-      .filter(c=> perteneceAUsuario(c, currentUser.uid));
-    arr[1]=own; sync();
-  });
+      // totales
+      let L=0, TOTAL=0;
+      for (const c of arr){
+        const litros = nAR(c.litros);
+        const total  = (c.totalPagado!=null && c.totalPagado!=="")
+          ? nAR(c.totalPagado)
+          : (nAR(c.precioPorLitro) * litros);
+        L += litros;
+        TOTAL += total;
+      }
+      const prom = L>0 ? TOTAL/L : 0;
+      pLitros.textContent = num2(L);
+      pTotal.textContent  = '$ ' + money(TOTAL);
+      pProm.textContent   = L>0 ? num2(prom) : '-';
+      pCant.textContent   = arr.length.toString();
 
-  function sync(){
-    cargas = [...(arr[0]||[]), ...(arr[1]||[])];
-    render();
-    $('dbg').textContent = `colecciones → cargas-combustible: ok${(arr[0]||[]).length? (arr[0].length):0} · cargasCombustible: ok${(arr[1]||[]).length? (arr[1].length):0}`;
-  }
-}
+      // lista
+      lista.innerHTML = "";
+      if (arr.length===0){
+        msg.style.display='block';
+        msg.textContent='No hay cargas para mostrar.';
+        return;
+      }
+      msg.style.display='none';
 
-/* ========== Render ========== */
-['q','orden'].forEach(id => $(id).addEventListener('input', render));
+      for (const c of arr){
+        const litros = nAR(c.litros);
+        const total  = (c.totalPagado!=null && c.totalPagado!=="")
+          ? nAR(c.totalPagado)
+          : (nAR(c.precioPorLitro) * litros);
+        const plitro = (litros>0)
+          ? (nAR(c.precioPorLitro) || (total>0 ? total/litros : 0))
+          : (nAR(c.precioPorLitro)||0);
 
-function render(){
-  const q = $('q').value.trim().toLowerCase();
-  let datos = cargas.slice();
+        const yoSoyAutor = (c.uid === uid) || (c.uidCreador === uid) || (c.creadoPor===uid);
 
-  if (q){
-    datos = datos.filter(c=>{
-      const blob = [
-        N.estacion(c), N.tipo(c), N.metodo(c),
-        N.patente(c), (c.observaciones||'')
-      ].join(' ').toLowerCase();
-      return blob.includes(q);
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `
+          <div class="row">
+            <div><strong>Fecha:</strong> ${toISO(c.fecha) || '-'}</div>
+            <div class="muted"><strong>Patente:</strong> ${c.patente || c.patenteCamion || '-'}</div>
+          </div>
+          <div class="muted" style="margin-top:4px">
+            <strong>Estación:</strong> ${c.estacion || c.estacionServicio || '-'}
+            &nbsp; | &nbsp; <strong>Tipo:</strong> ${c.tipoCombustible || '-'}
+            &nbsp; | &nbsp; <strong>Método:</strong> ${c.metodoPago || '-'}
+          </div>
+          <div style="margin-top:6px">
+            <span class="tag">Litros: ${num2(litros)}</span>
+            <span class="tag">$/l: ${plitro ? num2(plitro) : '-'}</span>
+            <span class="tag">Total: $ ${money(total)}</span>
+          </div>
+          <div class="actions" ${yoSoyAutor? '' : 'style="display:none"'} >
+            <button class="btn btn-green" data-edit="${c.__id}" data-col="${c.__col}">Editar</button>
+            <button class="btn btn-red" data-del="${c.__id}" data-col="${c.__col}">Eliminar</button>
+          </div>
+        `;
+        lista.appendChild(div);
+      }
+
+      // wire botones
+      lista.querySelectorAll('[data-del]').forEach(b=>{
+        b.onclick = ()=> eliminar(b.getAttribute('data-col'), b.getAttribute('data-del'));
+      });
+      lista.querySelectorAll('[data-edit]').forEach(b=>{
+        b.onclick = ()=> editar(b.getAttribute('data-col'), b.getAttribute('data-edit'));
+      });
+    }
+
+    async function eliminar(col, id){
+      if (!confirm('¿Eliminar esta carga?')) return;
+      try{
+        await deleteDoc(doc(db, col, id));
+      }catch(e){
+        alert('No se pudo eliminar: ' + (e.code||e.message));
+      }
+    }
+
+    async function editar(col, id){
+      const item = datos.find(x=>x.__id===id && x.__col===col);
+      if (!item) return;
+      const nuevaFecha = prompt('Fecha (YYYY-MM-DD):', toISO(item.fecha));
+      if (nuevaFecha===null) return;
+      const nuevosLitros = prompt('Litros:', nAR(item.litros));
+      if (nuevosLitros===null) return;
+      const nuevoPrecio = prompt('Precio por litro:', nAR(item.precioPorLitro));
+      if (nuevoPrecio===null) return;
+
+      try{
+        await updateDoc(doc(db, col, id), {
+          fecha: nuevaFecha,
+          litros: nAR(nuevosLitros),
+          precioPorLitro: nAR(nuevoPrecio)
+        });
+      }catch(e){
+        alert('No se pudo actualizar: ' + (e.code||e.message));
+      }
+    }
+
+    function watchCollection(colName){
+      const colRef = collection(db, colName);
+
+      // Por UID (actual y compat histórica)
+      addListener(onSnapshot(query(colRef, where('uid','==', uid)), snap=>{
+        upsertFromSnapshot(colName, snap); calcAndRender();
+      }, onSnapError));
+
+      addListener(onSnapshot(query(colRef, where('uidCreador','==', uid)), snap=>{
+        upsertFromSnapshot(colName, snap); calcAndRender();
+      }, onSnapError));
+
+      // Por patentes (normalizadas) – si hay hasta 10
+      if (patentesUser.length>0 && patentesUser.length<=10){
+        addListener(onSnapshot(query(colRef, where('patente','in', patentesUser)), snap=>{
+          upsertFromSnapshot(colName, snap); calcAndRender();
+        }, onSnapError));
+
+        addListener(onSnapshot(query(colRef, where('patenteCamion','in', patentesUser)), snap=>{
+          upsertFromSnapshot(colName, snap); calcAndRender();
+        }, onSnapError));
+      }
+    }
+
+    function onSnapError(err){
+      console.error(`[SNAP ERROR]`, err);
+      msg.style.display = 'block';
+      msg.textContent = 'No se pudieron cargar las cargas (' + (err.code||err.message) + ').';
+    }
+
+    function upsertFromSnapshot(colName, snap){
+      const map = new Map(datos.map(d => [d.__col+'|'+d.__id, d]));
+      snap.docChanges().forEach(ch=>{
+        const key = colName + '|' + ch.doc.id;
+        if (ch.type==='removed'){
+          map.delete(key);
+        } else {
+          const d = ch.doc.data();
+          map.set(key, { __id: ch.doc.id, __col: colName, ...d });
+        }
+      });
+      datos = Array.from(map.values());
+    }
+
+    // eventos UI
+    qInp.addEventListener('input', calcAndRender);
+    ordSel.addEventListener('change', calcAndRender);
+
+    onAuthStateChanged(auth, async (u)=>{
+      if (!u){ location.href='login.html'; return; }
+      uid = u.uid;
+
+      // leo perfil (para patentes)
+      try{
+        const ps = await getDoc(doc(db,'usuarios', uid));
+        if (ps.exists()){
+          const p = ps.data();
+          if (Array.isArray(p.patentes) && p.patentes.length){
+            patentesUser = p.patentes.map(normPat).filter(Boolean);
+          }else if (p.patente){
+            patentesUser = [ normPat(p.patente) ];
+          }else{
+            patentesUser = [];
+          }
+        }
+      }catch(e){ console.warn('perfil usuario:', e); }
+
+      // comienzo listeners
+      clearListeners();
+      watchCollection('cargas-combustible');
+      watchCollection('cargasCombustible');
+
+      // mini-debug
+      dbg.textContent = `colecciones → cargas-combustible ✓  •  cargasCombustible ✓`;
+      msg.style.display='block'; msg.textContent='Cargando…';
     });
-  }
-
-  // Orden
-  const ord = $('orden').value;
-  datos.sort((a,b)=>{
-    if (ord==='fecha_desc') return (parseFecha(N.fecha(b))||0) - (parseFecha(N.fecha(a))||0);
-    if (ord==='fecha_asc')  return (parseFecha(N.fecha(a))||0) - (parseFecha(N.fecha(b))||0);
-    if (ord==='total_desc') return N.total(b) - N.total(a);
-    if (ord==='total_asc')  return N.total(a) - N.total(b);
-    if (ord==='litros_desc')return N.litros(b) - N.litros(a);
-    if (ord==='litros_asc') return N.litros(a) - N.litros(b);
-    return 0;
-  });
-
-  // === Stats arregladas ===
-  const sumLitros = datos.reduce((s,c)=> s + N.litros(c), 0);
-  const sumTotal  = datos.reduce((s,c)=> s + N.total(c), 0);
-  // promedio ponderado por litros usando precio unitario (evita heredar totales mal grabados)
-  const sumLxP    = datos.reduce((s,c)=> s + (N.litros(c) * (N.precio(c)||0)), 0);
-  const prom      = sumLitros>0 ? (sumLxP / sumLitros) : 0;
-
-  $('kLitros').textContent = fmtNum(sumLitros,0);
-  $('kTotal').textContent  = fmtARS(sumTotal);
-  $('kProm').textContent   = prom ? fmtNum(prom,3) : '-';
-  $('kCargas').textContent = datos.length;
-
-  // Lista
-  const list = $('lista');
-  list.innerHTML = '';
-  if (!datos.length){
-    const d = document.createElement('div');
-    d.className = 'item';
-    d.textContent = 'No hay cargas para mostrar.';
-    list.appendChild(d);
-    return;
-  }
-
-  for (const c of datos){
-    const litros = N.litros(c);
-    const precio = N.precio(c);
-    const total  = N.total(c);
-    const div = document.createElement('div');
-    div.className = 'item';
-    div.innerHTML = `
-      <div class="row">
-        <div><b>Fecha:</b> ${fechaAR(N.fecha(c))}</div>
-        <div><b>Patente:</b> ${N.patente(c) || '-'}</div>
-      </div>
-
-      <div style="margin:6px 0 2px"><b>Estación:</b> ${N.estacion(c) || '-'}
-        &nbsp; <span class="pill">Tipo: ${N.tipo(c)||'-'}</span>
-        &nbsp; <span class="pill">Método: ${N.metodo(c)||'-'}</span>
-      </div>
-
-      <div>
-        <span class="pill">Litros: ${fmtNum(litros,0)}</span>
-        <span class="pill">$ / l: ${precio?fmtNum(precio,3):'-'}</span>
-        <span class="pill">Total: ${fmtARS(total)}</span>
-      </div>
-
-      <div class="acciones" style="margin-top:8px">
-        <button class="btn btn-edit">Editar</button>
-        <button class="btn btn-del">Eliminar</button>
-      </div>
-    `;
-
-    div.querySelector('.btn-edit').onclick = ()=> abrirModal(c);
-    div.querySelector('.btn-del').onclick  = ()=> eliminar(c);
-    list.appendChild(div);
-  }
-}
-
-/* ========== Modal edición ========== */
-const modal = $('modal');
-$('btnCerrar').onclick = ()=> modal.style.display='none';
-
-function abrirModal(c){
-  actual = c;
-  $('e_fecha').value    = toISO(parseFecha(N.fecha(c)) || new Date());
-  $('e_patente').value  = N.patente(c);
-  $('e_litros').value   = N.litros(c) || '';
-  $('e_precio').value   = (N.precio(c) || '').toString().replace(',','.');
-  $('e_total').value    = (N.total(c)  || '').toString().replace(',','.');
-  $('e_estacion').value = N.estacion(c);
-  $('e_tipo').value     = N.tipo(c) || '';
-  $('e_metodo').value   = N.metodo(c) || '';
-  $('e_obs').value      = c.observaciones || '';
-  modal.style.display = 'flex';
-}
-
-$('btnGuardar').onclick = async ()=>{
-  if (!actual) return;
-  const dataNorm = {
-    fecha: $('e_fecha').value,
-    patente: $('e_patente').value.trim().toUpperCase(),
-    litros: Number($('e_litros').value || 0),
-    precioPorLitro: Number($('e_precio').value || 0),
-    totalPagado: Number($('e_total').value || 0),
-    estacionServicio: $('e_estacion').value.trim(),
-    tipoCombustible: $('e_tipo').value || '',
-    metodoPago: $('e_metodo').value || '',
-    observaciones: $('e_obs').value.trim()
-  };
-
-  let update = {};
-  if (actual.__col === 'camel'){
-    update = {
-      fecha: dataNorm.fecha,
-      patente: dataNorm.patente,
-      litros: dataNorm.litros,
-      precioPorLitro: dataNorm.precioPorLitro,
-      totalPagado: dataNorm.totalPagado,
-      estacionServicio: dataNorm.estacionServicio,
-      tipoCombustible: dataNorm.tipoCombustible,
-      metodoPago: dataNorm.metodoPago,
-      observaciones: dataNorm.observaciones
-    };
-  } else {
-    update = {
-      fecha: dataNorm.fecha,
-      patenteCamion: dataNorm.patente,
-      litros: dataNorm.litros,
-      precioPorLitro: dataNorm.precioPorLitro,
-      sl: dataNorm.precioPorLitro,
-      total: dataNorm.totalPagado,
-      totalPagado: dataNorm.totalPagado,
-      estacion: dataNorm.estacionServicio,
-      tipo: dataNorm.tipoCombustible,
-      metodo: dataNorm.metodoPago,
-      observaciones: dataNorm.observaciones
-    };
-  }
-
-  try{
-    const ref = doc(db, actual.__col==='camel' ? 'cargasCombustible' : 'cargas-combustible', actual.id);
-    await updateDoc(ref, update);
-    alert('Carga actualizada.');
-    modal.style.display='none';
-  }catch(err){
-    alert('Error al guardar: ' + (err.code || err.message));
-  }
-};
-
-async function eliminar(c){
-  if (!confirm('¿Eliminar esta carga?')) return;
-  try{
-    const ref = doc(db, c.__col==='camel' ? 'cargasCombustible' : 'cargas-combustible', c.id);
-    await deleteDoc(ref);
-  }catch(err){
-    alert('No se pudo eliminar: ' + (err.code || err.message));
-  }
-}
-</script>
+  </script>
 </body>
 </html>
