@@ -1,285 +1,357 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ver viajes</title>
   <style>
-    body{margin:0;background:#FFD700;font-family:Arial,sans-serif;color:#fff}
-    .contenedor{background:#111;margin:50px auto;padding:20px;border-radius:10px;max-width:900px}
-    h1{text-align:center;text-decoration:underline;color:#fff;margin-top:0}
-    .bar{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap}
-    .bar input,.bar select{padding:8px;border:1px solid #000;border-radius:6px;background:#fff;color:#000}
-    .viaje{background:#222;margin:10px 0;padding:14px;border-radius:10px}
-    .viaje p{margin:4px 0}
-    .muted{opacity:.75}
-    .boton{padding:8px 14px;margin:4px 6px 0 0;border:none;border-radius:6px;cursor:pointer;font-weight:bold}
-    .editar{background:#2e7d32;color:#fff}
-    .eliminar{background:#d32f2f;color:#fff}
-    .volver{background:orange;color:#000}
-    .tag{display:inline-block;background:#333;border:1px solid #444;border-radius:999px;padding:2px 8px;margin-left:6px;font-size:12px}
-    .empty{padding:16px;background:#1a1a1a;border:1px dashed #333;border-radius:8px;text-align:center}
+    :root{
+      --yellow:#FFD700; --panel:#111; --card:#1a1a1a; --mut:#a9b0b6;
+      --green:#2e7d32; --red:#c62828; --orange:#ffa000;
+    }
+    body{margin:0;background:var(--yellow);font-family:Arial,Helvetica,sans-serif;color:#fff}
+    .wrap{max-width:900px;margin:40px auto;background:#000;border-radius:12px;padding:20px;box-shadow:0 12px 28px rgba(0,0,0,.35)}
+    h1{margin:0 0 12px;text-align:center;text-transform:uppercase;text-decoration:underline}
+    .bar{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center}
+    .bar input,.bar select{padding:10px;border:1px solid #000;border-radius:8px;background:#fff;color:#000;font-weight:600}
+    .btn{padding:10px 12px;border:1px solid #000;border-radius:8px;font-weight:bold;cursor:pointer;text-transform:uppercase}
+    .btn-volver{background:var(--orange);color:#000}
+
+    /* Stats */
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0 6px}
+    .card{background:#101010;border:1px solid #222;border-radius:10px;padding:10px;text-align:center}
+    .card .label{font-size:12px;color:#b7f1c4;text-transform:uppercase;letter-spacing:.4px}
+    .card .value{font-weight:bold;font-size:18px}
+
+    .lista{display:grid;gap:10px}
+    .item{background:#181818;border:1px solid #222;border-radius:12px;padding:12px}
+    .row{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap}
+    .pill{display:inline-block;background:#222;border:1px solid #333;border-radius:999px;padding:2px 8px;margin-right:6px;font-size:12px}
+    .acciones{display:flex;gap:8px;margin-top:8px}
+    .btn-edit{background:var(--green);color:#fff}
+    .btn-del{background:var(--red);color:#fff}
+    .empty{padding:16px;background:#121212;border:1px dashed #333;border-radius:8px;text-align:center;color:#ddd}
+
+    /* Modal */
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);justify-content:center;align-items:center;z-index:10}
+    .modal .box{background:#000;border-radius:12px;padding:16px;max-width:700px;width:95%}
+    .modal h2{margin:0 0 10px;text-transform:uppercase;text-decoration:underline}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .grid label{font-weight:bold;text-transform:uppercase}
+    .grid input,.grid textarea,.grid select{padding:8px;border:1px solid #000;border-radius:6px;background:#fff;color:#000}
+    .grid textarea{grid-column:span 2;height:70px;resize:vertical}
+    .modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+
+    @media (max-width:760px){
+      .bar{grid-template-columns:1fr}
+      .grid{grid-template-columns:1fr}
+      .stats{grid-template-columns:1fr}
+    }
   </style>
 </head>
 <body>
-  <div class="contenedor">
+  <div class="wrap">
     <h1>Viajes cargados</h1>
 
     <div class="bar">
-      <div>
-        <label class="muted">Buscar:</label>
-        <input id="q" placeholder="destino, patente, chofer, CUIT…">
-      </div>
-      <div>
-        <label class="muted">Ordenar por:</label>
-        <select id="orden">
-          <option value="fecha_desc">Fecha ↓</option>
-          <option value="fecha_asc">Fecha ↑</option>
-          <option value="ts_desc">Creación ↓</option>
-          <option value="ts_asc">Creación ↑</option>
-        </select>
-      </div>
-      <button class="boton volver" onclick="location.href='index.html'">Volver</button>
+      <input id="q" placeholder="buscar: origen, destino, patente, CUIT, obs">
+      <select id="orden">
+        <option value="fecha_desc">Fecha ↓</option>
+        <option value="fecha_asc">Fecha ↑</option>
+        <option value="ts_desc">Creación ↓</option>
+        <option value="ts_asc">Creación ↑</option>
+      </select>
+      <button class="btn btn-volver" onclick="location.href='index.html'">Volver</button>
     </div>
 
-    <div id="lista-viajes"></div>
+    <!-- Contadores -->
+    <div class="stats">
+      <div class="card"><div class="label">Viajes</div><div class="value" id="kViajes">0</div></div>
+      <div class="card"><div class="label">Toneladas cargadas</div><div class="value" id="kKgCarg">0</div></div>
+      <div class="card"><div class="label">Toneladas descargadas</div><div class="value" id="kKgDesc">0</div></div>
+    </div>
+
+    <div id="lista" class="lista"></div>
     <div id="msg" class="empty" style="display:none">Cargando…</div>
   </div>
 
+  <!-- MODAL EDITAR -->
+  <div id="modal" class="modal">
+    <div class="box">
+      <h2>Editar / Eliminar viaje</h2>
+      <div class="grid">
+        <label>Fecha</label><input type="date" id="e_fecha"/>
+        <label>Patente</label><input id="e_patente"/>
+
+        <label>Titular carta de porte (CUIT)</label><input id="e_cuitTitular"/>
+        <label>CUIT origen</label><input id="e_cuitOrigen"/>
+
+        <label>Origen</label><input id="e_origen"/>
+        <label>Destino</label><input id="e_destino"/>
+
+        <label>Tipo de cereal</label><input id="e_tipoCereal"/>
+
+        <label>Toneladas cargadas</label><input type="number" step="0.01" id="e_kgCarg"/>
+        <label>Toneladas descargadas</label><input type="number" step="0.01" id="e_kgDesc"/>
+
+        <label>Tarifa ($/tn)</label><input type="number" step="0.01" id="e_tarifa"/>
+
+        <label>Adelanto ($)</label><input type="number" step="0.01" id="e_adelanto"/>
+        <label>Peaje ($)</label><input type="number" step="0.01" id="e_peaje"/>
+
+        <label>Entrada ($)</label><input type="number" step="0.01" id="e_entrada"/>
+        <label></label><div></div>
+
+        <label>Observaciones</label><textarea id="e_obs"></textarea>
+      </div>
+      <div class="actions">
+        <button class="btn btn-edit" id="btnGuardar">Guardar</button>
+        <button class="btn btn-del" id="btnEliminar">Eliminar</button>
+        <button class="btn btn-volver" id="btnCerrar">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
-    // Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import {
-      getFirestore, collection, onSnapshot, getDocs, query, orderBy, where,
-      doc, getDoc, deleteDoc, updateDoc
+      getFirestore, collection, onSnapshot, query, orderBy, where,
+      doc, getDoc, updateDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
       authDomain: "transporte-mario-guizzo.firebaseapp.com",
       projectId: "transporte-mario-guizzo",
-      storageBucket: "transporte-mario-guizzo.firebasestorage.app",
+      storageBucket: "transporte-mario-guizzo.appspot.com",
       messagingSenderId: "465536166890",
-      appId: "1:465536166890:web:f658690629b09eca8fa093",
-      measurementId: "G-187MCQ2XPW"
+      appId: "1:465536166890:web:f658690629b09eca8fa093"
     };
 
-    const app  = initializeApp(firebaseConfig);
+    const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
-    const lista  = document.getElementById("lista-viajes");
-    const msg    = document.getElementById("msg");
-    const qInp   = document.getElementById("q");
-    const selOrd = document.getElementById("orden");
+    // UI refs
+    const $ = id => document.getElementById(id);
+    const lista = $('lista'), msg = $('msg');
+    const kViajes = $('kViajes'), kKgCarg = $('kKgCarg'), kKgDesc = $('kKgDesc');
 
-    let datos = [];        // viajes en memoria (para filtrar/ordenar)
-    let unsub = null;      // para desuscribir onSnapshot actual
-    let esAdmin = false;   // rol
-    let misPatentes = [];  // patentes del chofer (array)
-    let miUid = null;      // uid para filtro por uidCreador
-
-    // Helpers
+    const fechaAR = x => {
+      if (!x) return '-';
+      if (typeof x === 'string'){
+        if (x.includes('/')) return x; // ya dd/mm/aaaa
+        if (x.includes('-')){ const [y,m,d]=x.split('-'); return `${d}/${m}/${y}`; }
+      }
+      try{
+        const d = (x?.seconds) ? new Date(x.seconds*1000) : new Date(x);
+        return d.toLocaleDateString('es-AR',{timeZone:'UTC'});
+      }catch{ return '-'; }
+    };
+    const toISO = x => {
+      const d = (typeof x==='string') ? new Date(x) : (x?.seconds ? new Date(x.seconds*1000) : new Date(x));
+      return isNaN(d) ? '' : d.toISOString().slice(0,10);
+    };
     const safe = v => (v ?? '').toString();
-    const fmt  = s => safe(s).slice(0,10); // fecha YYYY-MM-DD
     const up   = s => safe(s).toUpperCase();
 
-    function ordenarEnMemoria(arr, clave){
-      const byFecha = (a,b) => (safe(a.fecha)||'').localeCompare(safe(b.fecha)||'');
-      const byTs    = (a,b) => (a.timestamp||0) - (b.timestamp||0);
-      const copy = [...arr];
-      switch (clave){
-        case 'fecha_asc': copy.sort(byFecha); break;
-        case 'fecha_desc': copy.sort(byFecha).reverse(); break;
-        case 'ts_asc': copy.sort(byTs); break;
-        case 'ts_desc': copy.sort(byTs).reverse(); break;
-      }
-      return copy;
+    // Normalizadores (acepta nombres viejos/nuevos)
+    const N = {
+      fecha: v => v.fecha || v.fechaViaje || v.createdAt || null,
+      patente: v => (v.patente || '').toUpperCase(),
+      origen: v => v.origenViaje || v.origen || '',
+      destino: v => v.destino || '',
+      chofer: v => v.chofer || '',
+      cuitOrigen: v => v.cuitOrigen || v.cuit || '',
+      cuitTitular: v => v.cuitTitularCartaPorte || v.cuitTitular || '',
+      tipoCereal: v => v.tipoCereal || v.tipoCarga || '',
+      kgCarg: v => Number(v.kgLlevados ?? v.peso ?? 0),
+      kgDesc: v => Number(v.kgDescargados ?? 0),
+      tarifa: v => Number(v.tarifaPorTonelada ?? v.tarifa ?? 0),
+      adelanto: v => Number(v.adelanto ?? 0),
+      peaje: v => Number(v.peaje ?? 0),
+      entrada: v => Number(v.entrada ?? 0),
+      obs: v => v.observaciones || '',
+      uid: v => v.uidCreador || v.uid || v.creadoPor || ''
+    };
+
+    // Estado
+    let esAdmin=false, miUid=null, misPatentes=[];
+    let datos=[], unsub=null;
+
+    function ordenarMem(clave, arr){
+      const a=[...arr];
+      const f = (x)=> (safe(x.fecha)||'');
+      const t = (x)=> (x.timestamp?.seconds || 0);
+      if (clave==='fecha_asc') a.sort((x,y)=>f(x).localeCompare(f(y)));
+      if (clave==='fecha_desc') a.sort((x,y)=>f(y).localeCompare(f(x)));
+      if (clave==='ts_asc') a.sort((x,y)=>t(x)-t(y));
+      if (clave==='ts_desc') a.sort((x,y)=>t(y)-t(x));
+      return a;
     }
 
     function render(){
-      const qtxt = up(qInp.value.trim());
-      lista.innerHTML = "";
+      const q = up($('q').value.trim());
+      const ord = $('orden').value;
 
-      // aplicar orden siempre en memoria (robusto para modo chofer)
-      const ordenados = ordenarEnMemoria(datos, selOrd.value);
+      const base = ordenarMem(ord, datos);
+      const fil = q ? base.filter(v=>{
+        const blob = [N.origen(v),N.destino(v),N.patente(v),N.cuitOrigen(v),N.obs(v)].join(' ').toUpperCase();
+        return blob.includes(q);
+      }): base;
 
-      const fil = qtxt
-        ? ordenados.filter(v => (
-            up(v.destino).includes(qtxt) ||
-            up(v.patente).includes(qtxt) ||
-            up(v.chofer).includes(qtxt) ||
-            up(v.cuitOrigen).includes(qtxt) ||
-            up(v.origen).includes(qtxt)
-          ))
-        : ordenados;
+      // Stats
+      kViajes.textContent = fil.length.toString();
+      const sumC = fil.reduce((s,v)=> s + N.kgCarg(v), 0);
+      const sumD = fil.reduce((s,v)=> s + N.kgDesc(v), 0);
+      kKgCarg.textContent = sumC.toLocaleString('es-AR');
+      kKgDesc.textContent = sumD.toLocaleString('es-AR');
 
-      if (!fil.length){
-        msg.style.display = "block";
-        msg.textContent = "Sin viajes para mostrar.";
-        return;
-      } else {
-        msg.style.display = "none";
-      }
+      // Lista
+      lista.innerHTML='';
+      if (!fil.length){ msg.style.display='block'; msg.textContent='Sin viajes para mostrar.'; return; }
+      msg.style.display='none';
 
       for (const v of fil){
-        const el = document.createElement("div");
-        el.className = "viaje";
+        const el = document.createElement('div');
+        el.className='item';
         el.innerHTML = `
-          <p><strong>Destino:</strong> ${safe(v.destino) || "-"}</p>
-          <p><strong>Fecha:</strong> ${fmt(v.fecha) || "-"}</p>
-          <p><strong>Patente:</strong> ${safe(v.patente) || "-"}</p>
-          <p><strong>Chofer:</strong> ${safe(v.chofer) || "-"}</p>
-          <p class="muted">
-            <span class="tag">Kg desc.: ${Number(v.kgDescargados||0)}</span>
-            <span class="tag">Cereal: ${safe(v.tipoCereal)||"-"}</span>
-            <span class="tag">CUIT Origen: ${safe(v.cuitOrigen)||"-"}</span>
-          </p>
-          <button class="boton editar" data-edit="${v.__id}">Editar</button>
-          <button class="boton eliminar" data-del="${v.__id}">Eliminar</button>
+          <div class="row">
+            <div><b>Fecha:</b> ${fechaAR(N.fecha(v))}</div>
+            <div><b>Patente:</b> ${N.patente(v) || '-'}</div>
+          </div>
+          <div><b>Origen → Destino:</b> ${N.origen(v) || '-'} → ${N.destino(v) || '-'}</div>
+          <div style="margin-top:4px">
+            <span class="pill">Tns carg.: ${N.kgCarg(v).toLocaleString('es-AR')}</span>
+            <span class="pill">Tns desc.: ${N.kgDesc(v).toLocaleString('es-AR')}</span>
+            <span class="pill">Cereal: ${N.tipoCereal(v) || '-'}</span>
+            ${N.tarifa(v) ? `<span class="pill">Tarifa $/tn: ${N.tarifa(v).toLocaleString('es-AR')}</span>` : ''}
+            ${N.cuitOrigen(v) ? `<span class="pill">CUIT origen: ${N.cuitOrigen(v)}</span>` : ''}
+          </div>
+          <div class="acciones">
+            <button class="btn btn-edit" data-edit="${v.__id}">Editar</button>
+            <button class="btn btn-del" data-del="${v.__id}">Eliminar</button>
+          </div>
         `;
+        el.querySelector('[data-edit]').onclick = ()=> abrirModal(v);
+        el.querySelector('[data-del]').onclick  = ()=> eliminar(v.__id);
         lista.appendChild(el);
       }
-
-      // Botones
-      lista.querySelectorAll('[data-edit]').forEach(b=>{
-        b.onclick = ()=> editarViaje(b.getAttribute('data-edit'));
-      });
-      lista.querySelectorAll('[data-del]').forEach(b=>{
-        b.onclick = ()=> eliminarViaje(b.getAttribute('data-del'));
-      });
     }
 
-    // Suscripción según rol (ADMIN: todo; CHOFER: por uidCreador y también por patentes)
     function escuchar(){
-      if (unsub) { try{unsub();}catch(_){} unsub = null; }
+      if (unsub){ try{unsub();}catch{} unsub=null; }
+      const ref = collection(db,'viajes');
 
-      const ref = collection(db, "viajes");
-      msg.style.display = "block";
-      msg.textContent = "Cargando…";
-
-      // ---- MODO ADMIN: ve todo (igual que antes) ----
       if (esAdmin){
         let qy;
-        switch(selOrd.value){
+        switch($('orden').value){
           case 'fecha_asc': qy = query(ref, orderBy('fecha','asc')); break;
-          case 'ts_desc':   qy = query(ref, orderBy('timestamp','desc')); break;
           case 'ts_asc':    qy = query(ref, orderBy('timestamp','asc')); break;
+          case 'ts_desc':   qy = query(ref, orderBy('timestamp','desc')); break;
           default:          qy = query(ref, orderBy('fecha','desc')); // fecha_desc
         }
         unsub = onSnapshot(qy, snap=>{
-          datos = snap.docs.map(d => ({ __id:d.id, ...d.data() }));
+          datos = snap.docs.map(d=>({__id:d.id, ...d.data()}));
           render();
-        }, onErr);
+        }, err=>{msg.style.display='block'; msg.textContent='Error: '+(err.code||err.message);});
         return;
       }
 
-      // ---- MODO CHOFER: siempre por uidCreador, y además por patente(s) si existen ----
-      const qUid = query(ref, where('uidCreador','==', miUid));
+      // Chofer: por uid + por patente(s)
+      const qUid = query(ref, where('uidCreador','==',miUid));
 
       let qPat = null;
-      if (misPatentes.length === 1){
-        qPat = query(ref, where('patente','==', misPatentes[0]));
-      } else if (misPatentes.length > 1 && misPatentes.length <= 10){
-        qPat = query(ref, where('patente','in', misPatentes));
-      }
+      if (misPatentes.length===1) qPat = query(ref, where('patente','==', misPatentes[0]));
+      else if (misPatentes.length>1 && misPatentes.length<=10) qPat = query(ref, where('patente','in', misPatentes));
 
-      let datosUid = [];
-      let datosPat = [];
+      let a=[], b=[];
+      const merge = ()=>{ const m=new Map(); [...a,...b].forEach(v=>m.set(v.__id,v)); datos=[...m.values()]; render(); };
 
-      const mergeYRender = () => {
-        const map = new Map();
-        [...datosUid, ...datosPat].forEach(d => map.set(d.__id, d)); // sin duplicados
-        datos = Array.from(map.values());
-        render();
+      const u1 = onSnapshot(qUid, s=>{ a=s.docs.map(d=>({__id:d.id,...d.data()})); merge(); });
+      const u2 = qPat ? onSnapshot(qPat, s=>{ b=s.docs.map(d=>({__id:d.id,...d.data()})); merge(); }) : null;
+      unsub = ()=>{ try{u1();}catch{} if(u2) try{u2();}catch{} };
+    }
+
+    // Modal edición
+    const modal = $('modal');
+    $('btnCerrar').onclick = ()=> modal.style.display='none';
+    let actualId=null;
+
+    function abrirModal(v){
+      actualId = v.__id;
+      $('e_fecha').value      = toISO(N.fecha(v)) || '';
+      $('e_patente').value    = N.patente(v);
+      $('e_cuitTitular').value= N.cuitTitular(v);
+      $('e_cuitOrigen').value = N.cuitOrigen(v);
+      $('e_origen').value     = N.origen(v);
+      $('e_destino').value    = N.destino(v);
+      $('e_tipoCereal').value = N.tipoCereal(v);
+      $('e_kgCarg').value     = N.kgCarg(v) || '';
+      $('e_kgDesc').value     = N.kgDesc(v) || '';
+      $('e_tarifa').value     = N.tarifa(v) || '';
+      $('e_adelanto').value   = N.adelanto(v) || '';
+      $('e_peaje').value      = N.peaje(v) || '';
+      $('e_entrada').value    = N.entrada(v) || '';
+      $('e_obs').value        = N.obs(v) || '';
+      modal.style.display='flex';
+    }
+
+    $('btnGuardar').onclick = async ()=>{
+      if (!actualId) return;
+      const data = {
+        fecha: $('e_fecha').value || null,
+        patente: up($('e_patente').value.trim()),
+        cuitTitularCartaPorte: $('e_cuitTitular').value.trim(),
+        cuitOrigen: $('e_cuitOrigen').value.trim(),
+        origenViaje: $('e_origen').value.trim(),
+        origen: $('e_origen').value.trim(),
+        destino: $('e_destino').value.trim(),
+        tipoCereal: $('e_tipoCereal').value.trim(),
+        tipoCarga: $('e_tipoCereal').value.trim(),
+        kgLlevados: Number($('e_kgCarg').value || 0),
+        peso: Number($('e_kgCarg').value || 0),
+        kgDescargados: Number($('e_kgDesc').value || 0),
+        tarifaPorTonelada: Number($('e_tarifa').value || 0),
+        tarifa: Number($('e_tarifa').value || 0),
+        adelanto: Number($('e_adelanto').value || 0),
+        peaje: Number($('e_peaje').value || 0),
+        entrada: Number($('e_entrada').value || 0),
+        observaciones: $('e_obs').value.trim()
       };
-
-      const unsubscribers = [];
-
-      const unsubUid = onSnapshot(qUid, snap=>{
-        datosUid = snap.docs.map(d => ({ __id:d.id, ...d.data() }));
-        mergeYRender();
-      }, onErr);
-      unsubscribers.push(unsubUid);
-
-      if (qPat){
-        const unsubPat = onSnapshot(qPat, snap=>{
-          datosPat = snap.docs.map(d => ({ __id:d.id, ...d.data() }));
-          mergeYRender();
-        }, onErr);
-        unsubscribers.push(unsubPat);
-      }
-
-      // función para desuscribir ambas
-      unsub = () => unsubscribers.forEach(fn => { try{fn();}catch(_){ } });
-    }
-
-    function onErr(err){
-      console.error(err);
-      msg.style.display = "block";
-      msg.textContent = "No se pudieron cargar los viajes ("+(err.code||err.message)+").";
-    }
-
-    async function eliminarViaje(id){
-      if (!confirm("¿Eliminar el viaje?")) return;
       try{
-        await deleteDoc(doc(db,"viajes",id));
-      }catch(e){
-        alert("No se pudo eliminar: " + (e.code||e.message));
+        await updateDoc(doc(db,'viajes',actualId), data);
+        alert('Viaje actualizado');
+        modal.style.display='none';
+      }catch(err){
+        alert('Error al guardar: ' + (err.code||err.message));
       }
-    }
+    };
 
-    async function editarViaje(id){
-      const v = datos.find(x=>x.__id===id);
-      if (!v) return;
-
-      const nd = prompt("Modificar destino:", safe(v.destino));
-      if (nd===null) return;
-      const nf = prompt("Modificar fecha (YYYY-MM-DD):", fmt(v.fecha));
-      if (nf===null) return;
-      const np = prompt("Modificar patente:", safe(v.patente));
-      if (np===null) return;
-
+    async function eliminar(id){
+      if (!confirm('¿Eliminar este viaje?')) return;
       try{
-        await updateDoc(doc(db,"viajes",id), {
-          destino: nd.trim(),
-          fecha: nf.trim(),
-          patente: up(np.trim())
-        });
-      }catch(e){
-        alert("No se pudo actualizar: " + (e.code||e.message));
+        await deleteDoc(doc(db,'viajes',id));
+      }catch(err){
+        alert('No se pudo eliminar: ' + (err.code||err.message));
       }
     }
 
-    // Eventos UI
-    qInp.addEventListener('input', render);
-    selOrd.addEventListener('change', escuchar); // re-suscribimos (admin usa orderBy del query)
+    // Eventos
+    $('q').addEventListener('input', render);
+    $('orden').addEventListener('change', escuchar);
 
-    // Auth + carga de perfil
     onAuthStateChanged(auth, async (u)=>{
-      if (!u){ location.href = "login.html"; return; }
+      if (!u){ location.href='login.html'; return; }
       miUid = u.uid;
-
-      // Perfil del usuario
       try{
-        const perfilSnap = await getDoc(doc(db, "usuarios", u.uid));
-        const perfil = perfilSnap.exists() ? perfilSnap.data() : {};
-        esAdmin = (perfil.rol || "").toLowerCase() === "admin";
-
-        // Patentes: admite "patentes" (array) o "patente" (string)
-        if (Array.isArray(perfil.patentes)) {
-          misPatentes = perfil.patentes.map(x => (x||"").toUpperCase()).filter(Boolean);
-        } else if (perfil.patente) {
-          misPatentes = [ String(perfil.patente).toUpperCase() ];
-        } else {
-          misPatentes = [];
-        }
-      }catch(e){
-        console.warn("No se pudo leer el perfil del usuario:", e);
-        esAdmin = false;
-        misPatentes = [];
-      }
-
+        const snap = await getDoc(doc(db,'usuarios',u.uid));
+        const p = snap.exists()? snap.data() : {};
+        esAdmin = (p.rol||'').toLowerCase()==='admin';
+        if (Array.isArray(p.patentes)) misPatentes = p.patentes.map(x=>up(x)).filter(Boolean);
+        else if (p.patente) misPatentes = [ up(p.patente) ];
+      }catch{ esAdmin=false; misPatentes=[]; }
       escuchar();
     });
   </script>
