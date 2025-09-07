@@ -3,40 +3,92 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Transporte Mario Güizzo</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://kit.fontawesome.com/a2e0e6ad65.js" crossorigin="anonymous"></script>
+  <title>Transporte Mario Guizzo</title>
   <style>
-    h1 { text-transform: uppercase; }
-    h2 { text-transform: uppercase; margin-top: -10px; }
-    .btn-naranja { text-transform: uppercase; }
+    :root{ --yellow:#FFD700; --black:#0a0a0a; --btn:#FFC400; }
+    body{ margin:0; background:#111; color:#fff; font-family:Arial, Helvetica, sans-serif; }
+    .wrap{ max-width:900px; margin:30px auto 60px; text-align:center; }
+    h1{ margin:10px 0 22px; text-transform:uppercase; letter-spacing:.5px; }
+    .logo{ width:480px; max-width:90%; border-radius:4px; box-shadow:0 12px 30px rgba(0,0,0,.45) }
+    .prompt{ margin:26px 0 18px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; }
+    .prompt span{ color:#FFD54F; }
+    .row{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+    .btn{ min-width:220px; padding:12px 16px; border-radius:6px; border:1px solid #000; background:var(--yellow);
+          color:#000; font-weight:800; cursor:pointer; text-transform:uppercase; }
+    .btn:hover{ filter:brightness(1.05); }
+    .foot{ margin-top:24px; opacity:.6; font-size:12px }
   </style>
 </head>
 <body>
-  <header>
+  <div class="wrap">
     <h1>Transporte Mario Güizzo</h1>
-    <img src="logo.png" alt="Logo" class="logo" />
-  </header>
 
-  <main>
-    <h2>¿Qué desea hacer?</h2>
+    <img class="logo" src="logo.png" alt="Logo Transporte Mario Güizzo" onerror="this.style.display='none'"/>
 
-    <button onclick="location.href='agregar-viaje.html'" class="btn-naranja">
-      <i class="fas fa-truck"></i> Agregar viaje
-    </button>
+    <div class="prompt">¿Qué desea hacer, <span id="who">…</span>?</div>
 
-    <button onclick="location.href='agregar-combustible.html'" class="btn-naranja">
-      <i class="fas fa-gas-pump"></i> Agregar carga de combustible
-    </button>
+    <div class="row">
+      <button class="btn" onclick="location.href='agregar-viaje.html'">Agregar viaje</button>
+      <button class="btn" onclick="location.href='agregar-combustible.html'">Agregar carga de combustible</button>
+      <button class="btn" onclick="location.href='ver-viajes.html'">Ver viajes cargados</button>
+      <button class="btn" onclick="location.href='ver-combustible.html'">Ver cargas de combustible</button>
+    </div>
 
-    <button onclick="location.href='ver-viajes.html'" class="btn-naranja">
-      <i class="fas fa-file-alt"></i> Ver viajes cargados
-    </button>
+    <div class="foot" id="footInfo"></div>
+  </div>
 
-    <!-- NUEVO BOTÓN -->
-    <button onclick="location.href='ver-cargas.html'" class="btn-naranja">
-      <i class="fas fa-list"></i> Ver cargas de combustible
-    </button>
-  </main>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
+      authDomain: "transporte-mario-guizzo.firebaseapp.com",
+      projectId: "transporte-mario-guizzo",
+      storageBucket: "transporte-mario-guizzo.appspot.com",
+      messagingSenderId: "465536166890",
+      appId: "1:465536166890:web:f658690629b09eca8fa093"
+    };
+
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+
+    const whoEl  = document.getElementById('who');
+    const footEl = document.getElementById('footInfo');
+
+    function niceName(data, user){
+      let n =
+        (data && (data.nombre || data.displayName)) ||
+        (user && user.displayName) ||
+        (user && user.email ? user.email.split('@')[0] : '') ||
+        'Chofer';
+      n = String(n).trim();
+      // quedarnos con el primer nombre y capitalizar
+      n = n.split(/\s+/)[0];
+      return n ? n.charAt(0).toUpperCase() + n.slice(1).toLowerCase() : 'Chofer';
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user){ location.href = "login.html"; return; }
+      try{
+        const snap = await getDoc(doc(db, "usuarios", user.uid));
+        const data = snap.exists() ? snap.data() : null;
+        whoEl.textContent = niceName(data, user);
+        // pie informativo opcional
+        if (data && data.patente){
+          footEl.textContent = `Patente asignada: ${data.patente} · % comisión: ${data.porcentaje ?? '—'}%`;
+        } else {
+          footEl.textContent = '';
+        }
+      }catch(err){
+        whoEl.textContent = niceName(null, user);
+        footEl.textContent = '';
+        console.error("No se pudo leer usuarios/{uid}:", err);
+      }
+    });
+  </script>
 </body>
 </html>
