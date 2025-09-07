@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -23,7 +22,8 @@
   .btn-verde{background:var(--green);color:#fff}
   .btn-naranja{background:var(--orange);color:#000}
   .btn-azul{background:var(--blue);color:#fff}
-  .cards{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:10px 0}
+  /* 6 o más tarjetas: que se acomoden automáticamente */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:10px 0}
   .card{background:#0f0f0f;border:1px solid #222;border-radius:10px;padding:12px;text-align:center}
   .card small{opacity:.8}
   .card b{display:block;margin-top:6px;font-size:18px}
@@ -40,8 +40,7 @@
   .chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
   .chip{background:#151515;border:1px solid #333;color:#fff;padding:6px 10px;border-radius:20px;cursor:pointer;font-size:12px}
   .chip.active{background:#1976d2;border-color:#1976d2}
-  @media (max-width:1000px){.cards{grid-template-columns:1fr 1fr 1fr}.grid2{grid-template-columns:1fr}}
-  @media (max-width:640px){.cards{grid-template-columns:1fr 1fr}}
+  @media (max-width:1000px){.grid2{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -81,12 +80,13 @@
 
   <!-- CARDS -->
   <div id="cards" class="cards panel">
-    <div class="card"><small>Ingresos</small>     <b id="kIng">$ 0</b></div>
-    <div class="card"><small>Combustible</small>  <b id="kComb">$ 0</b></div>
-    <div class="card"><small>Mantenimiento</small><b id="kMant">$ 0</b></div>
-    <div class="card"><small>Peajes</small>       <b id="kPeaje">$ 0</b></div>
-    <div class="card"><small>Adelantos</small>    <b id="kAdel">$ 0</b></div>
-    <div class="card"><small>Entradas</small>     <b id="kEntrada">$ 0</b></div>
+    <div class="card"><small>Ingresos</small>        <b id="kIng">$ 0</b></div>
+    <div class="card"><small>Combustible</small>     <b id="kComb">$ 0</b></div>
+    <div class="card"><small>Mantenimiento</small>   <b id="kMant">$ 0</b></div>
+    <div class="card"><small>Peajes</small>          <b id="kPeaje">$ 0</b></div>
+    <div class="card"><small>Adelantos</small>       <b id="kAdel">$ 0</b></div>
+    <div class="card"><small>Entradas</small>        <b id="kEntrada">$ 0</b></div>
+    <div class="card"><small>Comisión chofer</small> <b id="kComis">$ 0</b></div>
   </div>
   <div class="cards">
     <div class="card" style="grid-column: span 3"><small>TOTAL GASTOS</small><b id="kGastos">$ 0</b></div>
@@ -106,7 +106,7 @@
       <div class="panel">
         <h3 style="margin:6px 0 12px">Composición de egresos <span id="titPatente2"></span></h3>
         <canvas id="chartEgresos" height="180"></canvas>
-        <div class="note">Combustible + Mantenimiento + Peajes + Adelantos + Entradas.</div>
+        <div class="note">Combustible + Mantenimiento + Peajes + Adelantos + Entradas + Comisión.</div>
       </div>
     </div>
   </section>
@@ -117,7 +117,7 @@
       <h3 style="margin:6px 0 12px">Liquidación por Chofer</h3>
       <div class="note" style="margin-bottom:8px">
         Comisión = Ingreso × %  ·  Liquidación = Comisión − Adelantos + Peajes + Entradas.
-        Si en <code>usuarios</code> no hay <code>porcentaje</code>, se usa 20%.
+        (Click en el % para editarlo).
       </div>
       <table class="tabla">
         <thead>
@@ -184,12 +184,11 @@
 
 <script type="module">
 /* ==================== CONFIG ==================== */
-const DEFAULT_COMMISSION = 0.20;
+const DEFAULT_COMMISSION = 0.18; // tu valor actual por defecto
 
 /* ==================== Firebase ==================== */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
@@ -201,11 +200,9 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
-const auth = getAuth(app);
 
 /* ==================== Estado ==================== */
 let viajes = [], combustible = [], mant = [], usuarios = [];
-let combustibleA = [], combustibleB = []; // para las dos colecciones
 let movs = [];
 let patSet = new Set(), choSet = new Set();
 let activeTab = 'resumen';
@@ -225,6 +222,7 @@ const kMant = document.getElementById('kMant');
 const kPeaje = document.getElementById('kPeaje');
 const kAdel = document.getElementById('kAdel');
 const kEntrada = document.getElementById('kEntrada');
+const kComis = document.getElementById('kComis');
 const kGastos = document.getElementById('kGastos');
 const kMargen = document.getElementById('kMargen');
 
@@ -235,7 +233,8 @@ const chipsPat = document.getElementById('chipsPat');
 const titPat1 = document.getElementById('titPatente');
 const titPat2 = document.getElementById('titPatente2');
 
-const fmt = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
+const fmtCur = (n)=> '$ ' + (Number(toNum(n)||0)).toLocaleString('es-AR',{maximumFractionDigits:0});
+const fmt    = (n)=> (Number(toNum(n)||0)).toLocaleString('es-AR',{maximumFractionDigits:0});
 
 /* ===== Debug visible ===== */
 let dbg = document.getElementById('dbg');
@@ -251,6 +250,18 @@ const showDbg = (extra='')=>{
 };
 
 /* ==================== Normalizadores ==================== */
+// 1) Números robustos: "1.450,50" → 1450.5  |  "282.750" → 282750
+function toNum(v){
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string'){
+    const s = v.replace(/\s/g,'').replace(/\./g,'').replace(/,/g,'.');
+    const n = Number(s);
+    return isNaN(n) ? 0 : n;
+  }
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+}
+// Fecha → 'YYYY-MM-DD'
 function fechaStr(x){
   if (!x) return '';
   if (typeof x === 'string') return x.slice(0,10);
@@ -264,35 +275,76 @@ function fechaStr(x){
 const fechaViaje = (v) => fechaStr(v.fecha || v.fechaViaje || v.fechaSalida || v.fechaCarga || v.createdAt || null);
 
 // Combustible
-const combPatente  = (c) => (c.patenteCamion || c.patente || '').trim();
+const combPatente  = (c) => (c.patenteCamion || c.patente || '').trim().toUpperCase();
 const combEstacion = (c) => c.estacionServicio || c.estacion || '';
 const combMetodo   = (c) => c.metodoPago || c.metodo || '';
 const combTipo     = (c) => c.tipoCombustible || c.tipo || '';
 const combFecha    = (c) => fechaStr(c.fecha || c.fechaCarga || c.fechaCompra || null);
 const combTotal    = (c) => {
-  const cand = [c.totalPagado, c.total, (Number(c.litros||0) * Number(c.precioPorLitro || c.sl || 0))];
-  for (const v of cand){ const n = Number(v); if (!isNaN(n) && n>0) return n; }
+  const L = toNum(c.litros);
+  const P = toNum(c.precioPorLitro);
+  const T = c.totalPagado!=null && c.totalPagado!=='' ? toNum(c.totalPagado) : 0;
+  if (L>0 && P>0) return L*P;
+  if (T>0) return T;
   return 0;
 };
-// Ingreso de viaje
+
+// Ingreso de viaje (siempre por kg descargados × tarifa por tonelada si está)
 function ingresoViaje(v){
+  const kg = toNum(v.kgDescargados || v.kg || v.kgLlevados || v.peso || 0);
+  const tarifaTon = toNum(v.tarifaPorTon || v.tarifaTn || v.tarifa || 0);
+  if (tarifaTon>0 && kg>0) return (kg/1000)*tarifaTon; // kg → toneladas
+  // fallback a campos anteriores (si existieran)
   const cand = [v.importeCobrado, v.totalCobrado, v.importe, v.ingreso, v.total];
   for (const val of cand){
-    const n = Number(val);
-    if (!isNaN(n) && n>0) return n;
+    const n = toNum(val);
+    if (n>0) return n;
   }
-  const kg = Number(v.kgDescargados||0);
-  const tTon = Number(v.tarifaPorTon ?? NaN);
-  if (!isNaN(tTon) && tTon>0) return (kg/1000)*tTon;
-  const tKg = Number(v.tarifaPorKg ?? NaN);
-  if (!isNaN(tKg) && tKg>0) return kg*tKg;
   return 0;
 }
 
+/* Validar patente real (ABC123 o AB123CD) */
+function isValidPat(p){
+  return /^(?:[A-Z]{3}\s?\d{3}|[A-Z]{2}\d{3}[A-Z]{2})$/i.test((p||'').trim());
+}
+
+/* ==================== Lectura de colecciones ==================== */
+const onErr = (col) => (err)=>{ console.error(col, err); showDbg(`ERROR ${col}: ${err.code||''}`); };
+
+onSnapshot(collection(db,'usuarios'), qs=>{
+  usuarios = qs.docs.map(d => ({id:d.id, ...d.data()}))
+    .filter(u => (u.rol||'').toLowerCase()==='chofer');
+  choSet.clear();
+  usuarios.forEach(u => choSet.add( (u.nombre||u.displayName||u.email||'').trim() ));
+  poblarChoferes(); showDbg(); render();
+}, onErr('usuarios'));
+
+onSnapshot(collection(db,'viajes'), qs=>{
+  viajes = qs.docs.map(d => ({id:d.id, ...d.data()}));
+  viajes.forEach(v=>{
+    const p = (v.patente||'').trim().toUpperCase();
+    if (p) patSet.add(p);
+    if (v.chofer)  choSet.add((v.chofer||'').trim());
+  });
+  poblarPatentes(); poblarChoferes(); showDbg(); render();
+}, onErr('viajes'));
+
+onSnapshot(collection(db,'cargas-combustible'), qs=>{
+  combustible = qs.docs.map(d => ({id:d.id, ...d.data()}));
+  combustible.forEach(c=> { const p = combPatente(c); if (p) patSet.add(p); });
+  poblarPatentes(); showDbg(); render();
+}, onErr('cargas-combustible'));
+
+onSnapshot(collection(db,'mantenimientos'), qs=>{
+  mant = qs.docs.map(d => ({id:d.id, ...d.data()}));
+  mant.forEach(m=> { if (m.patente) patSet.add((m.patente||'').trim().toUpperCase()); });
+  poblarPatentes(); showDbg(); render();
+}, onErr('mantenimientos'));
+
 /* ==================== Helpers UI ==================== */
 function poblarPatentes(){
-  const prev = fPatente.value;
-  const arr = Array.from(patSet).filter(Boolean).sort();
+  const prev = fPatente.value.toUpperCase();
+  const arr = Array.from(patSet).filter(Boolean).filter(isValidPat).sort();
   fPatente.innerHTML = '<option value="">Todas las patentes</option>' + arr.map(p=>`<option>${p}</option>`).join('');
   if (arr.includes(prev)) fPatente.value = prev;
   buildChips(arr);
@@ -330,17 +382,18 @@ function pasaTexto(q, ...campos){
   return campos.some(c => ((c||'')+'').toLowerCase().includes(q));
 }
 function getPctChofer(nombre, patente){
-  const u = usuarios.find(u => (u.nombre||u.displayName||'').trim() === (nombre||'').trim());
+  const n = (nombre||'').trim();
+  const p = (patente||'').trim().toUpperCase();
+  const u = usuarios.find(u => (u.nombre||u.displayName||'').trim() === n)
+       || usuarios.find(u => Array.isArray(u.patentes) && u.patentes.map(x=>String(x).toUpperCase()).includes(p));
   if (u && Number(u.porcentaje)>=0) return Number(u.porcentaje)/100;
-  const u2 = usuarios.find(u => Array.isArray(u.patentes) && u.patentes.includes(patente));
-  if (u2 && Number(u2.porcentaje)>=0) return Number(u2.porcentaje)/100;
   return DEFAULT_COMMISSION;
 }
 
 /* ==================== Render principal ==================== */
 function render(){
   const d = fDesde.value||'', h = fHasta.value||'';
-  const ch = fChofer.value||'', pt = fPatente.value||'';
+  const ch = fChofer.value||'', pt = (fPatente.value||'').toUpperCase();
   const est = fEstadoMant.value||'', q = fQ.value||'';
 
   movs = [];
@@ -350,31 +403,36 @@ function render(){
     const f = fechaViaje(v);
     if (!inRangeFechaStr(f, d, h)) return false;
     if (ch && (v.chofer||'') !== ch) return false;
-    if (pt && (v.patente||'') !== pt) return false;
+    if (pt && (String(v.patente||'').toUpperCase()) !== pt) return false;
     if (!pasaTexto(q, v.origen, v.destino, v.cuitOrigen, v.observaciones, v.chofer, v.patente)) return false;
     return true;
   });
 
   for (const v of viajesFiltrados){
-    const ingreso = ingresoViaje(v);
+    const ingreso = toNum(ingresoViaje(v));
     const f = fechaViaje(v);
     if (ingreso>0){
-      movs.push({fecha:f, tipo:'Ingreso', detalle:`${v.origen||''} → ${v.destino||''}`, chofer:v.chofer||'', patente:v.patente||'', importe:ingreso});
+      movs.push({fecha:f, tipo:'Ingreso', detalle:`${v.origen||''} → ${v.destino||''}`, chofer:v.chofer||'', patente:String(v.patente||'').toUpperCase(), importe:ingreso});
+      // Comisión chofer (gasto)
+      const pct = getPctChofer(v.chofer, v.patente);
+      const com = ingreso * pct;
+      if (com>0){
+        movs.push({fecha:f, tipo:'Comision', detalle:`Comisión chofer ${v.chofer||''}`, chofer:v.chofer||'', patente:String(v.patente||'').toUpperCase(), importe:com});
+      }
     }
-    if (v.peajeAplica && Number(v.peajeMonto)>0){
-      movs.push({fecha:f, tipo:'Peaje', detalle:'Peaje', chofer:v.chofer||'', patente:v.patente||'', importe:Number(v.peajeMonto||0)});
+    if (v.peajeAplica && toNum(v.peajeMonto)>0){
+      movs.push({fecha:f, tipo:'Peaje', detalle:'Peaje', chofer:v.chofer||'', patente:String(v.patente||'').toUpperCase(), importe:toNum(v.peajeMonto)});
     }
-    if (v.entradaAplica && Number(v.entradaMonto)>0){
-      movs.push({fecha:f, tipo:'Entrada', detalle:'Entrada', chofer:v.chofer||'', patente:v.patente||'', importe:Number(v.entradaMonto||0)});
+    if (v.entradaAplica && toNum(v.entradaMonto)>0){
+      movs.push({fecha:f, tipo:'Entrada', detalle:'Entrada', chofer:v.chofer||'', patente:String(v.patente||'').toUpperCase(), importe:toNum(v.entradaMonto)});
     }
-    if (v.adelantoAplica && Number(v.adelantoMonto)>0){
-      movs.push({fecha:f, tipo:'Adelanto', detalle:'Adelanto chofer', chofer:v.chofer||'', patente:v.patente||'', importe:Number(v.adelantoMonto||0)});
+    if (v.adelantoAplica && toNum(v.adelantoMonto)>0){
+      movs.push({fecha:f, tipo:'Adelanto', detalle:'Adelanto chofer', chofer:v.chofer||'', patente:String(v.patente||'').toUpperCase(), importe:toNum(v.adelantoMonto)});
     }
   }
 
-  // COMBUSTIBLE (merge de ambas colecciones)
-  const combustiblesAll = combustible;
-  combustiblesAll.filter(c=>{
+  // COMBUSTIBLE
+  combustible.filter(c=>{
     const f = combFecha(c);
     if (!inRangeFechaStr(f, d, h)) return false;
     if (pt && (combPatente(c) !== pt)) return false;
@@ -382,7 +440,7 @@ function render(){
     if (!pasaTexto(q, combEstacion(c), combTipo(c), combMetodo(c), combPatente(c))) return false;
     return true;
   }).forEach(c=>{
-    const tot = combTotal(c);
+    const tot = toNum(combTotal(c));
     if (tot>0) movs.push({
       fecha: combFecha(c),
       tipo: 'Combustible',
@@ -397,43 +455,46 @@ function render(){
   mant.filter(m=>{
     const f = fechaStr(m.fecha);
     if (!inRangeFechaStr(f, d, h)) return false;
-    if (pt && (m.patente||'') !== pt) return false;
+    if (pt && (String(m.patente||'').toUpperCase()) !== pt) return false;
     if (est==='pagado'   && !(m.pagado===true || m.pagado==='si')) return false;
     if (est==='adeudado' &&  (m.pagado===true || m.pagado==='si')) return false;
     if (!pasaTexto(q, m.proveedor, m.tipo, m.observaciones, m.patente)) return false;
     return true;
   }).forEach(m=>{
-    const tot = Number(m.total||0);
+    const tot = toNum(m.total||0);
     if (tot>0) movs.push({
       fecha: fechaStr(m.fecha),
       tipo:'Mantenimiento',
       detalle:`${m.tipo||''} — ${m.proveedor||''}`,
       chofer:'',
-      patente:m.patente||'',
+      patente:String(m.patente||'').toUpperCase(),
       importe:tot
     });
   });
 
   movs.sort((a,b)=> b.fecha.localeCompare(a.fecha));
 
-  const sum = (tipo) => movs.filter(x=>x.tipo===tipo).reduce((a,b)=>a+Number(b.importe||0),0);
+  const sum = (tipo) => movs.filter(x=>x.tipo===tipo).reduce((a,b)=>a+toNum(b.importe||0),0);
   const ingresos   = sum('Ingreso');
   const combTotal$ = sum('Combustible');
   const mantTotal  = sum('Mantenimiento');
   const peajeTotal = sum('Peaje');
   const adelTotal  = sum('Adelanto');
   const entTotal   = sum('Entrada');
-  const gastos     = combTotal$ + mantTotal + peajeTotal + adelTotal + entTotal;
+  const comisTotal = sum('Comision');
+
+  const gastos     = combTotal$ + mantTotal + peajeTotal + adelTotal + entTotal + comisTotal;
   const margen     = ingresos - gastos;
 
-  kIng.textContent    = fmt(ingresos);
-  kComb.textContent   = fmt(combTotal$);
-  kMant.textContent   = fmt(mantTotal);
-  kPeaje.textContent  = fmt(peajeTotal);
-  kAdel.textContent   = fmt(adelTotal);
-  kEntrada.textContent= fmt(entTotal);
-  kGastos.textContent = fmt(gastos);
-  kMargen.textContent = fmt(margen);
+  kIng.textContent     = fmtCur(ingresos);
+  kComb.textContent    = fmtCur(combTotal$);
+  kMant.textContent    = fmtCur(mantTotal);
+  kPeaje.textContent   = fmtCur(peajeTotal);
+  kAdel.textContent    = fmtCur(adelTotal);
+  kEntrada.textContent = fmtCur(entTotal);
+  kComis.textContent   = fmtCur(comisTotal);
+  kGastos.textContent  = fmtCur(gastos);
+  kMargen.textContent  = fmtCur(margen);
 
   // Tabla
   tbody.innerHTML = movs.length ? movs.map(m=>`
@@ -443,7 +504,7 @@ function render(){
       <td>${m.detalle||''}</td>
       <td>${m.chofer||''}</td>
       <td>${m.patente||''}</td>
-      <td class="monto">${fmt(m.importe||0)}</td>
+      <td class="monto">${fmtCur(m.importe||0)}</td>
     </tr>`).join('') : `<tr><td colspan="6" style="padding:18px;opacity:.85">Sin movimientos.</td></tr>`;
 
   renderChofer(viajesFiltrados);
@@ -451,7 +512,7 @@ function render(){
   showDbg();
 }
 
-/* ---- Liquidación por chofer ---- */
+/* ---- Liquidación por chofer (con edición de %) ---- */
 function renderChofer(viajesFiltrados){
   const map = new Map();
   for (const v of viajesFiltrados){
@@ -459,41 +520,44 @@ function renderChofer(viajesFiltrados){
     if (!map.has(key)) map.set(key, {viajes:0, ingreso:0, peaje:0, entrada:0, adelanto:0, pct:getPctChofer(v.chofer, v.patente)});
     const o = map.get(key);
     o.viajes++;
-    o.ingreso += ingresoViaje(v);
-    if (v.peajeAplica)   o.peaje   += Number(v.peajeMonto||0);
-    if (v.entradaAplica) o.entrada += Number(v.entradaMonto||0);
-    if (v.adelantoAplica)o.adelanto+= Number(v.adelantoMonto||0);
+    o.ingreso += toNum(ingresoViaje(v));
+    if (v.peajeAplica)   o.peaje   += toNum(v.peajeMonto||0);
+    if (v.entradaAplica) o.entrada += toNum(v.entradaMonto||0);
+    if (v.adelantoAplica)o.adelanto+= toNum(v.adelantoMonto||0);
   }
   const rows = [...map.entries()].map(([cho, o])=>{
     const comision = o.ingreso * (o.pct ?? DEFAULT_COMMISSION);
     const liq = comision - o.adelanto + o.peaje + o.entrada;
-    return {chofer:cho, viajes:o.viajes, ingreso:o.ingreso, pct:o.pct, comision, peaje:o.peaje, entrada:o.entrada, adelanto:o.adelanto, liquidacion:liq};
+    const uid = (usuarios.find(u => (u.nombre||u.displayName||'').trim()===cho) || {}).id || '';
+    return {uid, chofer:cho, viajes:o.viajes, ingreso:o.ingreso, pct:o.pct, comision, peaje:o.peaje, entrada:o.entrada, adelanto:o.adelanto, liquidacion:liq};
   }).sort((a,b)=> a.chofer.localeCompare(b.chofer));
+
+  const fmtPct = (p)=> `${Math.round(((p ?? DEFAULT_COMMISSION) * 100))}%`;
 
   tbodyChofer.innerHTML = rows.length ? rows.map(r=>`
     <tr>
       <td>${r.chofer}</td>
       <td>${r.viajes}</td>
-      <td class="monto">${fmt(r.ingreso)}</td>
-      <td class="monto">${Math.round(((r.pct ?? DEFAULT_COMMISSION) * 100))}%</td>
-      <td class="monto">${fmt(r.comision)}</td>
-      <td class="monto">${fmt(r.peaje)}</td>
-      <td class="monto">${fmt(r.entrada)}</td>
-      <td class="monto">${fmt(r.adelanto)}</td>
-      <td class="monto"><b>${fmt(r.liquidacion)}</b></td>
+      <td class="monto">${fmtCur(r.ingreso)}</td>
+      <td class="monto pct-cell" data-uid="${r.uid}" data-chofer="${r.chofer}"><u>${fmtPct(r.pct)}</u></td>
+      <td class="monto">${fmtCur(r.comision)}</td>
+      <td class="monto">${fmtCur(r.peaje)}</td>
+      <td class="monto">${fmtCur(r.entrada)}</td>
+      <td class="monto">${fmtCur(r.adelanto)}</td>
+      <td class="monto"><b>${fmtCur(r.liquidacion)}</b></td>
     </tr>`).join('') : `<tr><td colspan="9" style="padding:14px;opacity:.85">Sin viajes en el rango.</td></tr>`;
 
   // por Chofer y Patente
   const map2 = new Map();
   for (const v of viajesFiltrados){
-    const key = (v.chofer||'(Sin chofer)') + '||' + (v.patente||'(sin patente)');
-    if (!map2.has(key)) map2.set(key, {chofer:v.chofer||'(Sin chofer)', patente:v.patente||'(sin patente)', viajes:0, ingreso:0, peaje:0, entrada:0, adelanto:0, pct:getPctChofer(v.chofer, v.patente)});
+    const key = (v.chofer||'(Sin chofer)') + '||' + (String(v.patente||'(sin patente)').toUpperCase());
+    if (!map2.has(key)) map2.set(key, {chofer:v.chofer||'(Sin chofer)', patente:String(v.patente||'(sin patente)').toUpperCase(), viajes:0, ingreso:0, peaje:0, entrada:0, adelanto:0, pct:getPctChofer(v.chofer, v.patente)});
     const o = map2.get(key);
     o.viajes++;
-    o.ingreso += ingresoViaje(v);
-    if (v.peajeAplica)   o.peaje   += Number(v.peajeMonto||0);
-    if (v.entradaAplica) o.entrada += Number(v.entradaMonto||0);
-    if (v.adelantoAplica)o.adelanto+= Number(v.adelantoMonto||0);
+    o.ingreso += toNum(ingresoViaje(v));
+    if (v.peajeAplica)   o.peaje   += toNum(v.peajeMonto||0);
+    if (v.entradaAplica) o.entrada += toNum(v.entradaMonto||0);
+    if (v.adelantoAplica)o.adelanto+= toNum(v.adelantoMonto||0);
   }
   const rows2 = [...map2.values()].map(o=>{
     const comision = o.ingreso * (o.pct ?? DEFAULT_COMMISSION);
@@ -506,14 +570,33 @@ function renderChofer(viajesFiltrados){
       <td>${r.chofer}</td>
       <td>${r.patente}</td>
       <td>${r.viajes}</td>
-      <td class="monto">${fmt(r.ingreso)}</td>
+      <td class="monto">${fmtCur(r.ingreso)}</td>
       <td class="monto">${Math.round(((r.pct ?? DEFAULT_COMMISSION) * 100))}%</td>
-      <td class="monto">${fmt(r.comision)}</td>
-      <td class="monto">${fmt(r.peaje)}</td>
-      <td class="monto">${fmt(r.entrada)}</td>
-      <td class="monto">${fmt(r.adelanto)}</td>
-      <td class="monto"><b>${fmt(r.liquidacion)}</b></td>
+      <td class="monto">${fmtCur(r.comision)}</td>
+      <td class="monto">${fmtCur(r.peaje)}</td>
+      <td class="monto">${fmtCur(r.entrada)}</td>
+      <td class="monto">${fmtCur(r.adelanto)}</td>
+      <td class="monto"><b>${fmtCur(r.liquidacion)}</b></td>
     </tr>`).join('') : `<tr><td colspan="10" style="padding:14px;opacity:.85">Sin viajes en el rango.</td></tr>`;
+
+  // click-to-edit del porcentaje
+  tbodyChofer.onclick = async (e)=>{
+    const td = e.target.closest('.pct-cell');
+    if (!td) return;
+    const uid = td.dataset.uid;
+    const cho = td.dataset.chofer;
+    if (!uid){ alert('No encuentro el usuario para ' + cho); return; }
+    const val = prompt(`Nuevo % de comisión para "${cho}" (0–100):`);
+    if (val===null) return;
+    const p = Number(val);
+    if (isNaN(p) || p<0 || p>100){ alert('Valor inválido'); return; }
+    try{
+      await updateDoc(doc(db,'usuarios', uid), { porcentaje: p });
+      alert('Porcentaje actualizado');
+    }catch(err){
+      alert('Error al actualizar: ' + err.message);
+    }
+  };
 
   window.__rowsChofer = rows;
   window.__rowsChoferPat = rows2;
@@ -527,11 +610,11 @@ function renderCharts(movsAll){
   titPat2.textContent = selectedPatChip ? `— ${selectedPatChip}` : '— Total';
 
   const pats = [...new Set(mm.map(m=>m.patente).filter(Boolean))].sort();
-  const ing = pats.map(p=> mm.filter(m=>m.patente===p && m.tipo==='Ingreso').reduce((a,b)=>a+Number(b.importe||0),0));
-  const egr = pats.map(p=> mm.filter(m=>m.patente===p && m.tipo!=='Ingreso').reduce((a,b)=>a+Number(b.importe||0),0));
+  const ing = pats.map(p=> mm.filter(m=>m.patente===p && m.tipo==='Ingreso').reduce((a,b)=>a+toNum(b.importe||0),0));
+  const egr = pats.map(p=> mm.filter(m=>m.patente===p && m.tipo!=='Ingreso').reduce((a,b)=>a+toNum(b.importe||0),0));
   const labels = pats.length ? pats : [ selectedPatChip || 'Total' ];
-  const ingV   = pats.length ? ing : [ mm.filter(m=>m.tipo==='Ingreso').reduce((a,b)=>a+Number(b.importe||0),0) ];
-  const egrV   = pats.length ? egr : [ mm.filter(m=>m.tipo!=='Ingreso').reduce((a,b)=>a+Number(b.importe||0),0) ];
+  const ingV   = pats.length ? ing : [ mm.filter(m=>m.tipo==='Ingreso').reduce((a,b)=>a+toNum(b.importe||0),0) ];
+  const egrV   = pats.length ? egr : [ mm.filter(m=>m.tipo!=='Ingreso').reduce((a,b)=>a+toNum(b.importe||0),0) ];
 
   const ctx1 = document.getElementById('chartPatentes').getContext('2d');
   window.chrtPat && window.chrtPat.destroy();
@@ -548,64 +631,17 @@ function renderCharts(movsAll){
     }
   });
 
-  const comp = ['Combustible','Mantenimiento','Peaje','Adelanto','Entrada'];
-  const vals = comp.map(t=> mm.filter(m=>m.tipo===t).reduce((a,b)=>a+Number(b.importe||0),0));
+  const comp = ['Combustible','Mantenimiento','Peaje','Adelanto','Entrada','Comision'];
+  const vals = comp.map(t=> mm.filter(m=>m.tipo===t).reduce((a,b)=>a+toNum(b.importe||0),0));
   const ctx2 = document.getElementById('chartEgresos').getContext('2d');
   window.chrtEgr && window.chrtEgr.destroy();
   window.chrtEgr = new window.Chart(ctx2,{
     type:'doughnut',
     data:{ labels:comp, datasets:[{ data:vals,
-      backgroundColor:['#42A5F5','#EC407A','#FFB300','#66BB6A','#AB47BC'],
-      borderColor:['#42A5F5','#EC407A','#FFB300','#66BB6A','#AB47BC'], borderWidth:1 }] },
+      backgroundColor:['#42A5F5','#EC407A','#FFB300','#66BB6A','#AB47BC','#8D6E63'],
+      borderColor:['#42A5F5','#EC407A','#FFB300','#66BB6A','#AB47BC','#8D6E63'], borderWidth:1 }] },
     options:{ responsive:true, cutout:'55%', plugins:{ legend:{position:'bottom', labels:{color:'#fff'}} } }
   });
-}
-
-/* ==================== Suscripciones (tras login) ==================== */
-const onErr = (col) => (err)=>{ console.error(col, err); showDbg(`ERROR ${col}: ${err.code||''}`); };
-
-function mergeCombustibleAndRender() {
-  combustible = [...combustibleA, ...combustibleB];
-  combustible.forEach(c=> { const p = combPatente(c); if (p) patSet.add(p); });
-  poblarPatentes(); showDbg(); render();
-}
-
-function subscribeAfterLogin(){
-  onSnapshot(collection(db,'usuarios'), qs=>{
-    usuarios = qs.docs.map(d => ({id:d.id, ...d.data()}))
-      .filter(u => (u.rol||'').toLowerCase()==='chofer');
-    choSet.clear();
-    usuarios.forEach(u => choSet.add( (u.nombre||u.displayName||u.email||'').trim() ));
-    poblarChoferes(); showDbg(); render();
-  }, onErr('usuarios'));
-
-  onSnapshot(collection(db,'viajes'), qs=>{
-    viajes = qs.docs.map(d => ({id:d.id, ...d.data()}));
-    viajes.forEach(v=>{
-      const p = (v.patente||'').trim();
-      if (p) patSet.add(p);
-      if (v.chofer)  choSet.add((v.chofer||'').trim());
-    });
-    poblarPatentes(); poblarChoferes(); showDbg(); render();
-  }, onErr('viajes'));
-
-  // Colección camelCase
-  onSnapshot(collection(db,'cargasCombustible'), qs=>{
-    combustibleA = qs.docs.map(d => ({id:d.id, ...d.data()}));
-    mergeCombustibleAndRender();
-  }, onErr('cargasCombustible'));
-
-  // Colección con guión (compatibilidad)
-  onSnapshot(collection(db,'cargas-combustible'), qs=>{
-    combustibleB = qs.docs.map(d => ({id:d.id, ...d.data()}));
-    mergeCombustibleAndRender();
-  }, onErr('cargas-combustible'));
-
-  onSnapshot(collection(db,'mantenimientos'), qs=>{
-    mant = qs.docs.map(d => ({id:d.id, ...d.data()}));
-    mant.forEach(m=> { if (m.patente) patSet.add((m.patente||'').trim()); });
-    poblarPatentes(); showDbg(); render();
-  }, onErr('mantenimientos'));
 }
 
 /* ==================== Eventos ==================== */
@@ -630,7 +666,7 @@ tabs.forEach(b=>{
 document.getElementById('btnCSV').addEventListener('click', ()=>{
   if (!movs.length){ alert('No hay datos.'); return; }
   const head = ['Fecha','Tipo','Detalle','Chofer','Patente','Importe'];
-  const rows = movs.map(m => [ m.fecha, m.tipo, (m.detalle||'').replace(/[\r\n]+/g,' '), m.chofer||'', m.patente||'', String(m.importe||0).replace('.',',') ]);
+  const rows = movs.map(m => [ m.fecha, m.tipo, (m.detalle||'').replace(/[\r\n]+/g,' '), m.chofer||'', m.patente||'', String(Math.round(toNum(m.importe||0))).replace('.',',') ]);
   const csv = [head, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
@@ -642,7 +678,7 @@ document.getElementById('btnCSV').addEventListener('click', ()=>{
 document.getElementById('btnPrintTabla').addEventListener('click', ()=>{
   if (activeTab !== 'tabla'){ document.querySelector('.tab[data-tab="tabla"]').click(); return; }
   const rows = movs.map(m => `
-    <tr><td>${m.fecha}</td><td>${m.tipo}</td><td>${m.detalle||''}</td><td>${m.chofer||''}</td><td>${m.patente||''}</td><td class="r">${fmt(m.importe||0)}</td></tr>
+    <tr><td>${m.fecha}</td><td>${m.tipo}</td><td>${m.detalle||''}</td><td>${m.chofer||''}</td><td>${m.patente||''}</td><td class="r">${fmtCur(m.importe||0)}</td></tr>
   `).join('');
   const html = `
 <!DOCTYPE html><html><head><meta charset="utf-8"><title>Movimientos</title>
@@ -659,9 +695,9 @@ document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
   const rows2 = (window.__rowsChoferPat||[]);
   const fmtPct = (p)=> `${Math.round((p ?? DEFAULT_COMMISSION)*100)}%`;
   const tr1 = rows.map(r=>`
-    <tr><td>${r.chofer}</td><td class="r">${r.viajes}</td><td class="r">${fmt(r.ingreso)}</td><td class="r">${fmtPct(r.pct)}</td><td class="r">${fmt(r.comision)}</td><td class="r">${fmt(r.peaje)}</td><td class="r">${fmt(r.entrada)}</td><td class="r">${fmt(r.adelanto)}</td><td class="r"><b>${fmt(r.liquidacion)}</b></td></tr>`).join('');
+    <tr><td>${r.chofer}</td><td class="r">${r.viajes}</td><td class="r">${fmtCur(r.ingreso)}</td><td class="r">${fmtPct(r.pct)}</td><td class="r">${fmtCur(r.comision)}</td><td class="r">${fmtCur(r.peaje)}</td><td class="r">${fmtCur(r.entrada)}</td><td class="r">${fmtCur(r.adelanto)}</td><td class="r"><b>${fmtCur(r.liquidacion)}</b></td></tr>`).join('');
   const tr2 = rows2.map(r=>`
-    <tr><td>${r.chofer}</td><td>${r.patente}</td><td class="r">${r.viajes}</td><td class="r">${fmt(r.ingreso)}</td><td class="r">${fmtPct(r.pct)}</td><td class="r">${fmt(r.comision)}</td><td class="r">${fmt(r.peaje)}</td><td class="r">${fmt(r.entrada)}</td><td class="r">${fmt(r.adelanto)}</td><td class="r"><b>${fmt(r.liquidacion)}</b></td></tr>`).join('');
+    <tr><td>${r.chofer}</td><td>${r.patente}</td><td class="r">${r.viajes}</td><td class="r">${fmtCur(r.ingreso)}</td><td class="r">${fmtPct(r.pct)}</td><td class="r">${fmtCur(r.comision)}</td><td class="r">${fmtCur(r.peaje)}</td><td class="r">${fmtCur(r.entrada)}</td><td class="r">${fmtCur(r.adelanto)}</td><td class="r"><b>${fmtCur(r.liquidacion)}</b></td></tr>`).join('');
   const html = `
 <!DOCTYPE html><html><head><meta charset="utf-8"><title>Liquidaciones</title>
 <style>body{font-family:Arial;margin:28px;color:#111}h3{margin:20px 0 8px}table{width:100%;border-collapse:collapse;margin-top:4px}th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}th{background:#f5f5f5}.r{text-align:right}.note{font-size:12px;color:#555;margin-bottom:10px}</style></head>
@@ -672,16 +708,6 @@ document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
   <h3>Por Chofer y Patente</h3><table><thead><tr><th>Chofer</th><th>Patente</th><th class="r">Viajes</th><th class="r">Ingreso</th><th class="r">% Comis.</th><th class="r">Comisión</th><th class="r">Peajes</th><th class="r">Entradas</th><th class="r">Adelantos</th><th class="r">Liquidación</th></tr></thead><tbody>${tr2 || '<tr><td colspan="10">Sin datos</td></tr>'}</tbody></table>
 </body></html>`;
   const w = window.open('', '_blank', 'width=900,height=1000'); w.document.write(html); w.document.close(); w.focus();
-});
-
-/* ====== Esperar login antes de suscribir ====== */
-onAuthStateChanged(auth, (user)=>{
-  if (user){
-    showDbg(`uid:${user.uid} · email:${user.email||'-'}`);
-    subscribeAfterLogin();
-  } else {
-    showDbg('No autenticado. Iniciá sesión.');
-  }
 });
 </script>
 
