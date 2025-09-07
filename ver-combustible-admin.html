@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -28,7 +27,7 @@
     .resumen .card{background:#0f1a0f;border:1px solid #1f3d1f;border-radius:8px;padding:10px;text-align:center;}
     .resumen .card .label{font-size:12px;color:#a0d8a0;text-transform:uppercase}
     .resumen .card .value{font-weight:bold;font-size:18px}
-    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);justify-content:center;align-items:center}
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);justify-content:center;align-items:center;z-index:20}
     .modal-content{background:#000;border-radius:12px;padding:16px;width:95%;max-width:650px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
     .modal-content h2{margin:0 0 12px;text-transform:uppercase;text-decoration:underline}
     .edit-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -78,10 +77,10 @@
     <button class="btn btn-naranja" onclick="location.href='admin.html'">Volver</button>
   </div>
 
-  <!-- MODAL DETALLE/EDICIÓN -->
+  <!-- MODAL DETALLE/EDICIÓN + NUEVA -->
   <div id="modal" class="modal">
     <div class="modal-content">
-      <h2>Detalle / Editar carga</h2>
+      <h2 id="modalTitle">Detalle / Editar carga</h2>
       <form id="formEdit" class="edit-form">
         <label>Fecha</label><input type="date" id="e_fecha"/>
         <label>Patente del camión</label><input type="text" id="e_patente"/>
@@ -118,7 +117,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
@@ -175,6 +174,7 @@
       let todas = [];
       let actualId = null;
       let actualCol = null;
+      let isNew = false;
 
       // Unir ambas colecciones
       let A=[], B=[];
@@ -220,7 +220,7 @@
         return true;
       }
 
-      // SIEMPRE que podamos: total = litros * precioPorLitro
+      // SIEMPRE: total = litros * precioPorLitro (si ambos existen)
       function calcTotal(c){
         const L = toNum(c.litros);
         const P = toNum(c.precioPorLitro);
@@ -301,7 +301,28 @@
 
       [fDesde,fHasta,fPatente,fTipo,fMetodo,fCuitOrigen,fBuscar].forEach(el=>el.addEventListener('input',render));
       btnLimpiar.addEventListener('click', ()=>{ fDesde.value=''; fHasta.value=''; rangoRapido.value=''; fPatente.value=''; fTipo.value=''; fMetodo.value=''; fCuitOrigen.value=''; fBuscar.value=''; render(); });
-      btnNueva.addEventListener('click', ()=>{ window.location.href='agregar-combustible.html'; });
+
+      // -------- NUEVA CARGA (no navega) --------
+      btnNueva.addEventListener('click', ()=>{
+        isNew = true;
+        actualId = null;
+        actualCol = 'cargas-combustible'; // escribir siempre aquí
+        document.getElementById('modalTitle').textContent = 'Nueva carga de combustible';
+        // limpiar campos
+        get('e_fecha').value = new Date().toISOString().slice(0,10);
+        get('e_patente').value = '';
+        get('e_litros').value = '';
+        get('e_precioLitro').value = '';
+        get('e_total').value = '';
+        get('e_estacion').value = '';
+        get('e_tipo').value = '';
+        get('e_metodo').value = '';
+        get('e_obs').value = '';
+        // UI: ocultar eliminar
+        document.getElementById('btnEliminar').style.display = 'none';
+        document.getElementById('btnGuardar').textContent = 'Crear';
+        modal.style.display='flex';
+      });
 
       // IMPRIMIR
       btnImprimir.addEventListener('click', ()=>{
@@ -370,10 +391,12 @@
       const get = id => document.getElementById(id);
 
       window._abrir = (key) => {
+        isNew = false;
         const [colName, id] = String(key).split('|');
         const c = todas.find(x => x.id === id && x._col === colName);
         if (!c) return;
         actualId = id; actualCol = colName;
+        document.getElementById('modalTitle').textContent = 'Detalle / Editar carga';
         get('e_fecha').value = c.fecha || '';
         get('e_patente').value = c.patenteCamion || '';
         get('e_litros').value = toNum(c.litros) || '';
@@ -383,6 +406,8 @@
         get('e_tipo').value = c.tipoCombustible || '';
         get('e_metodo').value = c.metodoPago || '';
         get('e_obs').value = c.observaciones || '';
+        document.getElementById('btnEliminar').style.display = '';
+        document.getElementById('btnGuardar').textContent = 'Guardar';
         modal.style.display='flex';
       };
 
@@ -391,7 +416,7 @@
       document.getElementById('btnGuardar').onclick = async ()=>{
         const data = {
           fecha: get('e_fecha').value || null,
-          patenteCamion: get('e_patente').value.trim(),
+          patenteCamion: get('e_patente').value.trim().toUpperCase(),
           litros: toNum(get('e_litros').value || 0),
           precioPorLitro: get('e_precioLitro').value==='' ? null : toNum(get('e_precioLitro').value),
           totalPagado: get('e_total').value==='' ? null : toNum(get('e_total').value),
@@ -401,8 +426,13 @@
           observaciones: get('e_obs').value.trim()
         };
         try{
-          await updateDoc(doc(db, actualCol, actualId), data);
-          alert('Carga actualizada');
+          if (isNew){
+            await addDoc(collection(db, 'cargas-combustible'), data);
+            alert('Carga creada');
+          }else{
+            await updateDoc(doc(db, actualCol, actualId), data);
+            alert('Carga actualizada');
+          }
           modal.style.display='none';
         }catch(err){
           alert('Error al guardar: ' + err.message);
