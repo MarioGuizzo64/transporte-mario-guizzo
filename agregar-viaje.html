@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Agregar Viaje</title>
   <style>
-    body{margin:0;font-family:'Roboto',Arial,sans-serif;background:#FFD700;color:#fff}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#FFD700;color:#fff}
     .container{background:#000;max-width:520px;margin:40px auto;padding:28px;border-radius:10px;box-shadow:0 0 20px rgba(0,0,0,.5)}
-    h2{text-align:center;font-size:22px;text-transform:uppercase;text-decoration:underline;font-weight:bold;color:#fff;margin:0 0 20px}
+    h2{text-align:center;font-size:22px;text-transform:uppercase;text-decoration:underline;font-weight:bold;margin:0 0 20px}
     form{display:flex;flex-direction:column;gap:12px}
     label{font-weight:bold;text-transform:uppercase}
     input,textarea,select{padding:8px;border:1px solid #000;background:#fff;color:#000;border-radius:4px;width:100%;box-sizing:border-box}
@@ -19,13 +19,12 @@
     .btn-volver{background:orange;color:#000}
     .btn-guardar{background:green;color:#fff}
     .mant-box{border:1px dashed #444;border-radius:8px;padding:12px;margin-top:4px}
-    .mant-box > label{display:flex;align-items:center;gap:10px} /* alineado izquierda */
     .mant-extra{display:none;margin-top:8px}
     .mant-extra.show{display:block}
-    /* Checkbox GRANDE y alineado */
-    #reqMant{width:22px;height:22px;accent-color:#FFD700;cursor:pointer}
     #modalExito{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;color:green;padding:18px 22px;border:2px solid green;border-radius:10px;z-index:1000;text-align:center;font-weight:bold}
     .ayuda{font-size:12px;color:#bbb;margin-top:-4px;text-transform:none}
+    /* checkbox más grande */
+    input[type="checkbox"]{width:18px;height:18px}
   </style>
 </head>
 <body>
@@ -33,47 +32,41 @@
     <h2>Agregar viaje</h2>
 
     <form id="formViaje">
-      <!-- 1) FECHA -->
       <label for="fecha">Fecha</label>
       <input type="date" id="fecha" required>
 
-      <!-- 2) TITULAR CARTA DE PORTE (CUIT) -->
-      <label for="cuitOrigen">Titular carta de porte (CUIT)</label>
-      <input type="text" id="cuitOrigen" placeholder="Ej: 20-12345678-9" required>
+      <label for="ctg">CTG</label>
+      <input type="text" id="ctg" placeholder="Ej: 0123456789">
 
-      <!-- 3) LUGAR DE ORIGEN DEL VIAJE -->
-      <label for="origen">Lugar de origen del viaje</label>
-      <input type="text" id="origen" placeholder="Campo/Planta/Localidad" required>
+      <label for="cuitTitular">Titular carta de porte (CUIT)</label>
+      <input type="text" id="cuitTitular" placeholder="Ej: 20-12345678-9">
 
-      <!-- 4) DESTINO -->
+      <label for="origenLugar">Lugar de origen del viaje</label>
+      <input type="text" id="origenLugar" placeholder="Campo/Planta/Localidad">
+
       <label for="destino">Destino</label>
       <input type="text" id="destino" required>
 
-      <!-- 5) TARIFA por tonelada (OBLIGATORIA) -->
-      <label for="tarifaValor">Tarifa por tonelada ($/tn)</label>
-      <input type="number" id="tarifaValor" step="0.01" min="0" placeholder="Ej: 14500" required>
+      <label for="tarifa">Tarifa ($/tn)</label>
+      <input type="number" id="tarifa" step="0.01" min="0" required>
 
-      <!-- 6) PATENTE -->
       <label for="patente">Patente</label>
       <input type="text" id="patente" placeholder="ABC123 / AB123CD" required>
 
-      <!-- (se mantiene) TIPO DE CEREAL -->
       <label for="tipoCereal">Tipo de cereal</label>
       <input type="text" id="tipoCereal" placeholder="Soja, Maíz, Trigo..." required>
 
-      <!-- 7-8) KG (en la práctica son toneladas) -->
       <div class="fila">
         <div>
-          <label for="kgLlevados">Kg cargados</label>
+          <label for="kgLlevados">Tns cargadas</label>
           <input type="number" id="kgLlevados" step="0.01" min="0" required>
         </div>
         <div>
-          <label for="kgDescargados">Kg descargados</label>
+          <label for="kgDescargados">Tns descargadas</label>
           <input type="number" id="kgDescargados" step="0.01" min="0" required>
         </div>
       </div>
 
-      <!-- ¿CARGÓ COMBUSTIBLE? -->
       <label for="cargoCombustible">¿Cargó combustible?</label>
       <select id="cargoCombustible">
         <option value="no" selected>No</option>
@@ -82,10 +75,7 @@
 
       <!-- Adelanto -->
       <label for="adelantoAplica">Adelanto</label>
-      <select id="adelantoAplica">
-        <option value="no" selected>No</option>
-        <option value="si">Sí</option>
-      </select>
+      <select id="adelantoAplica"><option value="no" selected>No</option><option value="si">Sí</option></select>
       <div id="adelantoMontoGrupo" class="grupo-monto">
         <label for="adelantoMonto">Monto adelanto ($)</label>
         <input type="number" id="adelantoMonto" step="0.01" min="0">
@@ -93,10 +83,7 @@
 
       <!-- Peajes -->
       <label for="peajeAplica">Gastos en peajes</label>
-      <select id="peajeAplica">
-        <option value="no" selected>No</option>
-        <option value="si">Sí</option>
-      </select>
+      <select id="peajeAplica"><option value="no" selected>No</option><option value="si">Sí</option></select>
       <div id="peajeMontoGrupo" class="grupo-monto">
         <label for="peajeMonto">Monto peajes ($)</label>
         <input type="number" id="peajeMonto" step="0.01" min="0">
@@ -104,20 +91,16 @@
 
       <!-- Entrada -->
       <label for="entradaAplica">Entrada</label>
-      <select id="entradaAplica">
-        <option value="no" selected>No</option>
-        <option value="si">Sí</option>
-      </select>
+      <select id="entradaAplica"><option value="no" selected>No</option><option value="si">Sí</option></select>
       <div id="entradaMontoGrupo" class="grupo-monto">
         <label for="entradaMonto">Monto entrada ($)</label>
         <input type="number" id="entradaMonto" step="0.01" min="0">
       </div>
 
-      <!-- 12) OBSERVACIONES -->
       <label for="observaciones">Observaciones</label>
       <textarea id="observaciones" placeholder="Notas adicionales..."></textarea>
 
-      <!-- 13) Mantenimiento -->
+      <!-- Mantenimiento -->
       <div class="mant-box">
         <label><input type="checkbox" id="reqMant"> ¿Requiere mantenimiento?</label>
         <div id="mantExtra" class="mant-extra">
@@ -126,13 +109,8 @@
               <label for="mantTipo">Tipo</label>
               <select id="mantTipo">
                 <option value="">Seleccionar…</option>
-                <option>Servicio</option>
-                <option>Cambio de aceite</option>
-                <option>Filtros</option>
-                <option>Cubiertas</option>
-                <option>Frenos</option>
-                <option>Reparación</option>
-                <option>Otro</option>
+                <option>Servicio</option><option>Cambio de aceite</option><option>Filtros</option>
+                <option>Cubiertas</option><option>Frenos</option><option>Reparación</option><option>Otro</option>
               </select>
             </div>
             <div>
@@ -180,140 +158,104 @@
       if (f && !f.value) f.value = new Date().toISOString().slice(0,10);
     });
 
-    // ----- UI helpers: mostrar/ocultar montos según "Sí/No"
+    // toggles Sí/No
     const mapToggles = [
       { sel: 'adelantoAplica', grupo: 'adelantoMontoGrupo', input: 'adelantoMonto' },
       { sel: 'peajeAplica',    grupo: 'peajeMontoGrupo',    input: 'peajeMonto'    },
       { sel: 'entradaAplica',  grupo: 'entradaMontoGrupo',  input: 'entradaMonto'  }
     ];
-    function toggleMonto(selId, grupoId, inputId) {
-      const sel = document.getElementById(selId);
-      const box = document.getElementById(grupoId);
-      const inp = document.getElementById(inputId);
-      const on  = (sel.value === 'si');
-      box.style.display = on ? 'block' : 'none';
-      inp.required = on;
-      if (!on) inp.value = '';
+    function toggleMonto(selId, grupoId, inputId){
+      const sel=document.getElementById(selId), box=document.getElementById(grupoId), inp=document.getElementById(inputId);
+      const on = (sel.value==='si'); box.style.display= on ? 'block':'none'; inp.required=on; if(!on) inp.value='';
     }
-    mapToggles.forEach(t => {
-      document.getElementById(t.sel).addEventListener('change', () => toggleMonto(t.sel, t.grupo, t.input));
-      toggleMonto(t.sel, t.grupo, t.input);
-    });
+    mapToggles.forEach(t=>{ document.getElementById(t.sel).addEventListener('change',()=>toggleMonto(t.sel,t.grupo,t.input)); toggleMonto(t.sel,t.grupo,t.input); });
 
-    // Mostrar/ocultar extras de mantenimiento
-    const reqMant   = document.getElementById('reqMant');
-    const mantExtra = document.getElementById('mantExtra');
-    reqMant.addEventListener('change', ()=> mantExtra.classList.toggle('show', reqMant.checked));
+    // mayúsculas patente
+    const patenteInput=document.getElementById('patente');
+    patenteInput.addEventListener('input',e=> e.target.value=e.target.value.toUpperCase());
 
-    // Patente siempre en mayúsculas
-    const patenteInput = document.getElementById('patente');
-    patenteInput.addEventListener('input', e => e.target.value = e.target.value.toUpperCase());
-
-    // ----- Guardar viaje
     document.getElementById("formViaje").addEventListener("submit", async (e) => {
       e.preventDefault();
       if (!currentUser) { alert("No hay sesión. Volvé a iniciar sesión."); return; }
 
-      // Validación básica (incluye TARIFA obligatoria)
-      const obligatorios = ["fecha","cuitOrigen","origen","destino","tarifaValor","patente","tipoCereal","kgLlevados","kgDescargados"];
-      for (const id of obligatorios) {
-        const el = document.getElementById(id);
-        if (!el || !el.value) {
-          alert("Por favor, complete todos los campos obligatorios.");
-          return;
-        }
-      }
-      // Montos si aplica
-      for (const t of mapToggles) {
+      const obligatorios = ["fecha","destino","patente","tipoCereal","kgLlevados","kgDescargados","tarifa"];
+      for (const id of obligatorios) if (!document.getElementById(id).value){ alert("Completá todos los campos obligatorios."); return; }
+      for (const t of mapToggles){
         const aplica = document.getElementById(t.sel).value === 'si';
         const val    = document.getElementById(t.input).value;
-        if (aplica && (val === "" || isNaN(parseFloat(val)))) {
-          alert("Complete correctamente el monto en: " + t.input.replace('Monto',''));
-          return;
-        }
+        if (aplica && (val==="" || isNaN(parseFloat(val)))){ alert("Completá correctamente el monto en: " + t.input.replace('Monto','')); return; }
       }
-
-      // Normalización
-      const patenteUP = document.getElementById("patente").value.trim().toUpperCase();
-      document.getElementById("patente").value = patenteUP;
-
-      const tarifaVal = parseFloat(document.getElementById("tarifaValor").value || 0); // $/tn (obligatoria)
-      const cargoCombustible = document.getElementById("cargoCombustible").value === "si";
-      const mantRequiere     = document.getElementById('reqMant').checked;
-      const mantTipoSugerido = (document.getElementById("mantTipo").value || "").trim();
-      const mantDescripcion  = (document.getElementById("mantDesc").value || "").trim();
 
       const viaje = {
         uidCreador: currentUser.uid,
 
         fecha: document.getElementById("fecha").value,
-        cuitOrigen: document.getElementById("cuitOrigen").value.trim(),
-        origen: document.getElementById("origen").value.trim(),
+        ctg: document.getElementById("ctg").value.trim(),
+        cuitTitularCartaPorte: document.getElementById("cuitTitular").value.trim(),
+        origenViaje: document.getElementById("origenLugar").value.trim(),
+        origen: document.getElementById("origenLugar").value.trim(),
         destino: document.getElementById("destino").value.trim(),
-        patente: patenteUP,
+        tarifaPorTonelada: parseFloat(document.getElementById("tarifa").value) || 0,
+        tarifa: parseFloat(document.getElementById("tarifa").value) || 0,
+
+        patente: document.getElementById("patente").value.trim().toUpperCase(),
         tipoCereal: document.getElementById("tipoCereal").value.trim(),
+
         kgLlevados: parseFloat(document.getElementById("kgLlevados").value) || 0,
+        peso:       parseFloat(document.getElementById("kgLlevados").value) || 0,
         kgDescargados: parseFloat(document.getElementById("kgDescargados").value) || 0,
 
-        // tarifa por tonelada
-        tarifaPorTon: tarifaVal,
-
-        cargoCombustible,
+        cargoCombustible: document.getElementById("cargoCombustible").value === "si",
 
         adelantoAplica: document.getElementById("adelantoAplica").value === "si",
-        adelantoMonto:  parseFloat(document.getElementById("adelantoMonto").value || 0),
+        adelanto:  parseFloat(document.getElementById("adelantoMonto").value || 0),
 
-        peajeAplica:    document.getElementById("peajeAplica").value === "si",
-        peajeMonto:     parseFloat(document.getElementById("peajeMonto").value || 0),
+        peajeAplica: document.getElementById("peajeAplica").value === "si",
+        peaje: parseFloat(document.getElementById("peajeMonto").value || 0),
 
-        entradaAplica:  document.getElementById("entradaAplica").value === "si",
-        entradaMonto:   parseFloat(document.getElementById("entradaMonto").value || 0),
+        entradaAplica: document.getElementById("entradaAplica").value === "si",
+        entrada: parseFloat(document.getElementById("entradaMonto").value || 0),
 
         observaciones: document.getElementById("observaciones").value.trim(),
 
-        // mantenimiento (solo sugerencia)
-        reqMantenimiento: mantRequiere,
-        mantTipoSugerido,
-        mantDescripcion,
+        reqMantenimiento: document.getElementById('reqMant').checked,
+        mantTipoSugerido: (document.getElementById("mantTipo").value || "").trim(),
+        mantDescripcion: (document.getElementById("mantDesc").value || "").trim(),
 
         timestamp: serverTimestamp()
       };
 
-      try {
-        const ref = await addDoc(collection(db, "viajes"), viaje);
+      try{
+        const ref = await addDoc(collection(db,"viajes"), viaje);
 
-        if (mantRequiere) {
-          const mant = {
-            creadoDesdeViaje: true,
-            viajeId: ref.id,
-            fecha: viaje.fecha,
-            patente: viaje.patente,
-            tipo: mantTipoSugerido || "Otro",
-            proveedor: "",
-            km: 0, repuestos: [], manoDeObra: 0, otros: 0, total: 0,
-            pagado: false, estado: "pendiente", proximoFecha: "",
-            observaciones: mantDescripcion || viaje.observaciones || "",
+        // si requiere mantenimiento, creamos sugerencia básica
+        if (viaje.reqMantenimiento){
+          await addDoc(collection(db,"mantenimientos"), {
+            creadoDesdeViaje:true, viajeId:ref.id, fecha:viaje.fecha, patente:viaje.patente,
+            tipo: viaje.mantTipoSugerido || "Otro", proveedor:"", km:0, repuestos:[], manoDeObra:0, otros:0,
+            total:0, pagado:false, estado:"pendiente", proximoFecha:"", observaciones: viaje.mantDescripcion || viaje.observaciones || "",
             timestamp: serverTimestamp()
-          };
-          await addDoc(collection(db, "mantenimientos"), mant);
+          });
         }
 
         const modal = document.getElementById("modalExito");
-        modal.style.display = "block";
-        setTimeout(() => {
-          modal.style.display = "none";
-          if (cargoCombustible) {
+        modal.style.display="block";
+        setTimeout(()=>{ modal.style.display="none"; 
+          if (viaje.cargoCombustible){
             const q = new URLSearchParams({ patente: viaje.patente, fecha: viaje.fecha });
             window.location.href = "agregar-combustible.html?" + q.toString();
-          } else {
+          }else{
             window.location.href = "index.html";
           }
-        }, 3000);
-      } catch (e) {
-        console.error('[WRITE] ERROR', e.code, e.message);
+        }, 1500);
+      }catch(e){
         alert("Error al guardar: " + (e.code || e.message));
       }
     });
+
+    // mantenimiento toggle
+    const reqMant=document.getElementById('reqMant'), mantExtra=document.getElementById('mantExtra');
+    reqMant.addEventListener('change',()=> mantExtra.classList.toggle('show', reqMant.checked));
   </script>
 </body>
 </html>
