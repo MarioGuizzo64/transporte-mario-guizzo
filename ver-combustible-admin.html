@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -7,11 +8,7 @@
   <style>
     body{margin:0;background:#FFD700;font-family:Arial,sans-serif;color:#fff;}
     .container{
-      background:#000;
-      max-width:980px;
-      margin:40px auto;
-      padding:24px;
-      border-radius:12px;
+      background:#000;max-width:980px;margin:40px auto;padding:24px;border-radius:12px;
       box-shadow:0 10px 30px rgba(0,0,0,.35)
     }
     h1{text-align:center;text-transform:uppercase;text-decoration:underline;margin:0 0 16px}
@@ -135,28 +132,28 @@
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
-    // Utils
-    const fmt = (n, suf="") => (n ?? "") === "" ? "-" : `${Number(n).toLocaleString("es-AR",{maximumFractionDigits:2})}${suf}`;
-    const fmtDMY = (f) => {
-      if(!f) return '—';
-      const d = new Date(f);
-      if (isNaN(d)) return '—';
-      const dd=String(d.getDate()).padStart(2,'0'), mm=String(d.getMonth()+1).padStart(2,'0'), yy=d.getFullYear();
-      return `${dd}/${mm}/${yy}`;
-    };
-    const parseFecha = (f) => {
-      if (!f) return null;
-      if (f.includes("-")) return new Date(f);
-      if (f.includes("/")) { const [dd,mm,aa] = f.split("/"); return new Date(+aa, +mm-1, +dd); }
-      const d = new Date(f); return isNaN(d) ? null : d;
+    // ---------- Utils ----------
+    const fmt     = (n, suf="") => (n ?? "") === "" ? "-" : `${Number(n).toLocaleString("es-AR",{maximumFractionDigits:2})}${suf}`;
+    const fmtDMY  = (f) => { if(!f) return '—'; const d=new Date(f); if(isNaN(d)) return '—'; const dd=String(d.getDate()).padStart(2,'0'),mm=String(d.getMonth()+1).padStart(2,'0'),yy=d.getFullYear(); return `${dd}/${mm}/${yy}`; };
+    const parseFecha = (f) => { if(!f) return null; if(f.includes("-")) return new Date(f); if(f.includes("/")){const[dd,mm,aa]=f.split("/"); return new Date(+aa,+mm-1,+dd)} const d=new Date(f); return isNaN(d)?null:d; };
+    // Convierte "1.450", "1.450,50", "1450" → número
+    const toNum = (v) => {
+      if (typeof v === 'number') return v;
+      if (typeof v === 'string') {
+        const s = v.replace(/\s/g,'').replace(/\./g,'').replace(/,/g,'.');
+        const n = Number(s);
+        return isNaN(n) ? 0 : n;
+      }
+      const n = Number(v);
+      return isNaN(n) ? 0 : n;
     };
 
     onAuthStateChanged(auth, (user) => {
       if (!user) { window.location.href = "login.html"; return; }
-      start(user);
+      start();
     });
 
-    function start(user){
+    function start(){
       const lista = document.getElementById("lista");
       const fDesde = document.getElementById("desde");
       const fHasta = document.getElementById("hasta");
@@ -175,115 +172,98 @@
       const rProm   = document.getElementById("r_promedio");
       const rCargas = document.getElementById("r_cargas");
 
-      let todas = [];         // merge de ambas colecciones
-      let actualId = null;    // id del doc abierto
-      let actualCol = null;   // nombre de colección del doc abierto
+      let todas = [];
+      let actualId = null;
+      let actualCol = null;
 
-      // Escuchar AMBAS colecciones y unificarlas
-      let A = [], B = [];
-      const refA = collection(db, "cargas-combustible");
-      const refB = collection(db, "cargasCombustible");
-
+      // Unir ambas colecciones
+      let A=[], B=[];
       const rebuild = () => {
-        todas = [...A, ...B];
-        // ordenar por fecha/timestamp desc
-        todas.sort((a,b)=> {
+        todas = [...A, ...B].sort((a,b)=>{
           const da = parseFecha(a.fecha) || (a.timestamp ? new Date(a.timestamp) : new Date(0));
-          const dbb= parseFecha(b.fecha) || (b.timestamp ? new Date(b.timestamp) : new Date(0));
-          return dbb - da;
+          const db = parseFecha(b.fecha) || (b.timestamp ? new Date(b.timestamp) : new Date(0));
+          return db - da;
         });
-        poblarSelects();
-        render();
+        poblarSelects(); render();
       };
-
-      onSnapshot(refA, (qs) => {
-        A = qs.docs.map(d => ({ id:d.id, _col:'cargas-combustible', ...d.data() }));
-        rebuild();
+      onSnapshot(collection(db,"cargas-combustible"), qs=>{
+        A = qs.docs.map(d=>({id:d.id,_col:'cargas-combustible',...d.data()})); rebuild();
       });
-      onSnapshot(refB, (qs) => {
-        B = qs.docs.map(d => ({ id:d.id, _col:'cargasCombustible', ...d.data() }));
-        rebuild();
+      onSnapshot(collection(db,"cargasCombustible"), qs=>{
+        B = qs.docs.map(d=>({id:d.id,_col:'cargasCombustible',...d.data()})); rebuild();
       });
 
       function poblarSelects(){
-        const patentes = Array.from(new Set(todas.map(x => x.patenteCamion).filter(Boolean))).sort();
-        const tipos    = Array.from(new Set(todas.map(x => x.tipoCombustible).filter(Boolean))).sort();
-        const metodos  = Array.from(new Set(todas.map(x => x.metodoPago).filter(Boolean))).sort();
-        const pSel = fPatente.value, tSel = fTipo.value, mSel = fMetodo.value;
-        fPatente.innerHTML = '<option value="">Todas las patentes</option>' + patentes.map(p=>`<option value="${p}">${p}</option>`).join('');
-        fTipo.innerHTML    = '<option value="">Todos los tipos</option>' + tipos.map(t=>`<option value="${t}">${t}</option>`).join('');
-        fMetodo.innerHTML  = '<option value="">Todos los métodos</option>' + metodos.map(m=>`<option value="${m}">${m}</option>`).join('');
-        if (pSel) fPatente.value = pSel;
-        if (tSel) fTipo.value = tSel;
-        if (mSel) fMetodo.value = mSel;
+        const patentes = Array.from(new Set(todas.map(x=>x.patenteCamion).filter(Boolean))).sort();
+        const tipos    = Array.from(new Set(todas.map(x=>x.tipoCombustible).filter(Boolean))).sort();
+        const metodos  = Array.from(new Set(todas.map(x=>x.metodoPago).filter(Boolean))).sort();
+        const pSel=fPatente.value,tSel=fTipo.value,mSel=fMetodo.value;
+        fPatente.innerHTML = '<option value="">Todas las patentes</option>'+patentes.map(p=>`<option value="${p}">${p}</option>`).join('');
+        fTipo.innerHTML    = '<option value="">Todos los tipos</option>'+tipos.map(t=>`<option value="${t}">${t}</option>`).join('');
+        fMetodo.innerHTML  = '<option value="">Todos los métodos</option>'+metodos.map(m=>`<option value="${m}">${m}</option>`).join('');
+        if(pSel) fPatente.value=pSel; if(tSel) fTipo.value=tSel; if(mSel) fMetodo.value=mSel;
       }
 
       function pasaFiltros(x){
-        if (fDesde.value) { const d = parseFecha(x.fecha); if (!d || d < new Date(fDesde.value)) return false; }
-        if (fHasta.value) { const d = parseFecha(x.fecha); if (!d || d > new Date(fHasta.value)) return false; }
-        if (fPatente.value && x.patenteCamion !== fPatente.value) return false;
-        if (fTipo.value && x.tipoCombustible !== fTipo.value) return false;
-        if (fMetodo.value && x.metodoPago !== fMetodo.value) return false;
-        if (fCuitOrigen.value) {
-          const co = (x.cuitOrigen || "").toString();
-          if (!co.includes(fCuitOrigen.value.trim())) return false;
-        }
-        const q = fBuscar.value.trim().toLowerCase();
-        if (q){
-          const blob = [ x.estacionServicio, x.patenteCamion, x.observaciones, x.tipoCombustible, x.metodoPago ]
-            .map(s => (s||"")+"").join(" ").toLowerCase();
-          if (!blob.includes(q)) return false;
+        if (fDesde.value){ const d=parseFecha(x.fecha); if(!d||d<new Date(fDesde.value)) return false; }
+        if (fHasta.value){ const d=parseFecha(x.fecha); if(!d||d>new Date(fHasta.value)) return false; }
+        if (fPatente.value && x.patenteCamion!==fPatente.value) return false;
+        if (fTipo.value && x.tipoCombustible!==fTipo.value) return false;
+        if (fMetodo.value && x.metodoPago!==fMetodo.value) return false;
+        if (fCuitOrigen.value){ const co=(x.cuitOrigen||'')+''; if(!co.includes(fCuitOrigen.value.trim())) return false; }
+        const q=fBuscar.value.trim().toLowerCase();
+        if(q){
+          const blob=[x.estacionServicio,x.patenteCamion,x.observaciones,x.tipoCombustible,x.metodoPago]
+            .map(s=>(s||'')+'').join(' ').toLowerCase();
+          if(!blob.includes(q)) return false;
         }
         return true;
       }
 
+      // SIEMPRE que podamos: total = litros * precioPorLitro
       function calcTotal(c){
-        const L = Number(c.litros || 0);
-        if (c.totalPagado==null || c.totalPagado===""){
-          const ppl = (c.precioPorLitro!=null) ? Number(c.precioPorLitro) : null;
-          return (ppl!=null && L>0) ? ppl*L : null;
-        }
-        return Number(c.totalPagado);
+        const L = toNum(c.litros);
+        const P = toNum(c.precioPorLitro);
+        if (L>0 && P>0) return L*P;
+        if (c.totalPagado!=null && c.totalPagado!=='') return toNum(c.totalPagado);
+        return null;
       }
       function precioPorLitro(c){
-        const L = Number(c.litros || 0);
-        if (c.precioPorLitro!=null) return Number(c.precioPorLitro);
-        const tot = (c.totalPagado!=null)? Number(c.totalPagado) : null;
-        return (L>0 && tot!=null) ? (tot/L) : null;
+        const P = toNum(c.precioPorLitro);
+        if (P>0) return P;
+        const L = toNum(c.litros);
+        const T = (c.totalPagado!=null)? toNum(c.totalPagado) : 0;
+        return (L>0 && T>0) ? (T/L) : null;
       }
 
       function actualizarResumen(datos){
-        const cargas = datos.length;
-        let totalLitros = 0, totalGasto  = 0;
-        for (const c of datos){
-          const L = Number(c.litros || 0);
+        let tLitros=0,tGasto=0;
+        for(const c of datos){
+          tLitros += toNum(c.litros);
           const T = calcTotal(c) ?? 0;
-          totalLitros += L;
-          totalGasto  += T;
+          tGasto  += T;
         }
-        const prom = (totalLitros>0) ? (totalGasto/totalLitros) : 0;
-        rLitros.textContent = fmt(totalLitros, " l");
-        rTotal.textContent  = "$ " + fmt(totalGasto);
-        rProm.textContent   = (totalLitros>0)? fmt(prom) : "-";
-        rCargas.textContent = cargas.toString();
+        rLitros.textContent = fmt(tLitros, " l");
+        rTotal.textContent  = "$ " + fmt(tGasto);
+        rProm.textContent   = tLitros>0 ? fmt(tGasto/tLitros) : "-";
+        rCargas.textContent = String(datos.length);
       }
 
       function render(){
         const datos = todas.filter(pasaFiltros);
         actualizarResumen(datos);
-        lista.innerHTML = "";
-        if (!datos.length){
-          lista.innerHTML = '<div class="item"><p>No hay cargas para los filtros seleccionados.</p></div>';
+        lista.innerHTML='';
+        if(!datos.length){
+          lista.innerHTML='<div class="item"><p>No hay cargas para los filtros seleccionados.</p></div>';
           return;
         }
-        for (const c of datos){
-          const L = Number(c.litros || 0);
+        for(const c of datos){
+          const L = toNum(c.litros);
           const tot = calcTotal(c);
-          const plitro = precioPorLitro(c);
+          const pl = precioPorLitro(c);
           const obsPill = c.observaciones ? '<span class="pill" style="background:#b71c1c">OBSERVACIONES</span>' : '';
           const key = `${c._col}|${c.id}`;
-          const div = document.createElement('div');
-          div.className = 'item';
+          const div=document.createElement('div'); div.className='item';
           div.innerHTML = `
             <div class="row">
               <div><strong>Fecha:</strong> ${fmtDMY(c.fecha)} ${obsPill}</div>
@@ -293,55 +273,43 @@
                &nbsp;|&nbsp; <strong>Tipo:</strong> ${c.tipoCombustible || '-'}
                &nbsp;|&nbsp; <strong>Método:</strong> ${c.metodoPago || '-'}</p>
             <p><strong>Litros:</strong> ${fmt(L,' l')}
-               &nbsp;|&nbsp; <strong>$/l:</strong> ${plitro!=null?fmt(plitro):'-'}
+               &nbsp;|&nbsp; <strong>$/l:</strong> ${pl!=null?fmt(pl):'-'}
                &nbsp;|&nbsp; <strong>Total:</strong> ${tot!=null? '$ '+fmt(tot) : '-'}</p>
             <div style="display:flex;justify-content:flex-end;">
               <button class="btn btn-verde" onclick="window._abrir('${key}')">Ver / Editar</button>
-            </div>
-          `;
+            </div>`;
           lista.appendChild(div);
         }
       }
 
       // Rango rápido
       rangoRapido.addEventListener('change', ()=>{
-        const now = new Date();
-        const y = now.getFullYear(), m = now.getMonth();
-        if (rangoRapido.value==='mes-actual'){
-          fDesde.value = new Date(y,m,1).toISOString().slice(0,10);
-          fHasta.value = new Date(y,m+1,0).toISOString().slice(0,10);
-        }else if (rangoRapido.value==='mes-pasado'){
-          fDesde.value = new Date(y,m-1,1).toISOString().slice(0,10);
-          fHasta.value = new Date(y,m,0).toISOString().slice(0,10);
-        }else if (rangoRapido.value==='ultimos-30'){
-          const d = new Date(); d.setDate(d.getDate()-30);
-          fDesde.value = d.toISOString().slice(0,10);
-          fHasta.value = new Date().toISOString().slice(0,10);
-        }else if (rangoRapido.value==='todo'){
-          fDesde.value=''; fHasta.value='';
-        }else{
-          fDesde.value=''; fHasta.value='';
-        }
+        const now=new Date(); const y=now.getFullYear(), m=now.getMonth();
+        if(rangoRapido.value==='mes-actual'){
+          fDesde.value=new Date(y,m,1).toISOString().slice(0,10);
+          fHasta.value=new Date(y,m+1,0).toISOString().slice(0,10);
+        }else if(rangoRapido.value==='mes-pasado'){
+          fDesde.value=new Date(y,m-1,1).toISOString().slice(0,10);
+          fHasta.value=new Date(y,m,0).toISOString().slice(0,10);
+        }else if(rangoRapido.value==='ultimos-30'){
+          const d=new Date(); d.setDate(d.getDate()-30);
+          fDesde.value=d.toISOString().slice(0,10);
+          fHasta.value=new Date().toISOString().slice(0,10);
+        }else{ fDesde.value=''; fHasta.value=''; }
         render();
       });
 
-      [fDesde,fHasta,fPatente,fTipo,fMetodo,fCuitOrigen,fBuscar].forEach(el => el.addEventListener('input', render));
+      [fDesde,fHasta,fPatente,fTipo,fMetodo,fCuitOrigen,fBuscar].forEach(el=>el.addEventListener('input',render));
       btnLimpiar.addEventListener('click', ()=>{ fDesde.value=''; fHasta.value=''; rangoRapido.value=''; fPatente.value=''; fTipo.value=''; fMetodo.value=''; fCuitOrigen.value=''; fBuscar.value=''; render(); });
       btnNueva.addEventListener('click', ()=>{ window.location.href='agregar-combustible.html'; });
 
-      /* ====== IMPRIMIR ====== */
+      // IMPRIMIR
       btnImprimir.addEventListener('click', ()=>{
         const datos = todas.filter(pasaFiltros);
-        let tLitros=0, tTotal=0;
-        for (const c of datos){
-          const L = Number(c.litros || 0);
-          const T = calcTotal(c) ?? 0;
-          tLitros += L; tTotal += T;
-        }
-        const tProm = tLitros>0 ? (tTotal/tLitros) : 0;
+        let tLitros=0,tTotal=0;
         const rows = datos.map(c=>{
-          const L = Number(c.litros || 0);
-          const T = calcTotal(c);
+          const L = toNum(c.litros); tLitros+=L;
+          const T = calcTotal(c) ?? 0; tTotal+=T;
           const P = precioPorLitro(c);
           return `
             <tr>
@@ -352,9 +320,10 @@
               <td>${c.metodoPago || '-'}</td>
               <td class="r">${fmt(L)}</td>
               <td class="r">${P!=null?fmt(P):'-'}</td>
-              <td class="r">${T!=null?fmt(T):'-'}</td>
+              <td class="r">${fmt(T)}</td>
             </tr>`;
         }).join('');
+        const prom = tLitros>0 ? (tTotal/tLitros) : 0;
 
         const html = `
 <!DOCTYPE html><html><head><meta charset="utf-8"><title>Cargas de combustible</title>
@@ -387,14 +356,13 @@
       <tr>
         <td colspan="5">Totales</td>
         <td class="r">${fmt(tLitros)}</td>
-        <td class="r">${tLitros>0?fmt(tProm):'-'}</td>
+        <td class="r">${tLitros>0?fmt(prom):'-'}</td>
         <td class="r">${fmt(tTotal)}</td>
       </tr>
     </tfoot>
   </table>
 </body></html>`;
-        const w = window.open('', '_blank', 'width=900,height=1000');
-        w.document.write(html); w.document.close(); w.focus();
+        const w=window.open('','_blank','width=900,height=1000'); w.document.write(html); w.document.close(); w.focus();
       });
 
       // ------- MODAL -------
@@ -402,21 +370,20 @@
       const get = id => document.getElementById(id);
 
       window._abrir = (key) => {
-        // key: "<col>|<id>"
         const [colName, id] = String(key).split('|');
         const c = todas.find(x => x.id === id && x._col === colName);
         if (!c) return;
         actualId = id; actualCol = colName;
         get('e_fecha').value = c.fecha || '';
         get('e_patente').value = c.patenteCamion || '';
-        get('e_litros').value = c.litros || '';
-        get('e_precioLitro').value = (c.precioPorLitro ?? '');
-        get('e_total').value = (c.totalPagado ?? '');
+        get('e_litros').value = toNum(c.litros) || '';
+        get('e_precioLitro').value = (c.precioPorLitro!=null && c.precioPorLitro!=='') ? toNum(c.precioPorLitro) : '';
+        get('e_total').value = (c.totalPagado!=null && c.totalPagado!=='') ? toNum(c.totalPagado) : '';
         get('e_estacion').value = c.estacionServicio || '';
         get('e_tipo').value = c.tipoCombustible || '';
         get('e_metodo').value = c.metodoPago || '';
         get('e_obs').value = c.observaciones || '';
-        modal.style.display = 'flex';
+        modal.style.display='flex';
       };
 
       document.getElementById('btnCerrar').onclick = ()=> modal.style.display='none';
@@ -425,9 +392,9 @@
         const data = {
           fecha: get('e_fecha').value || null,
           patenteCamion: get('e_patente').value.trim(),
-          litros: Number(get('e_litros').value || 0),
-          precioPorLitro: get('e_precioLitro').value==='' ? null : Number(get('e_precioLitro').value),
-          totalPagado: get('e_total').value==='' ? null : Number(get('e_total').value),
+          litros: toNum(get('e_litros').value || 0),
+          precioPorLitro: get('e_precioLitro').value==='' ? null : toNum(get('e_precioLitro').value),
+          totalPagado: get('e_total').value==='' ? null : toNum(get('e_total').value),
           estacionServicio: get('e_estacion').value.trim(),
           tipoCombustible: get('e_tipo').value,
           metodoPago: get('e_metodo').value,
