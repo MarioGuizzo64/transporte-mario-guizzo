@@ -36,12 +36,9 @@
   .right{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
   .volver{margin-top:14px}
   .note{font-size:12px;opacity:.75}
-
-  /* Chips de patentes */
   .chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
   .chip{background:#151515;border:1px solid #333;color:#fff;padding:6px 10px;border-radius:20px;cursor:pointer;font-size:12px}
   .chip.active{background:#1976d2;border-color:#1976d2}
-
   @media (max-width:1100px){.cards{grid-template-columns:repeat(4,1fr)}}
   @media (max-width:780px){.cards{grid-template-columns:repeat(2,1fr)} .grid2{grid-template-columns:1fr}}
 </style>
@@ -50,30 +47,24 @@
 <div class="wrap">
   <h1>Finanzas</h1>
 
-  <!-- TABS -->
   <div class="tabs">
     <button class="tab active" data-tab="resumen">Resumen</button>
     <button class="tab" data-tab="chofer">Por chofer</button>
     <button class="tab" data-tab="tabla">Tabla</button>
   </div>
 
-  <!-- FILTROS -->
   <div class="bar">
     <input type="date" id="fDesde">
     <input type="date" id="fHasta">
-
     <select id="fChofer"><option value="">Todos los choferes</option></select>
     <select id="fPatente"><option value="">Todas las patentes</option></select>
-
     <select id="fEstadoMant">
       <option value="">Mantenimiento (todos)</option>
       <option value="pagado">Mantenimiento pagado</option>
       <option value="adeudado">Mantenimiento adeudado</option>
     </select>
-
     <input id="fQ" placeholder="Buscar (estación, proveedor, obs)">
     <button id="btnLimpiar" class="btn btn-naranja">Limpiar</button>
-
     <div class="right" style="margin-left:auto">
       <button id="btnCSV" class="btn btn-azul">Exportar CSV</button>
       <button id="btnPrintTabla" class="btn btn-verde">Imprimir tabla</button>
@@ -81,7 +72,6 @@
     </div>
   </div>
 
-  <!-- CARDS -->
   <div id="cards" class="cards panel">
     <div class="card"><small>Ingresos</small>          <b id="kIng">$ 0</b></div>
     <div class="card"><small>Combustible</small>       <b id="kComb">$ 0</b></div>
@@ -96,11 +86,8 @@
     <div class="card" style="grid-column: span 4"><small>MARGEN (Ingresos – Gastos)</small><b id="kMargen">$ 0</b></div>
   </div>
 
-  <!-- RESUMEN -->
   <section id="tab-resumen">
-    <!-- chips de patentes -->
     <div id="chipsPat" class="chips"></div>
-
     <div class="grid2">
       <div class="panel">
         <h3 style="margin:6px 0 12px">Ingresos vs Egresos <span id="titPatente"></span></h3>
@@ -115,7 +102,6 @@
     </div>
   </section>
 
-  <!-- POR CHOFER -->
   <section id="tab-chofer" style="display:none">
     <div class="panel">
       <h3 style="margin:6px 0 12px">Liquidación por Chofer</h3>
@@ -163,7 +149,6 @@
     </div>
   </section>
 
-  <!-- TABLA -->
   <section id="tab-tabla" style="display:none">
     <div class="panel">
       <h3 style="margin:6px 0 12px">Movimientos (Ingresos + Egresos)</h3>
@@ -187,10 +172,8 @@
 </div>
 
 <script type="module">
-/* ==================== CONFIG ==================== */
 const DEFAULT_COMMISSION = 0.20;
 
-/* ==================== Firebase ==================== */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -207,20 +190,17 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db  = getFirestore(app);
 
-/* Esperar sesión (las reglas requieren auth) */
 onAuthStateChanged(auth, (u) => {
   if (!u) { location.href = "login.html"; return; }
   start();
 });
 
-/* ==================== Estado ==================== */
 let viajes = [], _comb1 = [], _comb2 = [], combustible = [], mant = [], usuarios = [];
 let movs = [];
 let patSet = new Set(), choSet = new Set();
 let activeTab = 'resumen';
-let selectedPatChip = ''; // '' = Total
+let selectedPatChip = '';
 
-/* ==================== Refs UI ==================== */
 const fDesde   = document.getElementById('fDesde');
 const fHasta   = document.getElementById('fHasta');
 const fChofer  = document.getElementById('fChofer');
@@ -247,7 +227,6 @@ const titPat2 = document.getElementById('titPatente2');
 
 const fmt = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
 
-/* ===== Debug visible ===== */
 let dbg = document.getElementById('dbg');
 if (!dbg){
   dbg = document.createElement('div');
@@ -260,18 +239,17 @@ const showDbg = (extra='')=>{
   dbg.textContent = `docs → viajes:${viajes.length} · combustible:${combustible.length} · mant:${mant.length} · choferes:${usuarios.length} ${extra?'· '+extra:''}`;
 };
 
-/* ==================== Normalizadores ==================== */
-// Parsear números en formato AR (quita puntos de miles y usa coma como decimal)
+/* --------- Helpers --------- */
 function parseARS(x){
   if (typeof x === 'number') return isFinite(x)?x:0;
   if (x == null) return 0;
-  let s = String(x).trim();
+  // deja solo dígitos, coma, punto y signo; luego quita separador de miles y usa coma como decimal
+  let s = String(x).trim().replace(/[^\d,.\-]/g,'');
   if (!s) return 0;
   s = s.replace(/\./g,'').replace(',', '.');
   const n = Number(s);
   return isNaN(n) ? 0 : n;
 }
-// Fecha → 'YYYY-MM-DD' (acepta string, Date, Timestamp, {seconds}, etc.)
 function fechaStr(x){
   if (!x) return '';
   if (typeof x === 'string') return x.slice(0,10);
@@ -282,63 +260,54 @@ function fechaStr(x){
   }
   return String(x).slice(0,10);
 }
-// Validar patentes (AAA123 o AA123AA, con o sin espacio)
 function isPatente(p){
   if (!p) return false;
   const s = String(p).replace(/\s/g,'').toUpperCase();
   return /^[A-Z]{3}\d{3}$/.test(s) || /^[A-Z]{2}\d{3}[A-Z]{2}$/.test(s);
 }
-// Viajes: aceptar nombres alternativos
 const fechaViaje = (v) => fechaStr(v.fecha || v.fechaViaje || v.fechaSalida || v.fechaCarga || v.createdAt || null);
 
-// Combustible (nombres alternativos)
 const combPatente  = (c) => (c.patenteCamion || c.patente || '').trim().toUpperCase();
 const combEstacion = (c) => c.estacionServicio || c.estacion || '';
 const combMetodo   = (c) => c.metodoPago || c.metodo || '';
 const combTipo     = (c) => c.tipoCombustible || c.tipo || '';
 const combFecha    = (c) => fechaStr(c.fecha || c.fechaCarga || c.fechaCompra || null);
+
+// ⚠️ PRIORIDAD: litros×precio  → si no se puede, usa totalPagado/total
 const combTotal    = (c) => {
-  // si hay total explícito, usarlo; si no, litros × precio
-  const explicitos = [c.totalPagado, c.total];
-  for (const v of explicitos){
+  const litros = parseARS(c.litros);
+  const precio = parseARS(c.precioPorLitro ?? c.sl);
+  if (litros>0 && precio>0) return litros*precio;
+
+  const cand = [c.totalPagado, c.total];
+  for (const v of cand){
     const n = parseARS(v);
     if (n>0) return n;
   }
-  const litros = parseARS(c.litros);
-  const precio = parseARS(c.precioPorLitro ?? c.sl);
-  return (litros>0 && precio>0) ? litros*precio : 0;
+  return 0;
 };
 
-// Ingreso de viaje (varios campos)
 function ingresoViaje(v){
   const cand = [v.importeCobrado, v.totalCobrado, v.importe, v.ingreso, v.total];
   for (const val of cand){
     const n = parseARS(val);
     if (n>0) return n;
   }
-  // cálculo por tarifa
   const kg = parseARS(v.kgDescargados ?? v.kg ?? v.kgDesc ?? 0);
-  const tTon = parseARS(v.tarifaPorTon ?? v.tarifa ?? 0); // $/tn
-  const tKg  = parseARS(v.tarifaPorKg ?? 0);              // $/kg
-  if (tTon>0 && kg>0){
-    // Si parece toneladas (<= 1000), tomar directo; si no, convertir desde kg
-    return (kg > 1000) ? (kg/1000)*tTon : kg*tTon;
-  }
+  const tTon = parseARS(v.tarifaPorTon ?? v.tarifa ?? 0);
+  const tKg  = parseARS(v.tarifaPorKg ?? 0);
+  if (tTon>0 && kg>0){ return (kg>1000 ? (kg/1000)*tTon : kg*tTon); }
   if (tKg>0 && kg>0) return kg*tKg;
   return 0;
 }
 
-/* ==================== Lectura de colecciones ==================== */
-const onErr = (col) => (err)=>{ console.error(col, err); showDbg(`ERROR ${col}: ${err.code||''}`); };
-
 function start(){
   onSnapshot(collection(db,'usuarios'), qs=>{
-    usuarios = qs.docs.map(d => ({id:d.id, ...d.data()}))
-      .filter(u => (u.rol||'').toLowerCase()!==''); // todos (admin/chofer)
+    usuarios = qs.docs.map(d => ({id:d.id, ...d.data()}));
     choSet.clear();
     usuarios.forEach(u => choSet.add( (u.nombre||u.displayName||u.email||'').trim() ));
     poblarChoferes(); showDbg(); render();
-  }, onErr('usuarios'));
+  });
 
   onSnapshot(collection(db,'viajes'), qs=>{
     viajes = qs.docs.map(d => ({id:d.id, ...d.data()}));
@@ -348,24 +317,23 @@ function start(){
       if (v.chofer)  choSet.add((v.chofer||'').trim());
     });
     poblarPatentes(); poblarChoferes(); showDbg(); render();
-  }, onErr('viajes'));
+  });
 
-  // Combustible (ambas colecciones)
   onSnapshot(collection(db,'cargas-combustible'), qs=>{
     _comb1 = qs.docs.map(d => ({id:d.id, ...d.data()}));
-    recomputeCombustible(); 
-  }, onErr('cargas-combustible'));
+    recomputeCombustible();
+  });
 
   onSnapshot(collection(db,'cargasCombustible'), qs=>{
     _comb2 = qs.docs.map(d => ({id:d.id, ...d.data()}));
     recomputeCombustible();
-  }, onErr('cargasCombustible'));
+  });
 
   onSnapshot(collection(db,'mantenimientos'), qs=>{
     mant = qs.docs.map(d => ({id:d.id, ...d.data()}));
     mant.forEach(m=> { const p = (m.patente||'').trim().toUpperCase(); if (isPatente(p)) patSet.add(p); });
     poblarPatentes(); showDbg(); render();
-  }, onErr('mantenimientos'));
+  });
 }
 
 function recomputeCombustible(){
@@ -374,7 +342,6 @@ function recomputeCombustible(){
   poblarPatentes(); showDbg(); render();
 }
 
-/* ==================== Helpers UI ==================== */
 function poblarPatentes(){
   const prev = (fPatente.value||'').toUpperCase();
   const arr = Array.from(patSet).filter(isPatente).sort();
@@ -414,8 +381,6 @@ function pasaTexto(q, ...campos){
   if (!q) return true;
   return campos.some(c => ((c||'')+'').toLowerCase().includes(q));
 }
-
-// % comisión por nombre o por patente (acepta 'patentes' array o 'patente' string)
 function getPctChofer(nombre, patente){
   const byName = usuarios.find(u => (u.nombre||u.displayName||'').trim() === (nombre||'').trim());
   if (byName && Number(byName.porcentaje) >= 0) return Number(byName.porcentaje)/100;
@@ -429,7 +394,7 @@ function getPctChofer(nombre, patente){
   return DEFAULT_COMMISSION;
 }
 
-/* ==================== Render principal ==================== */
+/* --------- Render --------- */
 function render(){
   const d = fDesde.value||'', h = fHasta.value||'';
   const ch = fChofer.value||'', pt = (fPatente.value||'').toUpperCase();
@@ -437,7 +402,6 @@ function render(){
 
   movs = [];
 
-  // VIAJES
   const viajesFiltrados = viajes.filter(v=>{
     const f = fechaViaje(v);
     if (!inRangeFechaStr(f, d, h)) return false;
@@ -451,12 +415,11 @@ function render(){
     const ingreso = ingresoViaje(v);
     const f = fechaViaje(v);
     const patenteUp = String(v.patente||'').toUpperCase();
-    if (ingreso>0){
+    if (_ingresoValido(ingreso)){
       movs.push({fecha:f, tipo:'Ingreso', detalle:`${v.origen||''} → ${v.destino||''}`, chofer:v.chofer||'', patente:patenteUp, importe:ingreso});
-      // comisión como egreso
       const pct = getPctChofer(v.chofer, patenteUp);
       const comi = ingreso * pct;
-      if (comi>0){
+      if (_ingresoValido(comi)){
         movs.push({fecha:f, tipo:'Comisión', detalle:`Comisión chofer ${Math.round(pct*100)}%`, chofer:v.chofer||'', patente:patenteUp, importe:comi});
       }
     }
@@ -470,8 +433,8 @@ function render(){
       movs.push({fecha:f, tipo:'Adelanto', detalle:'Adelanto chofer', chofer:v.chofer||'', patente:patenteUp, importe:parseARS(v.adelantoMonto)});
     }
   }
+  function _ingresoValido(n){ return Number(n||0) > 0; }
 
-  // COMBUSTIBLE
   combustible.filter(c=>{
     const f = combFecha(c);
     if (!inRangeFechaStr(f, d, h)) return false;
@@ -491,7 +454,6 @@ function render(){
     });
   });
 
-  // MANTENIMIENTO
   mant.filter(m=>{
     const f = fechaStr(m.fecha);
     if (!inRangeFechaStr(f, d, h)) return false;
@@ -535,7 +497,6 @@ function render(){
   kGastos.textContent  = fmt(gastos);
   kMargen.textContent  = fmt(margen);
 
-  // Tabla
   tbody.innerHTML = movs.length ? movs.map(m=>`
     <tr>
       <td>${m.fecha}</td>
@@ -551,7 +512,6 @@ function render(){
   showDbg();
 }
 
-/* ---- Liquidación por chofer ---- */
 function renderChofer(viajesFiltrados){
   const map = new Map();
   for (const v of viajesFiltrados){
@@ -584,7 +544,6 @@ function renderChofer(viajesFiltrados){
       <td class="monto"><b>${fmt(r.liquidacion)}</b></td>
     </tr>`).join('') : `<tr><td colspan="9" style="padding:14px;opacity:.85">Sin viajes en el rango.</td></tr>`;
 
-  // por Chofer y Patente
   const map2 = new Map();
   for (const v of viajesFiltrados){
     const key = (v.chofer||'(Sin chofer)') + '||' + (String(v.patente||'(sin patente)').toUpperCase());
@@ -621,7 +580,6 @@ function renderChofer(viajesFiltrados){
   window.__rowsChoferPat = rows2;
 }
 
-/* ---- Charts ---- */
 function renderCharts(movsAll){
   if (!window.Chart){ return; }
   const mm = selectedPatChip ? movsAll.filter(m=>m.patente===selectedPatChip) : movsAll;
@@ -663,25 +621,20 @@ function renderCharts(movsAll){
   });
 }
 
-/* ==================== Eventos ==================== */
+/* Eventos */
 [fDesde,fHasta,fChofer,fPatente,fEstadoMant,fQ].forEach(el => el.addEventListener('input', render));
 document.getElementById('btnLimpiar').addEventListener('click', ()=>{
   fDesde.value=''; fHasta.value=''; fChofer.value=''; fPatente.value=''; fEstadoMant.value=''; fQ.value='';
   render();
 });
-
-/* Tabs */
-const tabs = document.querySelectorAll('.tab');
-tabs.forEach(b=>{
+document.querySelectorAll('.tab').forEach(b=>{
   b.onclick = ()=>{
-    tabs.forEach(x=>x.classList.remove('active')); b.classList.add('active');
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); b.classList.add('active');
     document.querySelectorAll('section[id^="tab-"]').forEach(s=>s.style.display='none');
     document.getElementById('tab-'+b.dataset.tab).style.display='block';
     activeTab = b.dataset.tab;
   };
 });
-
-/* CSV */
 document.getElementById('btnCSV').addEventListener('click', ()=>{
   if (!movs.length){ alert('No hay datos.'); return; }
   const head = ['Fecha','Tipo','Detalle','Chofer','Patente','Importe'];
@@ -692,8 +645,6 @@ document.getElementById('btnCSV').addEventListener('click', ()=>{
   const a = document.createElement('a'); a.href = url; a.download = 'finanzas.csv'; a.click();
   URL.revokeObjectURL(url);
 });
-
-/* Print tabla */
 document.getElementById('btnPrintTabla').addEventListener('click', ()=>{
   if (activeTab !== 'tabla'){ document.querySelector('.tab[data-tab="tabla"]').click(); return; }
   const rows = movs.map(m => `
@@ -706,8 +657,6 @@ document.getElementById('btnPrintTabla').addEventListener('click', ()=>{
 <table><thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Chofer</th><th>Patente</th><th class="r">Importe</th></tr></thead><tbody>${rows||'<tr><td colspan="6">Sin datos</td></tr>'}</tbody></table></body></html>`;
   const w = window.open('', '_blank', 'width=900,height=1000'); w.document.write(html); w.document.close(); w.focus();
 });
-
-/* Print liquidación */
 document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
   if (activeTab !== 'chofer'){ document.querySelector('.tab[data-tab="chofer"]').click(); return; }
   const rows  = (window.__rowsChofer||[]);
