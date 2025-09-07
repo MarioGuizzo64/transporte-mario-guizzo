@@ -1,299 +1,378 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Ver cargas</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VER COMBUSTIBLE</title>
   <style>
-    /* MISMO ESTILO QUE ver-viajes.html */
-    body{margin:0;background:#FFD700;font-family:Arial,sans-serif;color:#fff}
-    .contenedor{background:#111;margin:50px auto;padding:20px;border-radius:10px;max-width:900px}
-    h1{text-align:center;text-decoration:underline;color:#fff;margin-top:0}
-    .bar{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap}
-    .bar input,.bar select{padding:8px;border:1px solid #000;border-radius:6px;background:#fff;color:#000}
-    .item{background:#222;margin:10px 0;padding:14px;border-radius:10px}
-    .item p{margin:4px 0}
-    .muted{opacity:.75}
-    .boton{padding:8px 14px;margin:4px 6px 0 0;border:none;border-radius:6px;cursor:pointer;font-weight:bold}
-    .editar{background:#2e7d32;color:#fff}
-    .eliminar{background:#d32f2f;color:#fff}
-    .volver{background:orange;color:#000}
-    .tag{display:inline-block;background:#333;border:1px solid #444;border-radius:999px;padding:2px 8px;margin-left:6px;font-size:12px}
-    .empty{padding:16px;background:#1a1a1a;border:1px dashed #333;border-radius:8px;text-align:center}
+    body{margin:0;background:#FFD700;font-family:Arial,sans-serif;color:#fff;}
+    .container{
+      background:#000;
+      max-width:980px;
+      margin:40px auto;
+      padding:24px;
+      border-radius:12px;
+      box-shadow:0 10px 30px rgba(0,0,0,.35)
+    }
+    h1{text-align:center;text-transform:uppercase;text-decoration:underline;margin:0 0 16px}
+    .filtros{display:grid;grid-template-columns:repeat(auto-fit, minmax(160px,1fr));gap:8px;margin:0 0 16px 0;}
+    .filtros input,.filtros select{padding:8px;border:1px solid #000;border-radius:4px;color:#000;background:#fff}
+    .btn{padding:10px;border:1px solid #000;border-radius:6px;font-weight:bold;cursor:pointer;text-transform:uppercase}
+    .btn-verde{background:green;color:#fff}
+    .btn-naranja{background:orange;color:#000}
+    .btn-azul{background:#1976d2;color:#fff}
+    .btn-volver{margin-top:16px}
+    .lista{display:grid;gap:10px}
+    .item{background:#191919;border-radius:10px;padding:12px}
+    .item p{margin:3px 0}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+    .pill{display:inline-block;background:#333;border-radius:999px;padding:2px 8px;font-size:12px;margin-left:8px}
+    .resumen{background:#111;border:1px solid #222;border-radius:10px;padding:10px 12px;margin:0 0 16px 0;display:grid;grid-template-columns:repeat(auto-fit, minmax(160px,1fr));gap:8px;}
+    .resumen .card{background:#0f1a0f;border:1px solid #1f3d1f;border-radius:8px;padding:10px;text-align:center;}
+    .resumen .card .label{font-size:12px;color:#a0d8a0;text-transform:uppercase}
+    .resumen .card .value{font-weight:bold;font-size:18px}
   </style>
 </head>
 <body>
-  <div class="contenedor">
-    <h1>Cargas de combustible</h1>
+  <div class="container">
+    <h1>Ver Combustible</h1>
 
-    <div class="bar">
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <div>
-          <label class="muted">Buscar:</label>
-          <input id="q" placeholder="estación, patente, tipo, chofer, CUIL…" />
-        </div>
-        <!-- contador como pill, igual estilo que ver-viajes -->
-        <span class="tag" id="countTag">Cargas: 0</span>
-      </div>
+    <!-- FILTROS -->
+    <form class="filtros" id="formFiltros">
+      <input type="date" id="desde"/>
+      <input type="date" id="hasta"/>
+      <select id="rangoRapido">
+        <option value="">Período…</option>
+        <option value="mes-actual">Mes actual</option>
+        <option value="mes-pasado">Mes pasado</option>
+        <option value="ultimos-30">Últimos 30 días</option>
+        <option value="todo">Todo</option>
+      </select>
+      <select id="fPatente"><option value="">Mis patentes</option></select>
+      <select id="fTipo"><option value="">Todos los tipos</option></select>
+      <select id="fMetodo"><option value="">Todos los métodos</option></select>
+      <input type="text" id="fCuitOrigen" placeholder="CUIT origen (opcional)"/>
+      <input type="text" id="buscar" placeholder="Buscar (estación, patente, obs)"/>
+      <button type="button" class="btn btn-naranja" id="btnLimpiar">Limpiar</button>
+      <button type="button" class="btn btn-azul" id="btnImprimir">Imprimir</button>
+      <button type="button" class="btn btn-verde" id="btnNueva">Nueva carga</button>
+    </form>
 
-      <div>
-        <label class="muted">Ordenar por:</label>
-        <select id="orden">
-          <option value="fecha_desc">Fecha ↓</option>
-          <option value="fecha_asc">Fecha ↑</option>
-          <option value="ts_desc">Creación ↓</option>
-          <option value="ts_asc">Creación ↑</option>
-        </select>
-      </div>
-
-      <button class="boton volver" onclick="location.href='index.html'">Volver</button>
+    <!-- RESUMEN -->
+    <div id="resumen" class="resumen">
+      <div class="card"><div class="label">Litros</div><div class="value" id="r_litros">-</div></div>
+      <div class="card"><div class="label">Total $</div><div class="value" id="r_total">$ -</div></div>
+      <div class="card"><div class="label">$/Litro prom.</div><div class="value" id="r_promedio">-</div></div>
+      <div class="card"><div class="label">Cargas</div><div class="value" id="r_cargas">-</div></div>
     </div>
 
-    <div id="lista-cargas"></div>
-    <div id="msg" class="empty" style="display:none">Cargando…</div>
+    <!-- LISTA -->
+    <div id="lista" class="lista"></div>
+
+    <button class="btn btn-naranja btn-volver" onclick="location.href='index.html'">Volver</button>
   </div>
 
   <script type="module">
-    /* === Firebase (copiado al estilo de ver-viajes.html) === */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import {
-      getFirestore, collection, onSnapshot, getDocs, query, orderBy, where,
-      doc, getDoc
-      // , deleteDoc, updateDoc  // si luego querés eliminar/editar
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+    // Config
     const firebaseConfig = {
       apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
       authDomain: "transporte-mario-guizzo.firebaseapp.com",
       projectId: "transporte-mario-guizzo",
-      storageBucket: "transporte-mario-guizzo.firebasestorage.app",
+      storageBucket: "transporte-mario-guizzo.appspot.com",
       messagingSenderId: "465536166890",
-      appId: "1:465536166890:web:f658690629b09eca8fa093",
-      measurementId: "G-187MCQ2XPW"
+      appId: "1:465536166890:web:f658690629b09eca8fa093"
     };
-
     const app  = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
-    const lista  = document.getElementById("lista-cargas");
-    const msg    = document.getElementById("msg");
-    const qInp   = document.getElementById("q");
-    const selOrd = document.getElementById("orden");
-    const countTag = document.getElementById("countTag");
+    // ------- Utilidades -------
+    const fmtMoney = (n)=> new Intl.NumberFormat("es-AR",{style:"currency",currency:"ARS",maximumFractionDigits:0}).format(Number(n||0));
+    const fmtInt   = (n)=> new Intl.NumberFormat("es-AR",{maximumFractionDigits:0}).format(Number(n||0));
 
-    let datos = [];        // cargas en memoria (para filtrar/ordenar)
-    let unsub = null;      // para desuscribir onSnapshot actual
-    let esAdmin = false;   // rol
-    let miUid = null;      // uid logueado
-    let miEmailLower = ""; // email en minúsculas (fallback si no guardaste uid en cargas)
-
-    // Helpers
-    const safe = v => (v ?? '').toString();
-    const fmt  = s => {
-      const v = s?.seconds ? new Date(s.seconds*1000).toISOString().slice(0,10) : safe(s).slice(0,10);
-      return v;
-    };
-    const up   = s => safe(s).toUpperCase();
-    const toNum = v => {
-      const n = Number(v);
-      return Number.isFinite(n) ? n : 0;
-    };
-
-    function ordenarEnMemoria(arr, clave){
-      const getFechaStr = (c) => {
-        // fecha campo preferente: fechaCarga, fallback: fecha
-        return safe(c.fechaCarga ?? c.fecha) || '';
-      };
-      const getTs = (c) => toNum(c.timestamp);
-
-      const byFecha = (a,b) => getFechaStr(a).localeCompare(getFechaStr(b));
-      const byTs    = (a,b) => getTs(a) - getTs(b);
-
-      const copy = [...arr];
-      switch (clave){
-        case 'fecha_asc': copy.sort(byFecha); break;
-        case 'fecha_desc': copy.sort(byFecha).reverse(); break;
-        case 'ts_asc': copy.sort(byTs); break;
-        case 'ts_desc': copy.sort(byTs).reverse(); break;
+    function toNumber(v){
+      if (typeof v === "number") return v;
+      if (v==null) return 0;
+      // convierte "1.450" -> 1450 ; "499.356" -> 499356 ; "1,50" -> 1.5
+      const s = String(v).trim().replace(/\./g,"").replace(/,/g,".");
+      const n = Number(s);
+      return isNaN(n) ? 0 : n;
+    }
+    function parseFecha(f){
+      if (!f) return null;
+      if (typeof f === "string"){
+        if (/^\d{4}-\d{2}-\d{2}/.test(f)) return new Date(f);
+        if (/^\d{2}\/\d{2}\/\d{4}/.test(f)){ const [dd,mm,aa]=f.split("/"); return new Date(+aa,+mm-1,+dd); }
       }
-      return copy;
+      if (f.seconds) return new Date(f.seconds*1000);
+      const d = new Date(f); return isNaN(d) ? null : d;
+    }
+    const dmy = (f)=>{
+      const d = parseFecha(f);
+      if (!d) return "-";
+      const dd = String(d.getDate()).padStart(2,"0");
+      const mm = String(d.getMonth()+1).padStart(2,"0");
+      const aa = d.getFullYear();
+      return `${dd}/${mm}/${aa}`;
+    };
+
+    // Normalizadores de campos en ambas colecciones
+    const combPatente  = (c) => (c.patenteCamion || c.patente || "").trim();
+    const combEstacion = (c) => c.estacionServicio || c.estacion || "";
+    const combMetodo   = (c) => c.metodoPago || c.metodo || "";
+    const combTipo     = (c) => c.tipoCombustible || c.tipo || "";
+    const combFecha    = (c) => c.fecha || c.fechaCarga || c.fechaCompra || "";
+    const combTotal    = (c) => {
+      const L = toNumber(c.litros);
+      const P = toNumber(c.precioPorLitro ?? c.sl);
+      const T = (c.totalPagado==="" || c.totalPagado==null) ? (L>0 && P>0 ? L*P : 0) : toNumber(c.totalPagado);
+      return T;
+    };
+
+    // ------- Estado y refs -------
+    let MIS_PATENTES = new Set();      // del usuario
+    let todas = [];                     // merge de ambas colecciones
+
+    const lista = document.getElementById("lista");
+    const fDesde = document.getElementById("desde");
+    const fHasta = document.getElementById("hasta");
+    const rangoRapido = document.getElementById("rangoRapido");
+    const fPatente = document.getElementById("fPatente");
+    const fTipo = document.getElementById("fTipo");
+    const fMetodo = document.getElementById("fMetodo");
+    const fBuscar = document.getElementById("buscar");
+    const fCuitOrigen = document.getElementById("fCuitOrigen");
+    const btnLimpiar = document.getElementById("btnLimpiar");
+    const btnImprimir = document.getElementById("btnImprimir");
+    const btnNueva = document.getElementById("btnNueva");
+
+    const rLitros = document.getElementById("r_litros");
+    const rTotal  = document.getElementById("r_total");
+    const rProm   = document.getElementById("r_promedio");
+    const rCargas = document.getElementById("r_cargas");
+
+    // ------- Auth gate -------
+    onAuthStateChanged(auth, async (user) => {
+      if (!user){ location.href = "login.html"; return; }
+      // Obtener patentes del usuario
+      try{
+        const s = await getDoc(doc(db, "usuarios", user.uid));
+        if (s.exists()){
+          const u = s.data();
+          if (Array.isArray(u.patentes) && u.patentes.length) u.patentes.forEach(p=>MIS_PATENTES.add(String(p).trim()));
+          if (u.patente) MIS_PATENTES.add(String(u.patente).trim());
+        }
+      }catch(e){ console.warn("No se pudo leer usuarios/{uid}", e); }
+
+      // Snapshots de ambas colecciones
+      const pushAll = ()=>{
+        // poblar selects segun MIS_PATENTES y datos
+        const patOpts = Array.from(new Set(todas.map(x=>combPatente(x)).filter(p=>p && (MIS_PATENTES.size===0 || MIS_PATENTES.has(p))))).sort();
+        const tSel = fPatente.value, tiSel = fTipo.value, mSel = fMetodo.value;
+        fPatente.innerHTML = '<option value="">Mis patentes</option>' + patOpts.map(p=>`<option value="${p}">${p}</option>`).join("");
+        const tipos = Array.from(new Set(todas.map(x=>combTipo(x)).filter(Boolean))).sort();
+        const mets  = Array.from(new Set(todas.map(x=>combMetodo(x)).filter(Boolean))).sort();
+        fTipo.innerHTML = '<option value="">Todos los tipos</option>' + tipos.map(t=>`<option>${t}</option>`).join("");
+        fMetodo.innerHTML = '<option value="">Todos los métodos</option>' + mets.map(m=>`<option>${m}</option>`).join("");
+        if (tSel) fPatente.value = tSel;
+        if (tiSel) fTipo.value = tiSel;
+        if (mSel) fMetodo.value = mSel;
+        render();
+      };
+
+      onSnapshot(collection(db,"cargas-combustible"), (qs)=>{
+        const a = qs.docs.map(d=>({id:d.id, src:"a", ...d.data()}));
+        // mezclar/actualizar
+        todas = [
+          ...a,
+          ...todas.filter(x=>x.src!=="a")
+        ];
+        // ordenar por fecha descendente
+        todas.sort((x,y)=>{
+          const dx = parseFecha(combFecha(x)) || new Date(0);
+          const dy = parseFecha(combFecha(y)) || new Date(0);
+          return dy - dx;
+        });
+        pushAll();
+      }, (err)=>console.warn("cargas-combustible ERR:", err.code||err.message));
+
+      onSnapshot(collection(db,"cargasCombustible"), (qs)=>{
+        const b = qs.docs.map(d=>({id:d.id, src:"b", ...d.data()}));
+        todas = [
+          ...todas.filter(x=>x.src!=="b"),
+          ...b
+        ];
+        todas.sort((x,y)=>{
+          const dx = parseFecha(combFecha(x)) || new Date(0);
+          const dy = parseFecha(combFecha(y)) || new Date(0);
+          return dy - dx;
+        });
+        pushAll();
+      }, (err)=>console.warn("cargasCombustible ERR:", err.code||err.message));
+    });
+
+    // ------- Filtros / render -------
+    function dentroRango(fstr){
+      const d = fDesde.value? new Date(fDesde.value): null;
+      const h = fHasta.value? new Date(fHasta.value): null;
+      const x = parseFecha(fstr);
+      if (!x) return false;
+      if (d && x < d) return false;
+      if (h && x > new Date(h.getFullYear(), h.getMonth(), h.getDate(), 23,59,59,999)) return false;
+      return true;
+    }
+
+    function pasaFiltros(x){
+      const pat = combPatente(x);
+      if (MIS_PATENTES.size && !MIS_PATENTES.has(pat)) return false; // restringir a mis patentes
+      if (fPatente.value && pat !== fPatente.value) return false;
+      if (fTipo.value && combTipo(x) !== fTipo.value) return false;
+      if (fMetodo.value && combMetodo(x) !== fMetodo.value) return false;
+      if (fCuitOrigen.value){
+        const co = (x.cuitOrigen || "").toString();
+        if (!co.includes(fCuitOrigen.value.trim())) return false;
+      }
+      if (fDesde.value || fHasta.value){
+        if (!dentroRango(combFecha(x))) return false;
+      }
+      const q = fBuscar.value.trim().toLowerCase();
+      if (q){
+        const blob = [ combEstacion(x), combTipo(x), combMetodo(x), pat, x.observaciones ]
+          .map(v => (v||"")+"").join(" ").toLowerCase();
+        if (!blob.includes(q)) return false;
+      }
+      return true;
+    }
+
+    function actualizarResumen(datos){
+      const cargas = datos.length;
+      let totalLitros = 0, totalGasto  = 0;
+      for (const c of datos){
+        const L = toNumber(c.litros);
+        const T = combTotal(c);
+        totalLitros += L;
+        totalGasto  += T;
+      }
+      const prom = totalLitros>0 ? (totalGasto/totalLitros) : 0;
+      rLitros.textContent = fmtInt(totalLitros) + " l";
+      rTotal.textContent  = fmtMoney(totalGasto);
+      rProm.textContent   = totalLitros>0 ? fmtInt(prom) : "-";
+      rCargas.textContent = String(cargas);
     }
 
     function render(){
-      const qtxt = up(qInp.value.trim());
+      const datos = todas.filter(pasaFiltros);
+      actualizarResumen(datos);
       lista.innerHTML = "";
-
-      // ordenar primero en memoria (como hiciste en ver-viajes para modo chofer)
-      const ordenados = ordenarEnMemoria(datos, selOrd.value);
-
-      const fil = qtxt
-        ? ordenados.filter(c => (
-            up(c.estacion || c.estacionServicio).includes(qtxt) ||
-            up(c.patente || c.patenteCamion).includes(qtxt) ||
-            up(c.tipo || c.tipoCombustible).includes(qtxt) ||
-            up(c.chofer).includes(qtxt) ||
-            up(c.cuil || c.cuit || c.cuitOrigen).includes(qtxt)
-          ))
-        : ordenados;
-
-      // contador
-      countTag.textContent = `Cargas: ${fil.length}`;
-
-      if (!fil.length){
-        msg.style.display = "block";
-        msg.textContent = "No hay cargas para mostrar.";
+      if (!datos.length){
+        lista.innerHTML = '<div class="item"><p>No hay cargas para los filtros seleccionados.</p></div>';
         return;
-      } else {
-        msg.style.display = "none";
       }
-
-      for (const c of fil){
-        const fecha = fmt(c.fechaCarga ?? c.fecha);
-        const litros = toNum(c.litros ?? c.cantidadLitros ?? c.cantidad);
-        const pxl = toNum(c.precioPorLitro ?? c.precio);
-        const total = c.total ?? (litros && pxl ? (litros*pxl) : 0);
-
-        const el = document.createElement("div");
-        el.className = "item";
-        el.innerHTML = `
-          <p><strong>Fecha:</strong> ${fecha || "-"}</p>
-          <p><strong>Litros:</strong> ${litros || "-"}</p>
-          <p><strong>Precio x litro:</strong> ${pxl ? ('$ ' + pxl) : "-"}</p>
-          <p><strong>Total pagado:</strong> ${total ? ('$ ' + total) : "-"}</p>
-          <p><strong>Estación:</strong> ${safe(c.estacion || c.estacionServicio) || "-"}</p>
-          <p><strong>Tipo:</strong> ${safe(c.tipo || c.tipoCombustible) || "-"}</p>
-          <p><strong>Patente:</strong> ${safe(c.patente || c.patenteCamion) || "-"}</p>
-          <p class="muted">
-            <span class="tag">Chofer: ${safe(c.chofer)||"-"}</span>
-            ${c.uid ? `<span class="tag">UID: ${c.uid}</span>` : ``}
-          </p>
-          <!-- Si más adelante querés edición/eliminación, activás estos botones:
-          <button class="boton editar" data-edit="${c.__id}">Editar</button>
-          <button class="boton eliminar" data-del="${c.__id}">Eliminar</button>
-          -->
+      for (const c of datos){
+        const litros = toNumber(c.litros);
+        const total  = combTotal(c);
+        const plitro = (litros>0) ? (total/litros) : 0;
+        const obsPill = c.observaciones ? '<span class="pill" style="background:#b71c1c">OBSERVACIONES</span>' : '';
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `
+          <div class="row">
+            <div><strong>Fecha:</strong> ${dmy(combFecha(c))} ${obsPill}</div>
+            <div><strong>Patente:</strong> ${combPatente(c) || '-'}</div>
+          </div>
+          <p><strong>Estación:</strong> ${combEstacion(c) || '-'}
+             &nbsp;|&nbsp; <strong>Tipo:</strong> ${combTipo(c) || '-'}
+             &nbsp;|&nbsp; <strong>Método:</strong> ${combMetodo(c) || '-'}</p>
+          <p><strong>Litros:</strong> ${fmtInt(litros)} l
+             &nbsp;|&nbsp; <strong>$/l:</strong> ${plitro? fmtInt(plitro):'-'}
+             &nbsp;|&nbsp; <strong>Total:</strong> ${fmtMoney(total)}</p>
         `;
-        lista.appendChild(el);
-      }
-
-      // listeners si activás edición/eliminación
-      // lista.querySelectorAll('[data-edit]').forEach(b=>{
-      //   b.onclick = ()=> editarCarga(b.getAttribute('data-edit'));
-      // });
-      // lista.querySelectorAll('[data-del]').forEach(b=>{
-      //   b.onclick = ()=> eliminarCarga(b.getAttribute('data-del'));
-      // });
-    }
-
-    // Suscripción según rol (misma idea que ver-viajes)
-    function escuchar(){
-      if (unsub) { try{unsub();}catch(_){} unsub = null; }
-
-      const ref = collection(db, "cargasCombustible");
-      msg.style.display = "block";
-      msg.textContent = "Cargando…";
-
-      // ---- ADMIN: ve todo, con orderBy en el query ----
-      if (esAdmin){
-        let qy;
-        switch(selOrd.value){
-          case 'fecha_asc': qy = query(ref, orderBy('fechaCarga','asc')); break;
-          case 'ts_desc':   qy = query(ref, orderBy('timestamp','desc')); break;
-          case 'ts_asc':    qy = query(ref, orderBy('timestamp','asc')); break;
-          default:          qy = query(ref, orderBy('fechaCarga','desc')); // fecha_desc
-        }
-        unsub = onSnapshot(qy, snap=>{
-          datos = snap.docs.map(d => ({ __id:d.id, ...d.data() }));
-          render();
-        }, onErr);
-        return;
-      }
-
-      // ---- CHOFER: filtra por uid; si no hay, por emailLower ----
-      let qyChofer = null;
-
-      if (miUid){
-        qyChofer = query(ref, where('uid','==', miUid));
-      }
-
-      const subscribeChofer = (qy) => {
-        unsub = onSnapshot(qy, async snap=>{
-          let arr = snap.docs.map(d => ({ __id:d.id, ...d.data() }));
-
-          // Si por UID no trajo nada y tenemos emailLower guardado en docs, intento fallback
-          if (!arr.length && miEmailLower){
-            const q2 = query(ref, where('email','==', miEmailLower));
-            const s2 = await getDocs(q2);
-            arr = s2.docs.map(d => ({ __id:d.id, ...d.data() }));
-          }
-
-          datos = arr;
-          render(); // el orden ya lo aplicamos en memoria
-        }, onErr);
-      };
-
-      if (qyChofer) subscribeChofer(qyChofer);
-      else {
-        // Si no tenemos uid por algún motivo, intentamos directo por email
-        if (miEmailLower){
-          const q2 = query(ref, where('email','==', miEmailLower));
-          subscribeChofer(q2);
-        } else {
-          datos = [];
-          msg.style.display = "block";
-          msg.textContent = "No hay cargas para mostrar.";
-          render();
-        }
+        lista.appendChild(div);
       }
     }
 
-    function onErr(err){
-      console.error(err);
-      msg.style.display = "block";
-      msg.textContent = "No se pudieron cargar las cargas ("+(err.code||err.message)+").";
-    }
-
-    // Eventos UI
-    qInp.addEventListener('input', render);
-    selOrd.addEventListener('change', escuchar); // re-suscribimos (admin usa orderBy del query)
-
-    // Auth + rol (igual lógica que ver-viajes)
-    onAuthStateChanged(auth, async (u)=>{
-      if (!u){ location.href = "login.html"; return; }
-      miUid = u.uid;
-      miEmailLower = (u.email || "").toLowerCase();
-
-      try{
-        // Perfil del usuario en 'usuarios' por UID (como haces en ver-viajes)
-        const perfilSnap = await getDoc(doc(db, "usuarios", u.uid));
-        const perfil = perfilSnap.exists() ? perfilSnap.data() : {};
-        esAdmin = (perfil.rol || "").toLowerCase() === "admin";
-      }catch(e){
-        console.warn("No se pudo leer el perfil del usuario:", e);
-        esAdmin = false;
-      }
-
-      escuchar();
+    // Eventos filtros
+    [fDesde,fHasta,fPatente,fTipo,fMetodo,fBuscar,fCuitOrigen].forEach(el => el.addEventListener('input', render));
+    btnLimpiar.addEventListener('click', ()=>{
+      fDesde.value=''; fHasta.value=''; rangoRapido.value='';
+      fPatente.value=''; fTipo.value=''; fMetodo.value='';
+      fCuitOrigen.value=''; fBuscar.value='';
+      render();
     });
 
-    // Si más adelante activás edición/eliminación:
-    // async function eliminarCarga(id){
-    //   if (!confirm("¿Eliminar la carga?")) return;
-    //   try{ await deleteDoc(doc(db,"cargasCombustible",id)); }
-    //   catch(e){ alert("No se pudo eliminar: " + (e.code||e.message)); }
-    // }
-    // async function editarCarga(id){
-    //   const c = datos.find(x=>x.__id===id); if (!c) return;
-    //   const nf = prompt("Fecha (YYYY-MM-DD):", fmt(c.fechaCarga || c.fecha)); if (nf===null) return;
-    //   const nl = prompt("Litros:", c.litros ?? c.cantidadLitros ?? ""); if (nl===null) return;
-    //   const np = prompt("Precio x litro:", c.precioPorLitro ?? c.precio ?? ""); if (np===null) return;
-    //   try{
-    //     await updateDoc(doc(db,"cargasCombustible",id), {
-    //       fechaCarga: nf.trim(), litros: Number(nl), precioPorLitro: Number(np),
-    //       total: Number(nl) && Number(np) ? Number(nl)*Number(np) : null
-    //     });
-    //   }catch(e){ alert("No se pudo actualizar: " + (e.code||e.message)); }
-    // }
+    // Períodos rápidos
+    rangoRapido.addEventListener("change", ()=>{
+      const now = new Date();
+      const y = now.getFullYear(), m = now.getMonth();
+      const fmt = (d)=> d.toISOString().slice(0,10);
+      if (rangoRapido.value === "mes-actual"){
+        const d1 = new Date(y,m,1);
+        const d2 = new Date(y,m+1,0);
+        fDesde.value = fmt(d1); fHasta.value = fmt(d2);
+      }else if (rangoRapido.value === "mes-pasado"){
+        const d1 = new Date(y,m-1,1);
+        const d2 = new Date(y,m,0);
+        fDesde.value = fmt(d1); fHasta.value = fmt(d2);
+      }else if (rangoRapido.value === "ultimos-30"){
+        const d1 = new Date(now); d1.setDate(d1.getDate()-30);
+        fDesde.value = fmt(d1); fHasta.value = fmt(now);
+      }else if (rangoRapido.value === "todo"){
+        fDesde.value=''; fHasta.value='';
+      }else{
+        return;
+      }
+      render();
+    });
+
+    // Imprimir
+    btnImprimir.addEventListener("click", ()=>{
+      // usamos el render actual
+      const datos = todas.filter(pasaFiltros);
+      const rows = datos.map(c=>`
+        <tr>
+          <td>${dmy(combFecha(c))}</td>
+          <td>${combPatente(c) || '-'}</td>
+          <td>${combEstacion(c) || '-'}</td>
+          <td>${combTipo(c) || '-'}</td>
+          <td style="text-align:right">${fmtInt(toNumber(c.litros))}</td>
+          <td style="text-align:right">${fmtInt( (toNumber(c.litros)>0)? combTotal(c)/toNumber(c.litros): 0 )}</td>
+          <td style="text-align:right">${fmtMoney(combTotal(c))}</td>
+        </tr>`).join("");
+      const html = `
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Combustible</title>
+<style>
+body{font-family:Arial;margin:28px;color:#111}
+h2{margin:0 0 10px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+th{background:#f5f5f5}
+.r{text-align:right}
+.small{font-size:12px;color:#555;margin-bottom:10px}
+</style></head>
+<body onload="window.print()">
+  <h2>Combustible</h2>
+  <div class="small">Rango: ${fDesde.value||'—'} a ${fHasta.value||'—'} · Patente: ${fPatente.value||'Mis patentes'}</div>
+  <table>
+    <thead><tr>
+      <th>Fecha</th><th>Patente</th><th>Estación</th><th>Tipo</th>
+      <th class="r">Litros</th><th class="r">$/l</th><th class="r">Total</th>
+    </tr></thead>
+    <tbody>${rows || '<tr><td colspan="7">Sin datos</td></tr>'}</tbody>
+  </table>
+</body></html>`;
+      const w = window.open('', '_blank', 'width=900,height=1000');
+      w.document.write(html); w.document.close(); w.focus();
+    });
+
+    // Nueva carga (permanece en flujo chofer)
+    btnNueva.addEventListener("click", ()=>{
+      location.href = "agregar-combustible.html";
+    });
   </script>
 </body>
 </html>
+
