@@ -8,7 +8,7 @@
     :root{
       --yellow:#FFD700; --black:#0a0a0a; --panel:#121212; --soft:#1a1a1a;
       --white:#fff; --muted:#bdbdbd; --green:#2ecc71; --green2:#a5f0c5;
-      --pill:#223322; --red:#c62828; --orange:#ffa000; --blue:#1976d2;
+      --pill:#223322; --red:#c62828; --orange:#ffa000;
     }
     body{margin:0;background:var(--yellow);font-family:Arial,Helvetica,sans-serif;color:#fff}
     .wrap{max-width:900px;margin:36px auto;background:#000;border-radius:14px;padding:22px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
@@ -148,11 +148,9 @@ const fmtARS = n => ' $ ' + Number(n||0).toLocaleString('es-AR',{maximumFraction
 const fmtNum = (n, d=3) => (n==null||isNaN(n)) ? '-' : Number(n).toLocaleString('es-AR',{minimumFractionDigits:0, maximumFractionDigits:d});
 const toISO = d => (d instanceof Date ? d : new Date(d)).toISOString().slice(0,10);
 
-// Fecha de distintos formatos → Date
 function parseFecha(x){
   if (!x) return null;
   if (typeof x === 'string'){
-    // 'YYYY-MM-DD' o 'DD/MM/YYYY'
     if (x.includes('-')) return new Date(x+'T00:00:00');
     if (x.includes('/')){ const [dd,mm,aa] = x.split('/'); return new Date(+aa, +mm-1, +dd); }
   }
@@ -163,12 +161,9 @@ function parseFecha(x){
   }
   const d = new Date(x); return isNaN(d)? null : d;
 }
-const fechaAR = x => {
-  const d = parseFecha(x); 
-  return d ? d.toLocaleDateString('es-AR',{timeZone:'UTC'}) : '-';
-};
+const fechaAR = x => { const d = parseFecha(x); return d ? d.toLocaleDateString('es-AR',{timeZone:'UTC'}) : '-'; };
 
-// Normalizadores por colecciones
+// Normalizadores (para ambas colecciones)
 const N = {
   patente:  c => (c.patenteCamion || c.patente || '').trim(),
   estacion: c => c.estacionServicio || c.estacion || '',
@@ -180,25 +175,25 @@ const N = {
     for (const v of cand){ const n = Number(v); if(!isNaN(n) && n>0) return n; }
     return 0;
   },
+  // ⬇⬇ ARREGLADO: priorizamos litros*precio; usamos total/totalPagado sólo si no podemos calcular
   total:    c => {
+    const L = Number(c.litros||0), P = N.precio(c);
+    if (L>0 && P>0) return L*P;
     const cand = [c.totalPagado, c.total];
     for (const v of cand){ const n = Number(v); if(!isNaN(n) && n>0) return n; }
-    // fallback
-    const L = Number(c.litros||0), P = N.precio(c);
-    return (L>0 && P>0) ? (L*P) : 0;
+    return 0;
   },
   fecha:    c => c.fecha || c.fechaCarga || c.fechaCompra || c.createdAt || c.timestamp || null
 };
 
-// Propiedad de usuario
 function perteneceAUsuario(c, uid){
   return (c.uid===uid || c.uidCreador===uid || c.choferUid===uid || c.userId===uid || c.creadoPor===uid);
 }
 
 /* ========== Estado ========== */
 let currentUser = null;
-let cargas = []; // {id, __col:'hyphen'|'camel', ...data}
-let actual = null; // carga seleccionada
+let cargas = [];
+let actual = null;
 
 /* ========== App ========== */
 onAuthStateChanged(auth, (u)=>{
@@ -256,12 +251,15 @@ function render(){
     return 0;
   });
 
-  // Stats
-  const litros = datos.reduce((s,c)=> s + N.litros(c), 0);
-  const total  = datos.reduce((s,c)=> s + N.total(c), 0);
-  const prom   = litros>0 ? (total/litros) : 0;
-  $('kLitros').textContent = fmtNum(litros,0);
-  $('kTotal').textContent  = fmtARS(total);
+  // === Stats arregladas ===
+  const sumLitros = datos.reduce((s,c)=> s + N.litros(c), 0);
+  const sumTotal  = datos.reduce((s,c)=> s + N.total(c), 0);
+  // promedio ponderado por litros usando precio unitario (evita heredar totales mal grabados)
+  const sumLxP    = datos.reduce((s,c)=> s + (N.litros(c) * (N.precio(c)||0)), 0);
+  const prom      = sumLitros>0 ? (sumLxP / sumLitros) : 0;
+
+  $('kLitros').textContent = fmtNum(sumLitros,0);
+  $('kTotal').textContent  = fmtARS(sumTotal);
   $('kProm').textContent   = prom ? fmtNum(prom,3) : '-';
   $('kCargas').textContent = datos.length;
 
@@ -305,7 +303,6 @@ function render(){
       </div>
     `;
 
-    // Acciones
     div.querySelector('.btn-edit').onclick = ()=> abrirModal(c);
     div.querySelector('.btn-del').onclick  = ()=> eliminar(c);
     list.appendChild(div);
@@ -344,7 +341,6 @@ $('btnGuardar').onclick = async ()=>{
     observaciones: $('e_obs').value.trim()
   };
 
-  // Mapear al esquema original
   let update = {};
   if (actual.__col === 'camel'){
     update = {
@@ -359,12 +355,11 @@ $('btnGuardar').onclick = async ()=>{
       observaciones: dataNorm.observaciones
     };
   } else {
-    // 'cargas-combustible' (legacy): guardamos también claves "modernas" para compatibilidad
     update = {
       fecha: dataNorm.fecha,
       patenteCamion: dataNorm.patente,
       litros: dataNorm.litros,
-      precioPorLitro: dataNorm.precioPorLitro, // además de sl, por si tu UI vieja usa 'sl'
+      precioPorLitro: dataNorm.precioPorLitro,
       sl: dataNorm.precioPorLitro,
       total: dataNorm.totalPagado,
       totalPagado: dataNorm.totalPagado,
