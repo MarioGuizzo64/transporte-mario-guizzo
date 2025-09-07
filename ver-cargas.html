@@ -5,71 +5,74 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>VER CARGAS</title>
   <style>
-    body{margin:0;background:#FFD700;font-family:Arial,sans-serif;color:#fff;}
-    .container{
-      background:#000;
-      max-width:980px;
-      margin:40px auto;
-      padding:24px;
-      border-radius:12px;
-      box-shadow:0 10px 30px rgba(0,0,0,.35)
-    }
-    h1{text-align:center;text-transform:uppercase;text-decoration:underline;margin:0 0 16px}
-    .filtros{display:grid;grid-template-columns:repeat(auto-fit, minmax(160px,1fr));gap:8px;margin:0 0 16px 0;}
-    .filtros input,.filtros select{padding:8px;border:1px solid #000;border-radius:4px;color:#000;background:#fff}
-    .btn{padding:10px;border:1px solid #000;border-radius:6px;font-weight:bold;cursor:pointer;text-transform:uppercase}
-    .btn-verde{background:green;color:#fff}
-    .btn-naranja{background:orange;color:#000}
-    .btn-azul{background:#1976d2;color:#fff}
-    .btn-volver{margin-top:16px}
+    :root{--yellow:#FFD700;--black:#0b0b0b;--panel:#151515;--soft:#1e1e1e;--line:#2a2a2a;--green:#2e7d32;--red:#c62828;--blue:#1976d2;}
+    body{margin:0;background:var(--yellow);font-family:Arial,Helvetica,sans-serif;color:#fff}
+    .wrap{max-width:900px;margin:42px auto;background:#000;border-radius:14px;box-shadow:0 14px 32px rgba(0,0,0,.35);padding:22px}
+    h1{margin:0 0 16px;text-align:center;text-transform:uppercase;text-decoration:underline}
+
+    .topbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 12px}
+    .search{flex:1;min-width:220px;display:flex;gap:8px;align-items:center}
+    .search input{flex:1;padding:10px;border-radius:8px;border:1px solid #000;background:#fff;color:#000}
+    .order{display:flex;gap:8px;align-items:center}
+    .order select{padding:10px;border-radius:8px;border:1px solid #000;background:#fff;color:#000}
+    .btn{padding:10px 12px;border:1px solid #000;border-radius:8px;background:orange;color:#000;font-weight:bold;cursor:pointer}
+
+    /* Resumen */
+    .resumen{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:6px 0 16px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center}
+    .card small{opacity:.8}
+    .card b{display:block;margin-top:6px;font-size:18px}
+
+    /* Lista */
     .lista{display:grid;gap:10px}
-    .item{background:#191919;border-radius:10px;padding:12px}
-    .item p{margin:3px 0}
-    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
-    .pill{display:inline-block;background:#333;border-radius:999px;padding:2px 8px;font-size:12px;margin-left:8px}
-    .resumen{background:#111;border:1px solid #222;border-radius:10px;padding:10px 12px;margin:0 0 16px 0;display:grid;grid-template-columns:repeat(auto-fit, minmax(160px,1fr));gap:8px;}
-    .resumen .card{background:#0f1a0f;border:1px solid #1f3d1f;border-radius:8px;padding:10px;text-align:center;}
-    .resumen .card .label{font-size:12px;color:#a0d8a0;text-transform:uppercase}
-    .resumen .card .value{font-weight:bold;font-size:18px}
+    .item{background:#191919;border:1px solid #232323;border-radius:12px;padding:12px}
+    .item h3{margin:0 0 6px;font-size:16px}
+    .meta{display:flex;gap:14px;flex-wrap:wrap;opacity:.9}
+    .row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    .pill{display:inline-block;padding:3px 8px;border-radius:999px;background:#2d2d2d;font-size:12px;margin-right:6px;border:1px solid #000}
+    .pill.warn{background:#8d2323}
+    .note{font-size:12px;opacity:.8;margin-top:8px}
+    .volver{margin-top:14px}
+    @media (max-width:720px){ .resumen{grid-template-columns:1fr 1fr} }
+    @media (max-width:460px){ .resumen{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Ver Cargas</h1>
+  <div class="wrap">
+    <h1>Viajes cargados — Combustible</h1>
 
-    <!-- FILTROS -->
-    <form class="filtros" id="formFiltros">
-      <input type="date" id="desde"/>
-      <input type="date" id="hasta"/>
-      <select id="rangoRapido">
-        <option value="">Período…</option>
-        <option value="mes-actual">Mes actual</option>
-        <option value="mes-pasado">Mes pasado</option>
-        <option value="ultimos-30">Últimos 30 días</option>
-        <option value="todo">Todo</option>
-      </select>
-      <select id="fPatente"><option value="">Mis patentes</option></select>
-      <select id="fTipo"><option value="">Todos los tipos</option></select>
-      <select id="fMetodo"><option value="">Todos los métodos</option></select>
-      <input type="text" id="fCuitOrigen" placeholder="CUIT origen (opcional)"/>
-      <input type="text" id="buscar" placeholder="Buscar (estación, patente, obs)"/>
-      <button type="button" class="btn btn-naranja" id="btnLimpiar">Limpiar</button>
-      <button type="button" class="btn btn-azul" id="btnImprimir">Imprimir</button>
-      <button type="button" class="btn btn-verde" id="btnNueva">Nueva carga</button>
-    </form>
-
-    <!-- RESUMEN -->
-    <div id="resumen" class="resumen">
-      <div class="card"><div class="label">Litros</div><div class="value" id="r_litros">-</div></div>
-      <div class="card"><div class="label">Total $</div><div class="value" id="r_total">$ -</div></div>
-      <div class="card"><div class="label">$/Litro prom.</div><div class="value" id="r_promedio">-</div></div>
-      <div class="card"><div class="label">Cargas</div><div class="value" id="r_cargas">-</div></div>
+    <div class="topbar">
+      <div class="search">
+        <label for="q" style="opacity:.85">Buscar:</label>
+        <input id="q" placeholder="estación, patente, tipo, método, obs"/>
+      </div>
+      <div class="order">
+        <label for="orden" style="opacity:.85">Ordenar por:</label>
+        <select id="orden">
+          <option value="fecha-desc">Fecha ↓</option>
+          <option value="fecha-asc">Fecha ↑</option>
+          <option value="total-desc">Total $ ↓</option>
+          <option value="total-asc">Total $ ↑</option>
+          <option value="litros-desc">Litros ↓</option>
+          <option value="litros-asc">Litros ↑</option>
+        </select>
+        <button class="btn" id="btnVolver">Volver</button>
+      </div>
     </div>
 
-    <!-- LISTA -->
-    <div id="lista" class="lista"></div>
+    <!-- RESUMEN -->
+    <div class="resumen">
+      <div class="card"><small>Litros</small>      <b id="kLitros">-</b></div>
+      <div class="card"><small>Total $</small>     <b id="kTotal">$ -</b></div>
+      <div class="card"><small>$/litro prom.</small><b id="kProm">-</b></div>
+      <div class="card"><small>Cargas</small>      <b id="kCargas">-</b></div>
+    </div>
 
-    <button class="btn btn-naranja btn-volver" onclick="location.href='index.html'">Volver</button>
+    <div class="lista" id="lista"></div>
+
+    <button class="btn volver" onclick="location.href='index.html'">Volver</button>
+
+    <div class="note" id="dbg" style="margin-top:10px;opacity:.7"></div>
   </div>
 
   <script type="module">
@@ -77,7 +80,7 @@
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, collection, onSnapshot, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // Config
+    /* ========= Firebase ========= */
     const firebaseConfig = {
       apiKey: "AIzaSyDGqynxRT1kEafI3xFdo9dM1gu2RIqWxxU",
       authDomain: "transporte-mario-guizzo.firebaseapp.com",
@@ -90,13 +93,13 @@
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
-    // ------- Utilidades -------
+    /* ========= Utils ========= */
+    const $ = (id)=> document.getElementById(id);
     const fmtMoney = (n)=> new Intl.NumberFormat("es-AR",{style:"currency",currency:"ARS",maximumFractionDigits:0}).format(Number(n||0));
     const fmtInt   = (n)=> new Intl.NumberFormat("es-AR",{maximumFractionDigits:0}).format(Number(n||0));
-
     function toNumber(v){
       if (typeof v === "number") return v;
-      if (v==null) return 0;
+      if (v==null || v==="")   return 0;
       // "1.450"->1450 ; "499.356"->499356 ; "1,50"->1.5
       const s = String(v).trim().replace(/\./g,"").replace(/,/g,".");
       const n = Number(s);
@@ -112,257 +115,162 @@
       const d = new Date(f); return isNaN(d) ? null : d;
     }
     const dmy = (f)=>{
-      const d = parseFecha(f);
-      if (!d) return "-";
+      const d = parseFecha(f); if (!d) return "-";
       const dd = String(d.getDate()).padStart(2,"0");
       const mm = String(d.getMonth()+1).padStart(2,"0");
       const aa = d.getFullYear();
       return `${dd}/${mm}/${aa}`;
     };
 
-    // Normalizadores de campos en ambas colecciones
+    // Normalizadores (ambas colecciones)
     const combPatente  = (c) => (c.patenteCamion || c.patente || "").trim();
     const combEstacion = (c) => c.estacionServicio || c.estacion || "";
     const combMetodo   = (c) => c.metodoPago || c.metodo || "";
     const combTipo     = (c) => c.tipoCombustible || c.tipo || "";
     const combFecha    = (c) => c.fecha || c.fechaCarga || c.fechaCompra || "";
+    const combLitros   = (c) => toNumber(c.litros);
     const combTotal    = (c) => {
-      const L = toNumber(c.litros);
+      // Si hay totalPagado válido lo uso, si no, Litros * PrecioPorLitro
+      const L = combLitros(c);
       const P = toNumber(c.precioPorLitro ?? c.sl);
       const T = (c.totalPagado==="" || c.totalPagado==null) ? (L>0 && P>0 ? L*P : 0) : toNumber(c.totalPagado);
       return T;
     };
 
-    // ------- Estado y refs -------
-    let MIS_PATENTES = new Set();      // del usuario
-    let todas = [];                     // merge de ambas colecciones
+    /* ========= Estado ========= */
+    let MIS_PATENTES = new Set();  // desde usuarios/{uid}
+    let todas = [];                // merge de ambas colecciones
+    let cargadasA = false, cargadasB = false;
+    let lastErr = "";
 
-    const lista = document.getElementById("lista");
-    const fDesde = document.getElementById("desde");
-    const fHasta = document.getElementById("hasta");
-    const rangoRapido = document.getElementById("rangoRapido");
-    const fPatente = document.getElementById("fPatente");
-    const fTipo = document.getElementById("fTipo");
-    const fMetodo = document.getElementById("fMetodo");
-    const fBuscar = document.getElementById("buscar");
-    const fCuitOrigen = document.getElementById("fCuitOrigen");
-    const btnLimpiar = document.getElementById("btnLimpiar");
-    const btnImprimir = document.getElementById("btnImprimir");
-    const btnNueva = document.getElementById("btnNueva");
+    /* ========= UI refs ========= */
+    const q = $("q");
+    const orden = $("orden");
+    const kLitros=$("kLitros"), kTotal=$("kTotal"), kProm=$("kProm"), kCargas=$("kCargas");
+    const lista = $("lista");
+    const dbg = $("dbg");
+    $("btnVolver").onclick = ()=> history.back();
 
-    const rLitros = document.getElementById("r_litros");
-    const rTotal  = document.getElementById("r_total");
-    const rProm   = document.getElementById("r_promedio");
-    const rCargas = document.getElementById("r_cargas");
-
-    // ------- Auth gate -------
+    /* ========= Auth ========= */
     onAuthStateChanged(auth, async (user) => {
       if (!user){ location.href = "login.html"; return; }
-      // Obtener patentes del usuario
+
+      // Traer patentes asignadas al chofer
       try{
-        const s = await getDoc(doc(db, "usuarios", user.uid));
-        if (s.exists()){
-          const u = s.data();
-          if (Array.isArray(u.patentes) && u.patentes.length) u.patentes.forEach(p=>MIS_PATENTES.add(String(p).trim()));
+        const snap = await getDoc(doc(db, "usuarios", user.uid));
+        if (snap.exists()){
+          const u = snap.data();
+          if (Array.isArray(u.patentes)) u.patentes.forEach(p=>MIS_PATENTES.add(String(p).trim()));
           if (u.patente) MIS_PATENTES.add(String(u.patente).trim());
         }
-      }catch(e){ console.warn("No se pudo leer usuarios/{uid}", e); }
+      }catch(e){ console.warn("usuarios/{uid} no disponible", e); }
 
-      // Snapshots de ambas colecciones
-      const pushAll = ()=>{
-        // poblar selects segun MIS_PATENTES y datos
-        const patOpts = Array.from(new Set(todas.map(x=>combPatente(x)).filter(p=>p && (MIS_PATENTES.size===0 || MIS_PATENTES.has(p))))).sort();
-        const tSel = fPatente.value, tiSel = fTipo.value, mSel = fMetodo.value;
-        fPatente.innerHTML = '<option value="">Mis patentes</option>' + patOpts.map(p=>`<option value="${p}">${p}</option>`).join("");
-        const tipos = Array.from(new Set(todas.map(x=>combTipo(x)).filter(Boolean))).sort();
-        const mets  = Array.from(new Set(todas.map(x=>combMetodo(x)).filter(Boolean))).sort();
-        fTipo.innerHTML = '<option value="">Todos los tipos</option>' + tipos.map(t=>`<option>${t}</option>`).join("");
-        fMetodo.innerHTML = '<option value="">Todos los métodos</option>' + mets.map(m=>`<option>${m}</option>`).join("");
-        if (tSel) fPatente.value = tSel;
-        if (tiSel) fTipo.value = tiSel;
-        if (mSel) fMetodo.value = mSel;
-        render();
-      };
-
+      // Suscribirse a ambas colecciones
       onSnapshot(collection(db,"cargas-combustible"), (qs)=>{
-        const a = qs.docs.map(d=>({id:d.id, src:"a", ...d.data()}));
-        todas = [ ...a, ...todas.filter(x=>x.src!=="a") ];
-        todas.sort((x,y)=>{
-          const dx = parseFecha(combFecha(x)) || new Date(0);
-          const dy = parseFecha(combFecha(y)) || new Date(0);
-          return dy - dx;
-        });
-        pushAll();
-      }, (err)=>console.warn("cargas-combustible ERR:", err.code||err.message));
+        cargadasA = true;
+        const arr = qs.docs.map(d => ({id:d.id, src:"a", ...d.data()}));
+        todas = [ ...arr, ...todas.filter(x => x.src!=="a") ];
+        sortAndRender();
+      }, (err)=>{ lastErr = err.code||err.message; sortAndRender(); });
 
       onSnapshot(collection(db,"cargasCombustible"), (qs)=>{
-        const b = qs.docs.map(d=>({id:d.id, src:"b", ...d.data()}));
-        todas = [ ...todas.filter(x=>x.src!=="b"), ...b ];
-        todas.sort((x,y)=>{
-          const dx = parseFecha(combFecha(x)) || new Date(0);
-          const dy = parseFecha(combFecha(y)) || new Date(0);
-          return dy - dx;
-        });
-        pushAll();
-      }, (err)=>console.warn("cargasCombustible ERR:", err.code||err.message));
+        cargadasB = true;
+        const arr = qs.docs.map(d => ({id:d.id, src:"b", ...d.data()}));
+        todas = [ ...todas.filter(x => x.src!=="b"), ...arr ];
+        sortAndRender();
+      }, (err)=>{ lastErr = err.code||err.message; sortAndRender(); });
     });
 
-    // ------- Filtros / render -------
-    function dentroRango(fstr){
-      const d = fDesde.value? new Date(fDesde.value): null;
-      const h = fHasta.value? new Date(fHasta.value): null;
-      const x = parseFecha(fstr);
-      if (!x) return false;
-      if (d && x < d) return false;
-      if (h && x > new Date(h.getFullYear(), h.getMonth(), h.getDate(), 23,59,59,999)) return false;
-      return true;
+    /* ========= Render ========= */
+    function pasaFiltroTexto(c){
+      const s = (q.value||"").trim().toLowerCase();
+      if (!s) return true;
+      const blob = [
+        combEstacion(c), combTipo(c), combMetodo(c), combPatente(c), c.observaciones
+      ].map(x => (x||"")+"").join(" ").toLowerCase();
+      return blob.includes(s);
     }
 
-    function pasaFiltros(x){
-      const pat = combPatente(x);
-      if (MIS_PATENTES.size && !MIS_PATENTES.has(pat)) return false; // restringir a mis patentes
-      if (fPatente.value && pat !== fPatente.value) return false;
-      if (fTipo.value && combTipo(x) !== fTipo.value) return false;
-      if (fMetodo.value && combMetodo(x) !== fMetodo.value) return false;
-      if (fCuitOrigen.value){
-        const co = (x.cuitOrigen || "").toString();
-        if (!co.includes(fCuitOrigen.value.trim())) return false;
-      }
-      if (fDesde.value || fHasta.value){
-        if (!dentroRango(combFecha(x))) return false;
-      }
-      const q = fBuscar.value.trim().toLowerCase();
-      if (q){
-        const blob = [ combEstacion(x), combTipo(x), combMetodo(x), pat, x.observaciones ]
-          .map(v => (v||"")+"").join(" ").toLowerCase();
-        if (!blob.includes(q)) return false;
-      }
-      return true;
+    function datosFiltrados(){
+      // restringir por patentes del chofer (si existen)
+      let arr = todas.filter(c=>{
+        const p = combPatente(c);
+        if (MIS_PATENTES.size && !MIS_PATENTES.has(p)) return false;
+        return true;
+      }).filter(pasaFiltroTexto);
+
+      // ordenar
+      const key = orden.value;
+      arr.sort((a,b)=>{
+        if (key==="fecha-desc") return (parseFecha(combFecha(b))||0) - (parseFecha(combFecha(a))||0);
+        if (key==="fecha-asc")  return (parseFecha(combFecha(a))||0) - (parseFecha(combFecha(b))||0);
+        if (key==="total-desc") return combTotal(b) - combTotal(a);
+        if (key==="total-asc")  return combTotal(a) - combTotal(b);
+        if (key==="litros-desc")return combLitros(b) - combLitros(a);
+        if (key==="litros-asc") return combLitros(a) - combLitros(b);
+        return 0;
+      });
+      return arr;
     }
 
-    function actualizarResumen(datos){
-      const cargas = datos.length;
-      let totalLitros = 0, totalGasto  = 0;
-      for (const c of datos){
-        const L = toNumber(c.litros);
-        const T = combTotal(c);
-        totalLitros += L;
-        totalGasto  += T;
-      }
-      const prom = totalLitros>0 ? (totalGasto/totalLitros) : 0;
-      rLitros.textContent = fmtInt(totalLitros) + " l";
-      rTotal.textContent  = fmtMoney(totalGasto);
-      rProm.textContent   = totalLitros>0 ? fmtInt(prom) : "-";
-      rCargas.textContent = String(cargas);
+    function actualizarResumen(arr){
+      const cargas = arr.length;
+      let litros = 0, total = 0;
+      for (const c of arr){ litros += combLitros(c); total += combTotal(c); }
+      const prom = litros>0 ? total/litros : 0;
+      kLitros.textContent = fmtInt(litros) + " l";
+      kTotal.textContent  = fmtMoney(total);
+      kProm.textContent   = litros>0 ? fmtInt(prom) : "-";
+      kCargas.textContent = String(cargas);
     }
 
-    function render(){
-      const datos = todas.filter(pasaFiltros);
-      actualizarResumen(datos);
+    function renderLista(arr){
       lista.innerHTML = "";
-      if (!datos.length){
-        lista.innerHTML = '<div class="item"><p>No hay cargas para los filtros seleccionados.</p></div>';
+      if (!arr.length){
+        const m = document.createElement("div");
+        m.className = "item";
+        m.innerHTML = "<p>No hay cargas para mostrar.</p>";
+        lista.appendChild(m);
         return;
       }
-      for (const c of datos){
-        const litros = toNumber(c.litros);
+      for (const c of arr){
+        const litros = combLitros(c);
         const total  = combTotal(c);
-        const plitro = (litros>0) ? (total/litros) : 0;
-        const obsPill = c.observaciones ? '<span class="pill" style="background:#b71c1c">OBSERVACIONES</span>' : '';
-        const div = document.createElement('div');
-        div.className = 'item';
-        div.innerHTML = `
+        const pl     = litros>0 ? total/litros : 0;
+        const obs    = (c.observaciones && String(c.observaciones).trim()) ? `<span class="pill warn">OBSERVACIONES</span>` : "";
+
+        const el = document.createElement("div");
+        el.className = "item";
+        el.innerHTML = `
           <div class="row">
-            <div><strong>Fecha:</strong> ${dmy(combFecha(c))} ${obsPill}</div>
-            <div><strong>Patente:</strong> ${combPatente(c) || '-'}</div>
+            <h3>${combEstacion(c) || "—"}</h3>
+            <div class="meta"><span>Fecha: <b>${dmy(combFecha(c))}</b></span> · <span>Patente: <b>${combPatente(c)||"—"}</b></span></div>
           </div>
-          <p><strong>Estación:</strong> ${combEstacion(c) || '-'}
-             &nbsp;|&nbsp; <strong>Tipo:</strong> ${combTipo(c) || '-'}
-             &nbsp;|&nbsp; <strong>Método:</strong> ${combMetodo(c) || '-'}</p>
-          <p><strong>Litros:</strong> ${fmtInt(litros)} l
-             &nbsp;|&nbsp; <strong>$/l:</strong> ${plitro? fmtInt(plitro):'-'}
-             &nbsp;|&nbsp; <strong>Total:</strong> ${fmtMoney(total)}</p>
+          <div class="meta" style="margin-top:6px">
+            <span>Tipo: <b>${combTipo(c)||"—"}</b></span>
+            <span>Método: <b>${combMetodo(c)||"—"}</b></span>
+          </div>
+          <div style="margin-top:8px">
+            <span class="pill">Litros: ${fmtInt(litros)} l</span>
+            <span class="pill">$/l: ${pl? fmtInt(pl) : "-"}</span>
+            <span class="pill">Total: ${fmtMoney(total)}</span>
+            ${obs}
+          </div>
         `;
-        lista.appendChild(div);
+        lista.appendChild(el);
       }
     }
 
-    // Eventos filtros
-    [fDesde,fHasta,fPatente,fTipo,fMetodo,fBuscar,fCuitOrigen].forEach(el => el.addEventListener('input', render));
-    btnLimpiar.addEventListener('click', ()=>{
-      fDesde.value=''; fHasta.value=''; rangoRapido.value='';
-      fPatente.value=''; fTipo.value=''; fMetodo.value='';
-      fCuitOrigen.value=''; fBuscar.value='';
-      render();
-    });
+    function sortAndRender(){
+      const arr = datosFiltrados();
+      actualizarResumen(arr);
+      renderLista(arr);
+      const a = cargadasA?"ok":"—", b=cargadasB?"ok":"—";
+      dbg.textContent = `colecciones → cargas-combustible:${a} · cargasCombustible:${b}${lastErr?` · ERROR: ${lastErr}`:""}`;
+    }
 
-    // Períodos rápidos
-    rangoRapido.addEventListener("change", ()=>{
-      const now = new Date();
-      const y = now.getFullYear(), m = now.getMonth();
-      const fmt = (d)=> d.toISOString().slice(0,10);
-      if (rangoRapido.value === "mes-actual"){
-        const d1 = new Date(y,m,1);
-        const d2 = new Date(y,m+1,0);
-        fDesde.value = fmt(d1); fHasta.value = fmt(d2);
-      }else if (rangoRapido.value === "mes-pasado"){
-        const d1 = new Date(y,m-1,1);
-        const d2 = new Date(y,m,0);
-        fDesde.value = fmt(d1); fHasta.value = fmt(d2);
-      }else if (rangoRapido.value === "ultimos-30"){
-        const d1 = new Date(now); d1.setDate(d1.getDate()-30);
-        fDesde.value = fmt(d1); fHasta.value = fmt(now);
-      }else if (rangoRapido.value === "todo"){
-        fDesde.value=''; fHasta.value='';
-      }else{
-        return;
-      }
-      render();
-    });
-
-    // Imprimir
-    btnImprimir.addEventListener("click", ()=>{
-      const datos = todas.filter(pasaFiltros);
-      const rows = datos.map(c=>`
-        <tr>
-          <td>${dmy(combFecha(c))}</td>
-          <td>${combPatente(c) || '-'}</td>
-          <td>${combEstacion(c) || '-'}</td>
-          <td>${combTipo(c) || '-'}</td>
-          <td style="text-align:right">${fmtInt(toNumber(c.litros))}</td>
-          <td style="text-align:right">${fmtInt( (toNumber(c.litros)>0)? combTotal(c)/toNumber(c.litros): 0 )}</td>
-          <td style="text-align:right">${fmtMoney(combTotal(c))}</td>
-        </tr>`).join("");
-      const html = `
-<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cargas de Combustible</title>
-<style>
-body{font-family:Arial;margin:28px;color:#111}
-h2{margin:0 0 10px}
-table{width:100%;border-collapse:collapse}
-th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
-th{background:#f5f5f5}
-.r{text-align:right}
-.small{font-size:12px;color:#555;margin-bottom:10px}
-</style></head>
-<body onload="window.print()">
-  <h2>Cargas de Combustible</h2>
-  <div class="small">Rango: ${fDesde.value||'—'} a ${fHasta.value||'—'} · Patente: ${fPatente.value||'Mis patentes'}</div>
-  <table>
-    <thead><tr>
-      <th>Fecha</th><th>Patente</th><th>Estación</th><th>Tipo</th>
-      <th class="r">Litros</th><th class="r">$/l</th><th class="r">Total</th>
-    </tr></thead>
-    <tbody>${rows || '<tr><td colspan="7">Sin datos</td></tr>'}</tbody>
-  </table>
-</body></html>`;
-      const w = window.open('', '_blank', 'width=900,height=1000');
-      w.document.write(html); w.document.close(); w.focus();
-    });
-
-    // Nueva carga (permanece en flujo chofer)
-    btnNueva.addEventListener("click", ()=>{
-      location.href = "agregar-combustible.html";
-    });
+    q.addEventListener("input", sortAndRender);
+    orden.addEventListener("change", sortAndRender);
   </script>
 </body>
 </html>
