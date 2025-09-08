@@ -58,7 +58,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import {
-      getFirestore, collection, query, where, onSnapshot, getDoc, doc, deleteDoc, updateDoc, orderBy
+      getFirestore, collection, query, where, onSnapshot, getDoc, doc, deleteDoc, updateDoc
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     // -------- Firebase --------
@@ -88,19 +88,49 @@
     // -------- Helpers --------
     const normPat = s => (s||"").toString().toUpperCase().replace(/[^A-Z0-9]/g,''); // saca espacios/guiones
     const safeStr = v => (v ?? '').toString();
-    const toISO   = f => (f||'').toString().slice(0,10);
+
+    function parseToDate(f){
+      // acepta "YYYY-MM-DD", "DD/MM/YYYY" o timestamp ISO
+      if (!f) return null;
+      const s = String(f);
+      if (/\d{4}-\d{2}-\d{2}/.test(s)) { const [y,m,d]=s.split('-'); return new Date(+y,+m-1,+d); }
+      if (/\d{2}\/\d{2}\/\d{4}/.test(s)) { const [d,m,y]=s.split('/'); return new Date(+y,+m-1,+d); }
+      const d = new Date(s); return isNaN(d)?null:d;
+    }
+    const fmtFechaAR = f => {
+      const d = parseToDate(f); if (!d) return '-';
+      const dd = String(d.getDate()).padStart(2,'0');
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const yy = d.getFullYear();
+      return `${dd}/${mm}/${yy}`;
+    };
+
+    // convierte string con "." o "," en número
     const nAR = (x) => {
-      // Acepta number, "1450", "1.450", "1,450.50", etc.
       if (typeof x === 'number') return x;
       const s = (x ?? '').toString().trim();
       if (!s) return 0;
-      // quita separadores de miles . o ,
       const clean = s.replace(/\./g,'').replace(/,/g,'.');
       const n = Number(clean);
       return isNaN(n) ? 0 : n;
     };
-    const money = n => (n||0).toLocaleString('es-AR', {maximumFractionDigits:0});
-    const num2  = n => (n||0).toLocaleString('es-AR', {maximumFractionDigits:2});
+
+    // Normaliza posibles **centavos** guardados como enteros grandes (×100)
+    const normalizaPrecio = (p) => {
+      let n = nAR(p);
+      // si parece estar en centavos (ej: 145000), dividir por 100
+      if (n >= 20000) n = Math.round(n / 100);
+      return n;
+    };
+    const normalizaTotal = (t) => {
+      let n = nAR(t);
+      // totales reales suelen ser < 5.000.000; si viene con 2 ceros de más, dividir
+      if (n >= 2_000_000) n = Math.round(n / 100);
+      return n;
+    };
+
+    const money0 = n => (n||0).toLocaleString('es-AR', {maximumFractionDigits:0});
+    const num2   = n => (n||0).toLocaleString('es-AR', {maximumFractionDigits:2});
 
     // estado
     let uid = null;
@@ -112,7 +142,6 @@
       unsubAll.forEach(fn=>{ try{fn();}catch{} });
       unsubAll = [];
     }
-
     function addListener(fn){ unsubAll.push(fn); }
 
     function calcAndRender(){
@@ -143,15 +172,16 @@
       let L=0, TOTAL=0;
       for (const c of arr){
         const litros = nAR(c.litros);
+        const precio = normalizaPrecio(c.precioPorLitro);
         const total  = (c.totalPagado!=null && c.totalPagado!=="")
-          ? nAR(c.totalPagado)
-          : (nAR(c.precioPorLitro) * litros);
+          ? normalizaTotal(c.totalPagado)
+          : precio * litros;
         L += litros;
         TOTAL += total;
       }
       const prom = L>0 ? TOTAL/L : 0;
       pLitros.textContent = num2(L);
-      pTotal.textContent  = '$ ' + money(TOTAL);
+      pTotal.textContent  = '$ ' + money0(TOTAL);
       pProm.textContent   = L>0 ? num2(prom) : '-';
       pCant.textContent   = arr.length.toString();
 
@@ -166,12 +196,13 @@
 
       for (const c of arr){
         const litros = nAR(c.litros);
+        const precio = normalizaPrecio(c.precioPorLitro);
         const total  = (c.totalPagado!=null && c.totalPagado!=="")
-          ? nAR(c.totalPagado)
-          : (nAR(c.precioPorLitro) * litros);
+          ? normalizaTotal(c.totalPagado)
+          : precio * litros;
         const plitro = (litros>0)
-          ? (nAR(c.precioPorLitro) || (total>0 ? total/litros : 0))
-          : (nAR(c.precioPorLitro)||0);
+          ? (precio || (total>0 ? total/litros : 0))
+          : (precio||0);
 
         const yoSoyAutor = (c.uid === uid) || (c.uidCreador === uid) || (c.creadoPor===uid);
 
@@ -179,7 +210,7 @@
         div.className = 'card';
         div.innerHTML = `
           <div class="row">
-            <div><strong>Fecha:</strong> ${toISO(c.fecha) || '-'}</div>
+            <div><strong>Fecha:</strong> ${fmtFechaAR(c.fecha)}</div>
             <div class="muted"><strong>Patente:</strong> ${c.patente || c.patenteCamion || '-'}</div>
           </div>
           <div class="muted" style="margin-top:4px">
@@ -190,7 +221,7 @@
           <div style="margin-top:6px">
             <span class="tag">Litros: ${num2(litros)}</span>
             <span class="tag">$/l: ${plitro ? num2(plitro) : '-'}</span>
-            <span class="tag">Total: $ ${money(total)}</span>
+            <span class="tag">Total: $ ${money0(total)}</span>
           </div>
           <div class="actions" ${yoSoyAutor? '' : 'style="display:none"'} >
             <button class="btn btn-green" data-edit="${c.__id}" data-col="${c.__col}">Editar</button>
@@ -221,16 +252,23 @@
     async function editar(col, id){
       const item = datos.find(x=>x.__id===id && x.__col===col);
       if (!item) return;
-      const nuevaFecha = prompt('Fecha (YYYY-MM-DD):', toISO(item.fecha));
+      const nuevaFecha = prompt('Fecha (dd/mm/aaaa):', fmtFechaAR(item.fecha));
       if (nuevaFecha===null) return;
       const nuevosLitros = prompt('Litros:', nAR(item.litros));
       if (nuevosLitros===null) return;
-      const nuevoPrecio = prompt('Precio por litro:', nAR(item.precioPorLitro));
+      const nuevoPrecio = prompt('Precio por litro:', normalizaPrecio(item.precioPorLitro));
       if (nuevoPrecio===null) return;
+
+      // convertir fecha a ISO para guardar
+      let iso = nuevaFecha;
+      if (/\d{2}\/\d{2}\/\d{4}/.test(nuevaFecha)) {
+        const [d,m,y] = nuevaFecha.split('/');
+        iso = `${y}-${m}-${d}`;
+      }
 
       try{
         await updateDoc(doc(db, col, id), {
-          fecha: nuevaFecha,
+          fecha: iso,
           litros: nAR(nuevosLitros),
           precioPorLitro: nAR(nuevoPrecio)
         });
@@ -239,7 +277,7 @@
       }
     }
 
-    function watchCollection(colName){
+    function watchCollection(colName, patentesUser){
       const colRef = collection(db, colName);
 
       // Por UID (actual y compat histórica)
@@ -251,7 +289,7 @@
         upsertFromSnapshot(colName, snap); calcAndRender();
       }, onSnapError));
 
-      // Por patentes (normalizadas) – si hay hasta 10
+      // Por patentes – hasta 10
       if (patentesUser.length>0 && patentesUser.length<=10){
         addListener(onSnapshot(query(colRef, where('patente','in', patentesUser)), snap=>{
           upsertFromSnapshot(colName, snap); calcAndRender();
@@ -292,24 +330,25 @@
       uid = u.uid;
 
       // leo perfil (para patentes)
+      let patentes = [];
       try{
         const ps = await getDoc(doc(db,'usuarios', uid));
         if (ps.exists()){
           const p = ps.data();
           if (Array.isArray(p.patentes) && p.patentes.length){
-            patentesUser = p.patentes.map(normPat).filter(Boolean);
+            patentes = p.patentes;
           }else if (p.patente){
-            patentesUser = [ normPat(p.patente) ];
-          }else{
-            patentesUser = [];
+            patentes = [ p.patente ];
           }
         }
       }catch(e){ console.warn('perfil usuario:', e); }
 
+      const patNorm = patentes.map(normPat).filter(Boolean);
+
       // comienzo listeners
       clearListeners();
-      watchCollection('cargas-combustible');
-      watchCollection('cargasCombustible');
+      watchCollection('cargas-combustible', patNorm);
+      watchCollection('cargasCombustible',  patNorm);
 
       // mini-debug
       dbg.textContent = `colecciones → cargas-combustible ✓  •  cargasCombustible ✓`;
