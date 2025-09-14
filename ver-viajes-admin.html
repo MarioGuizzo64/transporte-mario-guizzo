@@ -84,7 +84,7 @@
       <h2 style="text-transform:uppercase;text-decoration:underline;margin-top:0">Detalle / Editar Viaje</h2>
       <form id="formEdit" class="edit-form">
         <label>Fecha</label><input type="date" id="e_fecha"/>
-        <label>CTG</label><Input type="text" id="e_ctg"/>
+        <label>CTG</label><input type="text" id="e_ctg"/>
         <label>Titular carta de porte (CUIT)</label><input type="text" id="e_cuit"/>
         <label>Lugar de origen del viaje</label><input type="text" id="e_origen"/>
         <label>Destino</label><input type="text" id="e_destino"/>
@@ -150,7 +150,6 @@
     const tarifaLabel = (v) => {
       const tTon = toNum(v.tarifaPorTon);
       if (tTon>0) return `${fmtInt(tTon)} / tn`;
-      // compat. si hubiera viejo tarifaPorKg
       const tKg  = toNum(v.tarifaPorKg);
       return tKg>0 ? `${fmtInt(tKg)} / kg` : '—';
     };
@@ -273,7 +272,7 @@
         isNew = false; actualId = id;
         abrirModal();
         get('e_fecha').value = v.fecha || '';
-        get('e_ctg').value = v.ctg || '');
+        get('e_ctg').value = v.ctg || '';
         get('e_cuit').value = (v.cuitOrigen || v.cuit || '');
         get('e_origen').value = v.origen || '';
         get('e_destino').value = v.destino || '';
@@ -291,6 +290,7 @@
       btnNuevo.addEventListener('click', ()=>{
         isNew = true; actualId = null;
         get('e_fecha').value = new Date().toISOString().slice(0,10);
+        get('e_ctg').value = '';
         get('e_cuit').value = ''; get('e_origen').value = ''; get('e_destino').value = '';
         get('e_tarifaTon').value = ''; get('e_patente').value = ''; get('e_tipoCarga').value = '';
         get('e_peso').value = ''; get('e_kgDescargados').value = '';
@@ -357,7 +357,9 @@
         const rows = _ultimos.map(v=>`
             <tr>
               <td>${fmtDMY(v.fecha)}</td>
+              <td>${v.chofer || '-'}</td>
               <td>${v.patente || '-'}</td>
+              <td>${v.ctg || '-'}</td>
               <td>${(v.origen||'-')} → ${(v.destino||'-')}</td>
               <td>${tarifaLabel(v)}</td>
               <td style="text-align:right">${fmtInt(v.kgLlevados ?? v.peso ?? 0)}</td>
@@ -390,7 +392,7 @@
   <table>
     <thead>
       <tr>
-        <th>Fecha</th><th>Chofer</th><th>Patente</th><th>Origen → Destino</th><th>Tarifa</th>
+        <th>Fecha</th><th>Chofer</th><th>Patente</th><th>CTG</th><th>Origen → Destino</th><th>Tarifa</th>
         <th class="r">Kg cargados</th>
         <th class="r">Kg descargados</th>
         <th class="r">Adelanto</th>
@@ -398,10 +400,10 @@
         <th class="r">Entrada</th>
       </tr>
     </thead>
-    <tbody>${rows || '<tr><td colspan="10">Sin datos</td></tr>'}</tbody>
+    <tbody>${rows || '<tr><td colspan="11">Sin datos</td></tr>'}</tbody>
     <tfoot>
       <tr>
-        <td colspan="6">Totales</td>
+        <td colspan="7">Totales</td>
         <td class="r">${fmtInt(totalKgDesc)}</td>
         <td class="r">${fmtInt(totalAdel)}</td>
         <td class="r">${fmtInt(totalPeaje)}</td>
