@@ -84,6 +84,7 @@
       <h2 style="text-transform:uppercase;text-decoration:underline;margin-top:0">Detalle / Editar Viaje</h2>
       <form id="formEdit" class="edit-form">
         <label>Fecha</label><input type="date" id="e_fecha"/>
+        <label>CTG</label><Input type="text" id="e_ctg"/>
         <label>Titular carta de porte (CUIT)</label><input type="text" id="e_cuit"/>
         <label>Lugar de origen del viaje</label><input type="text" id="e_origen"/>
         <label>Destino</label><input type="text" id="e_destino"/>
@@ -240,7 +241,7 @@
               <p style="margin:0"><strong>Fecha:</strong> ${fmtDMY(v.fecha)}</p>
               ${hayObs ? '<span class="badge badge-rojo">OBSERVACIONES</span>' : ''}
             </div>
-            <p><strong>Chofer:</strong> ${v.chofer || '-'}</p>
+            <p><strong>CTG:</strong> ${v.ctg || '-'}</p>
             <p><strong>Patente:</strong> ${v.patente || '-'}</p>
             <p><strong>Origen → Destino:</strong> ${v.origen || '-'} → ${v.destino || '-'}</p>
             <p><strong>Tarifa:</strong> ${tarifaLabel(v)}</p>
@@ -272,6 +273,7 @@
         isNew = false; actualId = id;
         abrirModal();
         get('e_fecha').value = v.fecha || '';
+        get('e_ctg').value = v.ctg || '');
         get('e_cuit').value = (v.cuitOrigen || v.cuit || '');
         get('e_origen').value = v.origen || '';
         get('e_destino').value = v.destino || '';
@@ -303,6 +305,7 @@
         const entrada  = toNum(get('e_entrada').value);
         const data = {
           fecha: get('e_fecha').value || null,
+          ctg: get('e_ctg').value.trim(),
           cuitOrigen: get('e_cuit').value.trim(),
           cuit: get('e_cuit').value.trim(),
           origen: get('e_origen').value.trim(),
@@ -354,7 +357,6 @@
         const rows = _ultimos.map(v=>`
             <tr>
               <td>${fmtDMY(v.fecha)}</td>
-              <td>${v.chofer || '-'}</td>
               <td>${v.patente || '-'}</td>
               <td>${(v.origen||'-')} → ${(v.destino||'-')}</td>
               <td>${tarifaLabel(v)}</td>
