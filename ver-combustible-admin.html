@@ -35,6 +35,7 @@
     .edit-form input,.edit-form select,.edit-form textarea{padding:8px;border:1px solid #000;border-radius:4px;background:#fff;color:#000}
     .edit-form textarea{grid-column:span 2;height:70px;resize:vertical}
     .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+    .muted{color:#9aa;opacity:.9;font-size:12px;margin-left:6px}
     @media (max-width:800px){ .edit-form{grid-template-columns:1fr} }
   </style>
 </head>
@@ -133,8 +134,27 @@
 
     // ---------- Utils ----------
     const fmt     = (n, suf="") => (n ?? "") === "" ? "-" : `${Number(n).toLocaleString("es-AR",{maximumFractionDigits:2})}${suf}`;
-    const fmtDMY  = (f) => { if(!f) return '—'; const d=new Date(f); if(isNaN(d)) return '—'; const dd=String(d.getDate()).padStart(2,'0'),mm=String(d.getMonth()+1).padStart(2,'0'),yy=d.getFullYear(); return `${dd}/${mm}/${yy}`; };
-    const parseFecha = (f) => { if(!f) return null; if(f.includes("-")) return new Date(f); if(f.includes("/")){const[dd,mm,aa]=f.split("/"); return new Date(+aa,+mm-1,+dd)} const d=new Date(f); return isNaN(d)?null:d; };
+
+    // PARSEO LOCAL de 'YYYY-MM-DD' (evita el día -1 por timezone)
+    const parseFechaLocal = (f) => {
+      if (!f) return null;
+      if (typeof f === 'string') {
+        if (f.includes('-')) { const [y,m,d]=f.split('-').map(Number); return new Date(y, (m||1)-1, d||1); }
+        if (f.includes('/')) { const [dd,mm,aa]=f.split('/').map(Number); return new Date(aa, (mm||1)-1, dd||1); }
+      }
+      // Firestore Timestamp
+      if (typeof f === 'object' && typeof f.toDate === 'function') return f.toDate();
+      if (typeof f === 'object' && typeof f.seconds === 'number') return new Date(f.seconds*1000);
+      const d = new Date(f);
+      return isNaN(d) ? null : d;
+    };
+    const fmtDMY  = (f) => {
+      const d = parseFechaLocal(f);
+      if (!d) return '—';
+      const dd=String(d.getDate()).padStart(2,'0'),mm=String(d.getMonth()+1).padStart(2,'0'),yy=d.getFullYear();
+      return `${dd}/${mm}/${yy}`;
+    };
+
     // Convierte "1.450", "1.450,50", "1450" → número
     const toNum = (v) => {
       if (typeof v === 'number') return v;
@@ -180,8 +200,8 @@
       let A=[], B=[];
       const rebuild = () => {
         todas = [...A, ...B].sort((a,b)=>{
-          const da = parseFecha(a.fecha) || (a.timestamp ? new Date(a.timestamp) : new Date(0));
-          const db = parseFecha(b.fecha) || (b.timestamp ? new Date(b.timestamp) : new Date(0));
+          const da = parseFechaLocal(a.fecha) || (a.timestamp && a.timestamp.toDate ? a.timestamp.toDate() : new Date(0));
+          const db = parseFechaLocal(b.fecha) || (b.timestamp && b.timestamp.toDate ? b.timestamp.toDate() : new Date(0));
           return db - da;
         });
         poblarSelects(); render();
@@ -194,7 +214,7 @@
       });
 
       function poblarSelects(){
-        const patentes = Array.from(new Set(todas.map(x=>x.patenteCamion).filter(Boolean))).sort();
+        const patentes = Array.from(new Set(todas.map(x=>x.patenteCamion || x.patente).filter(Boolean))).sort();
         const tipos    = Array.from(new Set(todas.map(x=>x.tipoCombustible).filter(Boolean))).sort();
         const metodos  = Array.from(new Set(todas.map(x=>x.metodoPago).filter(Boolean))).sort();
         const pSel=fPatente.value,tSel=fTipo.value,mSel=fMetodo.value;
@@ -205,22 +225,24 @@
       }
 
       function pasaFiltros(x){
-        if (fDesde.value){ const d=parseFecha(x.fecha); if(!d||d<new Date(fDesde.value)) return false; }
-        if (fHasta.value){ const d=parseFecha(x.fecha); if(!d||d>new Date(fHasta.value)) return false; }
-        if (fPatente.value && x.patenteCamion!==fPatente.value) return false;
+        const f = parseFechaLocal(x.fecha);
+        if (fDesde.value){ const d0=parseFechaLocal(fDesde.value); if(!f||f<d0) return false; }
+        if (fHasta.value){ const d1=parseFechaLocal(fHasta.value); if(!f||f>d1) return false; }
+        const pat = (x.patenteCamion || x.patente || '');
+        if (fPatente.value && pat!==fPatente.value) return false;
         if (fTipo.value && x.tipoCombustible!==fTipo.value) return false;
         if (fMetodo.value && x.metodoPago!==fMetodo.value) return false;
         if (fCuitOrigen.value){ const co=(x.cuitOrigen||'')+''; if(!co.includes(fCuitOrigen.value.trim())) return false; }
         const q=fBuscar.value.trim().toLowerCase();
         if(q){
-          const blob=[x.estacionServicio,x.patenteCamion,x.observaciones,x.tipoCombustible,x.metodoPago]
+          const blob=[x.estacionServicio,pat,x.observaciones,x.tipoCombustible,x.metodoPago]
             .map(s=>(s||'')+'').join(' ').toLowerCase();
           if(!blob.includes(q)) return false;
         }
         return true;
       }
 
-      // SIEMPRE: total = litros * precioPorLitro (si ambos existen)
+      // total = litros * precioPorLitro, si no, totalPagado
       function calcTotal(c){
         const L = toNum(c.litros);
         const P = toNum(c.precioPorLitro);
@@ -260,21 +282,24 @@
         for(const c of datos){
           const L = toNum(c.litros);
           const tot = calcTotal(c);
+          const raw = (tot!=null) ? String(Math.round(tot)) : '';
           const pl = precioPorLitro(c);
           const obsPill = c.observaciones ? '<span class="pill" style="background:#b71c1c">OBSERVACIONES</span>' : '';
           const key = `${c._col}|${c.id}`;
+          const patente = c.patenteCamion || c.patente || '-';
           const div=document.createElement('div'); div.className='item';
           div.innerHTML = `
             <div class="row">
               <div><strong>Fecha:</strong> ${fmtDMY(c.fecha)} ${obsPill}</div>
-              <div><strong>Patente:</strong> ${c.patenteCamion || '-'}</div>
+              <div><strong>Patente:</strong> ${patente}</div>
             </div>
             <p><strong>Estación:</strong> ${c.estacionServicio || '-'}
                &nbsp;|&nbsp; <strong>Tipo:</strong> ${c.tipoCombustible || '-'}
                &nbsp;|&nbsp; <strong>Método:</strong> ${c.metodoPago || '-'}</p>
             <p><strong>Litros:</strong> ${fmt(L,' l')}
                &nbsp;|&nbsp; <strong>$/l:</strong> ${pl!=null?fmt(pl):'-'}
-               &nbsp;|&nbsp; <strong>Total:</strong> ${tot!=null? '$ '+fmt(tot) : '-'}</p>
+               &nbsp;|&nbsp; <strong>Total:</strong> ${tot!=null? ('$ '+fmt(tot)) : '-'}
+               ${tot!=null? `<span class="muted">(${raw})</span>` : ''}</p>
             <div style="display:flex;justify-content:flex-end;">
               <button class="btn btn-verde" onclick="window._abrir('${key}')">Ver / Editar</button>
             </div>`;
@@ -286,16 +311,16 @@
       rangoRapido.addEventListener('change', ()=>{
         const now=new Date(); const y=now.getFullYear(), m=now.getMonth();
         if(rangoRapido.value==='mes-actual'){
-          fDesde.value=new Date(y,m,1).toISOString().slice(0,10);
-          fHasta.value=new Date(y,m+1,0).toISOString().slice(0,10);
+          document.getElementById('desde').value=new Date(y,m,1).toISOString().slice(0,10);
+          document.getElementById('hasta').value=new Date(y,m+1,0).toISOString().slice(0,10);
         }else if(rangoRapido.value==='mes-pasado'){
-          fDesde.value=new Date(y,m-1,1).toISOString().slice(0,10);
-          fHasta.value=new Date(y,m,0).toISOString().slice(0,10);
+          document.getElementById('desde').value=new Date(y,m-1,1).toISOString().slice(0,10);
+          document.getElementById('hasta').value=new Date(y,m,0).toISOString().slice(0,10);
         }else if(rangoRapido.value==='ultimos-30'){
           const d=new Date(); d.setDate(d.getDate()-30);
-          fDesde.value=d.toISOString().slice(0,10);
-          fHasta.value=new Date().toISOString().slice(0,10);
-        }else{ fDesde.value=''; fHasta.value=''; }
+          document.getElementById('desde').value=d.toISOString().slice(0,10);
+          document.getElementById('hasta').value=new Date().toISOString().slice(0,10);
+        }else{ document.getElementById('desde').value=''; document.getElementById('hasta').value=''; }
         render();
       });
 
@@ -335,7 +360,7 @@
           return `
             <tr>
               <td>${fmtDMY(c.fecha)}</td>
-              <td>${c.patenteCamion || '-'}</td>
+              <td>${(c.patenteCamion||c.patente||'-')}</td>
               <td>${c.estacionServicio || '-'}</td>
               <td>${c.tipoCombustible || '-'}</td>
               <td>${c.metodoPago || '-'}</td>
@@ -398,7 +423,7 @@
         actualId = id; actualCol = colName;
         document.getElementById('modalTitle').textContent = 'Detalle / Editar carga';
         get('e_fecha').value = c.fecha || '';
-        get('e_patente').value = c.patenteCamion || '';
+        get('e_patente').value = (c.patenteCamion || c.patente || '').toUpperCase();
         get('e_litros').value = toNum(c.litros) || '';
         get('e_precioLitro').value = (c.precioPorLitro!=null && c.precioPorLitro!=='') ? toNum(c.precioPorLitro) : '';
         get('e_total').value = (c.totalPagado!=null && c.totalPagado!=='') ? toNum(c.totalPagado) : '';
