@@ -700,21 +700,43 @@ document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
     return true;
   }).sort((a,b)=> (fechaViaje(a)||'').localeCompare(fechaViaje(b)));
 
-  // Helpers para columnas
+    // Helpers para columnas
   const fmtAR = (n)=> new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(Number(n||0));
-  const fmtPeso = (n)=> n==null||n==='' ? '' : new Intl.NumberFormat('es-AR',{maximumFractionDigits:3}).format(Number(n));
-  const fechaDMY = (f)=> { if(!f) return '—'; const d=new Date(f); return isNaN(d)? String(f).slice(0,10) : `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; };
-  const getCTG = (v)=> v.ctg || v.nroCTG || v.numeroCTG || '';
+  const fechaDMY = (f)=> {
+    if(!f) return '—';
+    const d=new Date(f);
+    return isNaN(d)? String(f).slice(0,10) : `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  };
+  const getCTG = (v)=> v.ctg || v.nroCTG || v.numeroCTG || v.CTG || v.ctgNumero || '';
+  
   const getTarifa = (v)=>{
     if (v.tarifaPorTon) return `$ ${fmtAR(parseARS(v.tarifaPorTon))}/tn`;
     if (v.tarifaPorKg)  return `$ ${fmtAR(parseARS(v.tarifaPorKg))}/kg`;
     if (v.tarifa)       return `$ ${fmtAR(parseARS(v.tarifa))}`;
     return '';
   };
-  const kgCarg = (v)=> (v.kgCargadosRaw ?? v.kgCargados ?? v.kgCargado ?? v.kg ?? v.kgCarga ?? '');
-  const kgDesc = (v)=> (v.kgDescargadosRaw ?? v.kgDescargados ?? v.kgDesc ?? v.kg ?? '');
+  
+  // Trae "kg cargados" de varias variantes de campo.
+  // Si no encuentra nada, cae a "kg descargados" para que no quede vacío.
+  const kgCarg = (v)=> {
+    const cand = [
+      v.kgCargadosRaw, v.kgCargados, v.kgCargado, v.kgC, v.kgCarga, v.kgCargaTN,
+      v.kg, v.kilosCargados, v.kilosCarga
+    ];
+    let val = cand.find(x => x!=null && String(x).trim()!=='');
+    if (val==null || String(val).trim()==='') val = v.kgDescargados ?? v.kgDesc ?? v.kilosDescargados ?? '';
+    return (val==null)? '' : String(val);
+  };
+  
+  const kgDesc = (v)=> {
+    const cand = [v.kgDescargadosRaw, v.kgDescargados, v.kgDesc, v.kilosDescargados, v.kg];
+    const val = cand.find(x => x!=null && String(x).trim()!=='');
+    return (val==null)? '' : String(val);
+  };
+  
   const adel   = (v)=> (v.adelantoAplica ? parseARS(v.adelantoMonto||0) : 0);
-  const peaje  = (v)=> (v.peajeAplica ? parseARS(v.peajeMonto||0) : 0);
+  const peaje  = (v)=> (v.peajeAplica   ? parseARS(v.peajeMonto  ||0) : 0);
+  const entrada= (v)=> (v.entradaAplica ? parseARS(v.entradaMonto||0) : 0);
 
   // Totales
   let tViajes = viajesDet.length, tComi = 0, tPeaje = 0, tEnt = 0, tAdel = 0, tLiq = 0;
@@ -750,7 +772,7 @@ document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
     </table>`;
 
   // Detalle por viaje
-  const rowsDet = viajesDet.map((v,i)=>`
+    const rowsDet = viajesDet.map((v,i)=>`
     <tr>
       <td class="c">${i+1}</td>
       <td class="c">${fechaDMY(fechaViaje(v))}</td>
@@ -761,17 +783,19 @@ document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
       <td class="r">${kgDesc(v)}</td>
       <td class="r">${adel(v) ? '$ '+fmtAR(adel(v)) : ''}</td>
       <td class="r">${peaje(v) ? '$ '+fmtAR(peaje(v)) : ''}</td>
+      <td class="r">${entrada(v) ? '$ '+fmtAR(entrada(v)) : ''}</td>
       <td>${(v.observaciones||'').toString().replace(/[\r\n]+/g,' ')}</td>
     </tr>
   `).join('');
-
-  const totDet = `
+ 
+    const totDet = `
     <tfoot><tr>
       <td colspan="5" class="r"><b>Totales</b></td>
       <td class="r"><b>${fmtAR(tKgCarg)}</b></td>
       <td class="r"><b>${fmtAR(tKgDesc)}</b></td>
       <td class="r"><b>$ ${fmtAR(tAdel)}</b></td>
       <td class="r"><b>$ ${fmtAR(tPeaje)}</b></td>
+      <td class="r"><b>$ ${fmtAR(tEnt)}</b></td>
       <td></td>
     </tr></tfoot>`;
 
@@ -785,8 +809,8 @@ document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
   .frame{position:absolute;inset:5mm;border:2px solid #666}
   .frame::after{content:"";position:absolute;inset:3mm;border:1px solid #999}
   .content{position:relative;padding:18mm 14mm 14mm 14mm;color:#111}
-  h1{margin:0 0 6mm 0;letter-spacing:1px}
-  .head{display:flex;align-items:center;gap:12px;margin-bottom:6mm}
+  h1{margin:0;letter-spacing:1px;text-transform:uppercase;text-align:center}
+  .head{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;margin-bottom:6mm}
   .head img{height:24mm;object-fit:contain}
   .muted{color:#666;font-size:11px}
   .badge{background:#e8f0ff;border:1px solid #c8d8ff;color:#003366;padding:3px 8px;border-radius:999px;font-size:12px}
@@ -815,7 +839,7 @@ document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
     ${resumenHTML}
 
     <table class="t" style="margin-top:6mm">
-      <thead>
+            <thead>
         <tr>
           <th style="width:18mm">#</th>
           <th style="width:22mm">Fecha</th>
@@ -826,6 +850,7 @@ document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
           <th style="width:32mm" class="r">Kg descargados</th>
           <th style="width:24mm" class="r">Adelanto</th>
           <th style="width:22mm" class="r">Peaje</th>
+          <th style="width:22mm" class="r">Entrada</th>
           <th style="width:70mm">Observaciones</th>
         </tr>
       </thead>
