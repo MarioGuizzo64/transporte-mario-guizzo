@@ -22,7 +22,7 @@
   .btn-verde{background:var(--green);color:#fff}
   .btn-naranja{background:var(--orange);color:#000}
   .btn-azul{background:var(--blue);color:#fff}
-  .cards{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin:10px 0}
+  .cards{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin:10px 0}
   .card{background:#0f0f0f;border:1px solid #222;border-radius:10px;padding:12px;text-align:center}
   .card small{opacity:.8}
   .card b{display:block;margin-top:6px;font-size:18px}
@@ -72,18 +72,21 @@
     </div>
   </div>
 
+  <!-- Tarjetas -->
   <div id="cards" class="cards panel">
-    <div class="card"><small>Ingresos</small>          <b id="kIng">$ 0</b></div>
-    <div class="card"><small>Combustible</small>       <b id="kComb">$ 0</b></div>
-    <div class="card"><small>Mantenimiento</small>     <b id="kMant">$ 0</b></div>
-    <div class="card"><small>Peajes</small>            <b id="kPeaje">$ 0</b></div>
-    <div class="card"><small>Adelantos</small>         <b id="kAdel">$ 0</b></div>
-    <div class="card"><small>Entradas</small>          <b id="kEntrada">$ 0</b></div>
-    <div class="card"><small>Comisión chofer</small>   <b id="kComision">$ 0</b></div>
+    <div class="card"><small>Subtotal (Ingresos)</small> <b id="kIngSub">$ 0</b></div>
+    <div class="card"><small>IVA 21%</small>             <b id="kIVA">$ 0</b></div>
+    <div class="card"><small>Total (c/ IVA)</small>      <b id="kIngTot">$ 0</b></div>
+    <div class="card"><small>Combustible</small>         <b id="kComb">$ 0</b></div>
+    <div class="card"><small>Mantenimiento</small>       <b id="kMant">$ 0</b></div>
+    <div class="card"><small>Peajes</small>              <b id="kPeaje">$ 0</b></div>
+    <div class="card"><small>Entradas</small>            <b id="kEntrada">$ 0</b></div>
+    <div class="card"><small>Adelantos</small>           <b id="kAdel">$ 0</b></div>
   </div>
   <div class="cards">
-    <div class="card" style="grid-column: span 3"><small>TOTAL GASTOS</small><b id="kGastos">$ 0</b></div>
-    <div class="card" style="grid-column: span 4"><small>MARGEN (Ingresos – Gastos)</small><b id="kMargen">$ 0</b></div>
+    <div class="card" style="grid-column: span 2"><small>Comisión chofer (18% por defecto)</small><b id="kComision">$ 0</b></div>
+    <div class="card" style="grid-column: span 3"><small>A pagar choferes (Comisión − Adelantos + Peajes + Entradas)</small><b id="kAPagarChofer">$ 0</b></div>
+    <div class="card" style="grid-column: span 3"><small>MARGEN (Subtotal – Gastos)</small><b id="kMargen">$ 0</b></div>
   </div>
 
   <section id="tab-resumen">
@@ -92,7 +95,7 @@
       <div class="panel">
         <h3 style="margin:6px 0 12px">Ingresos vs Egresos <span id="titPatente"></span></h3>
         <canvas id="chartPatentes" height="180"></canvas>
-        <div class="note">Columna “Ingresos” vs “Egresos” del rango y camión seleccionado.</div>
+        <div class="note">Comparación con <b>Subtotal</b> (sin IVA) vs Egresos del rango y camión seleccionado.</div>
       </div>
       <div class="panel">
         <h3 style="margin:6px 0 12px">Composición de egresos <span id="titPatente2"></span></h3>
@@ -107,7 +110,7 @@
       <h3 style="margin:6px 0 12px">Liquidación por Chofer</h3>
       <div class="note" style="margin-bottom:8px">
         Comisión = Ingreso × %  ·  Liquidación = Comisión − Adelantos + Peajes + Entradas.
-        Si en <code>usuarios</code> no hay <code>porcentaje</code>, se usa 20%.
+        Si en <code>usuarios</code> no hay <code>porcentaje</code>, se usa <b>18%</b>.
       </div>
       <table class="tabla">
         <thead>
@@ -172,7 +175,10 @@
 </div>
 
 <script type="module">
-const DEFAULT_COMMISSION = 0.20;
+/* ======= CONFIG ======= */
+// % comisión por defecto si el usuario no tiene porcentaje asignado:
+const DEFAULT_COMMISSION = 0.18;
+const IVA_RATE = 0.21;
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -195,12 +201,14 @@ onAuthStateChanged(auth, (u) => {
   start();
 });
 
+/* ======= STATE ======= */
 let viajes = [], _comb1 = [], _comb2 = [], combustible = [], mant = [], usuarios = [];
 let movs = [];
 let patSet = new Set(), choSet = new Set();
 let activeTab = 'resumen';
 let selectedPatChip = '';
 
+/* ======= UI refs ======= */
 const fDesde   = document.getElementById('fDesde');
 const fHasta   = document.getElementById('fHasta');
 const fChofer  = document.getElementById('fChofer');
@@ -208,14 +216,16 @@ const fPatente = document.getElementById('fPatente');
 const fEstadoMant = document.getElementById('fEstadoMant');
 const fQ       = document.getElementById('fQ');
 
-const kIng = document.getElementById('kIng');
-const kComb = document.getElementById('kComb');
-const kMant = document.getElementById('kMant');
-const kPeaje = document.getElementById('kPeaje');
-const kAdel = document.getElementById('kAdel');
-const kEntrada = document.getElementById('kEntrada');
+const kIngSub = document.getElementById('kIngSub');
+const kIVA    = document.getElementById('kIVA');
+const kIngTot = document.getElementById('kIngTot');
+const kComb   = document.getElementById('kComb');
+const kMant   = document.getElementById('kMant');
+const kPeaje  = document.getElementById('kPeaje');
+const kAdel   = document.getElementById('kAdel');
+const kEntrada= document.getElementById('kEntrada');
 const kComision = document.getElementById('kComision');
-const kGastos = document.getElementById('kGastos');
+const kAPagarChofer = document.getElementById('kAPagarChofer');
 const kMargen = document.getElementById('kMargen');
 
 const tbody = document.getElementById('tbody');
@@ -227,6 +237,7 @@ const titPat2 = document.getElementById('titPatente2');
 
 const fmt = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
 
+/* ======= DEBUG ======= */
 let dbg = document.getElementById('dbg');
 if (!dbg){
   dbg = document.createElement('div');
@@ -239,11 +250,10 @@ const showDbg = (extra='')=>{
   dbg.textContent = `docs → viajes:${viajes.length} · combustible:${combustible.length} · mant:${mant.length} · choferes:${usuarios.length} ${extra?'· '+extra:''}`;
 };
 
-/* --------- Helpers --------- */
+/* ======= Helpers ======= */
 function parseARS(x){
   if (typeof x === 'number') return isFinite(x)?x:0;
   if (x == null) return 0;
-  // deja solo dígitos, coma, punto y signo; luego quita separador de miles y usa coma como decimal
   let s = String(x).trim().replace(/[^\d,.\-]/g,'');
   if (!s) return 0;
   s = s.replace(/\./g,'').replace(',', '.');
@@ -260,32 +270,18 @@ function fechaStr(x){
   }
   return String(x).slice(0,10);
 }
-function isPatente(p){
-  if (!p) return false;
-  const s = String(p).replace(/\s/g,'').toUpperCase();
-  return /^[A-Z]{3}\d{3}$/.test(s) || /^[A-Z]{2}\d{3}[A-Z]{2}$/.test(s);
+function inRangeFechaStr(fstr, d, h){
+  if (!d && !h) return true;
+  if (!fstr) return false;
+  if (d && fstr < d) return false;
+  if (h && fstr > h) return false;
+  return true;
 }
-const fechaViaje = (v) => fechaStr(v.fecha || v.fechaViaje || v.fechaSalida || v.fechaCarga || v.createdAt || null);
-
-const combPatente  = (c) => (c.patenteCamion || c.patente || '').trim().toUpperCase();
-const combEstacion = (c) => c.estacionServicio || c.estacion || '';
-const combMetodo   = (c) => c.metodoPago || c.metodo || '';
-const combTipo     = (c) => c.tipoCombustible || c.tipo || '';
-const combFecha    = (c) => fechaStr(c.fecha || c.fechaCarga || c.fechaCompra || null);
-
-// ⚠️ PRIORIDAD: litros×precio  → si no se puede, usa totalPagado/total
-const combTotal    = (c) => {
-  const litros = parseARS(c.litros);
-  const precio = parseARS(c.precioPorLitro ?? c.sl);
-  if (litros>0 && precio>0) return litros*precio;
-
-  const cand = [c.totalPagado, c.total];
-  for (const v of cand){
-    const n = parseARS(v);
-    if (n>0) return n;
-  }
-  return 0;
-};
+function pasaTexto(q, ...campos){
+  q = (q||'').trim().toLowerCase();
+  if (!q) return true;
+  return campos.some(c => ((c||'')+'').toLowerCase().includes(q));
+}
 
 function ingresoViaje(v){
   const cand = [v.importeCobrado, v.totalCobrado, v.importe, v.ingreso, v.total];
@@ -300,7 +296,37 @@ function ingresoViaje(v){
   if (tKg>0 && kg>0) return kg*tKg;
   return 0;
 }
+function getPctChofer(nombre, patente){
+  const byName = usuarios.find(u => (u.nombre||u.displayName||'').trim() === (nombre||'').trim());
+  if (byName && Number(byName.porcentaje) >= 0) return Number(byName.porcentaje)/100;
 
+  const byArray = usuarios.find(u => Array.isArray(u.patentes) && u.patentes.map(p=>String(p).toUpperCase()).includes(String(patente||'').toUpperCase()));
+  if (byArray && Number(byArray.porcentaje) >= 0) return Number(byArray.porcentaje)/100;
+
+  const bySingle = usuarios.find(u => typeof u.patente === 'string' && String(u.patente).toUpperCase() === String(patente||'').toUpperCase());
+  if (bySingle && Number(bySingle.porcentaje) >= 0) return Number(bySingle.porcentaje)/100;
+
+  return DEFAULT_COMMISSION; // 18%
+}
+
+const fechaViaje = (v) => fechaStr(v.fecha || v.fechaViaje || v.fechaSalida || v.fechaCarga || v.createdAt || null);
+
+/* Combustible helpers */
+const combPatente  = (c) => (c.patenteCamion || c.patente || '').trim().toUpperCase();
+const combEstacion = (c) => c.estacionServicio || c.estacion || '';
+const combMetodo   = (c) => c.metodoPago || c.metodo || '';
+const combTipo     = (c) => c.tipoCombustible || c.tipo || '';
+const combFecha    = (c) => fechaStr(c.fecha || c.fechaCarga || c.fechaCompra || null);
+const combTotal    = (c) => {
+  const litros = parseARS(c.litros);
+  const precio = parseARS(c.precioPorLitro ?? c.sl);
+  if (litros>0 && precio>0) return litros*precio;
+  const cand = [c.totalPagado, c.total];
+  for (const v of cand){ const n = parseARS(v); if (n>0) return n; }
+  return 0;
+};
+
+/* ======= Data listeners ======= */
 function start(){
   onSnapshot(collection(db,'usuarios'), qs=>{
     usuarios = qs.docs.map(d => ({id:d.id, ...d.data()}));
@@ -313,7 +339,7 @@ function start(){
     viajes = qs.docs.map(d => ({id:d.id, ...d.data()}));
     viajes.forEach(v=>{
       const p = (v.patente||'').trim().toUpperCase();
-      if (isPatente(p)) patSet.add(p);
+      if (p) patSet.add(p);
       if (v.chofer)  choSet.add((v.chofer||'').trim());
     });
     poblarPatentes(); poblarChoferes(); showDbg(); render();
@@ -331,20 +357,20 @@ function start(){
 
   onSnapshot(collection(db,'mantenimientos'), qs=>{
     mant = qs.docs.map(d => ({id:d.id, ...d.data()}));
-    mant.forEach(m=> { const p = (m.patente||'').trim().toUpperCase(); if (isPatente(p)) patSet.add(p); });
+    mant.forEach(m=> { const p = (m.patente||'').trim().toUpperCase(); if (p) patSet.add(p); });
     poblarPatentes(); showDbg(); render();
   });
 }
-
 function recomputeCombustible(){
   combustible = [..._comb1, ..._comb2];
-  combustible.forEach(c=> { const p = combPatente(c); if (isPatente(p)) patSet.add(p); });
+  combustible.forEach(c=> { const p = combPatente(c); if (p) patSet.add(p); });
   poblarPatentes(); showDbg(); render();
 }
 
+/* ======= UI builders ======= */
 function poblarPatentes(){
   const prev = (fPatente.value||'').toUpperCase();
-  const arr = Array.from(patSet).filter(isPatente).sort();
+  const arr = Array.from(patSet).filter(Boolean).sort();
   fPatente.innerHTML = '<option value="">Todas las patentes</option>' + arr.map(p=>`<option>${p}</option>`).join('');
   if (arr.includes(prev)) fPatente.value = prev;
   buildChips(arr);
@@ -369,32 +395,8 @@ function buildChips(arr){
     };
   });
 }
-function inRangeFechaStr(fstr, d, h){
-  if (!d && !h) return true;
-  if (!fstr) return false;
-  if (d && fstr < d) return false;
-  if (h && fstr > h) return false;
-  return true;
-}
-function pasaTexto(q, ...campos){
-  q = (q||'').trim().toLowerCase();
-  if (!q) return true;
-  return campos.some(c => ((c||'')+'').toLowerCase().includes(q));
-}
-function getPctChofer(nombre, patente){
-  const byName = usuarios.find(u => (u.nombre||u.displayName||'').trim() === (nombre||'').trim());
-  if (byName && Number(byName.porcentaje) >= 0) return Number(byName.porcentaje)/100;
 
-  const byArray = usuarios.find(u => Array.isArray(u.patentes) && u.patentes.map(p=>String(p).toUpperCase()).includes(String(patente||'').toUpperCase()));
-  if (byArray && Number(byArray.porcentaje) >= 0) return Number(byArray.porcentaje)/100;
-
-  const bySingle = usuarios.find(u => typeof u.patente === 'string' && String(u.patente).toUpperCase() === String(patente||'').toUpperCase());
-  if (bySingle && Number(bySingle.porcentaje) >= 0) return Number(bySingle.porcentaje)/100;
-
-  return DEFAULT_COMMISSION;
-}
-
-/* --------- Render --------- */
+/* ======= Render principal ======= */
 function render(){
   const d = fDesde.value||'', h = fHasta.value||'';
   const ch = fChofer.value||'', pt = (fPatente.value||'').toUpperCase();
@@ -411,15 +413,16 @@ function render(){
     return true;
   });
 
+  // Ingresos + extras por viaje
   for (const v of viajesFiltrados){
     const ingreso = ingresoViaje(v);
     const f = fechaViaje(v);
     const patenteUp = String(v.patente||'').toUpperCase();
-    if (_ingresoValido(ingreso)){
+    if (Number(ingreso)>0){
       movs.push({fecha:f, tipo:'Ingreso', detalle:`${v.origen||''} → ${v.destino||''}`, chofer:v.chofer||'', patente:patenteUp, importe:ingreso});
       const pct = getPctChofer(v.chofer, patenteUp);
-      const comi = ingreso * pct;
-      if (_ingresoValido(comi)){
+      const comi = ingreso * pct; // 18% por defecto
+      if (Number(comi)>0){
         movs.push({fecha:f, tipo:'Comisión', detalle:`Comisión chofer ${Math.round(pct*100)}%`, chofer:v.chofer||'', patente:patenteUp, importe:comi});
       }
     }
@@ -433,8 +436,8 @@ function render(){
       movs.push({fecha:f, tipo:'Adelanto', detalle:'Adelanto chofer', chofer:v.chofer||'', patente:patenteUp, importe:parseARS(v.adelantoMonto)});
     }
   }
-  function _ingresoValido(n){ return Number(n||0) > 0; }
 
+  // Combustible
   combustible.filter(c=>{
     const f = combFecha(c);
     if (!inRangeFechaStr(f, d, h)) return false;
@@ -454,6 +457,7 @@ function render(){
     });
   });
 
+  // Mantenimiento
   mant.filter(m=>{
     const f = fechaStr(m.fecha);
     if (!inRangeFechaStr(f, d, h)) return false;
@@ -477,26 +481,38 @@ function render(){
   movs.sort((a,b)=> b.fecha.localeCompare(a.fecha));
 
   const sum = (tipo) => movs.filter(x=>x.tipo===tipo).reduce((a,b)=>a+Number(b.importe||0),0);
-  const ingresos   = sum('Ingreso');
+  const subtotal   = sum('Ingreso');          // sin IVA
+  const iva        = subtotal * IVA_RATE;     // 21%
+  const totalIng   = subtotal + iva;          // con IVA
+
   const combTotal$ = sum('Combustible');
   const mantTotal  = sum('Mantenimiento');
   const peajeTotal = sum('Peaje');
   const adelTotal  = sum('Adelanto');
   const entTotal   = sum('Entrada');
   const comiTotal  = sum('Comisión');
-  const gastos     = combTotal$ + mantTotal + peajeTotal + adelTotal + entTotal + comiTotal;
-  const margen     = ingresos - gastos;
 
-  kIng.textContent     = fmt(ingresos);
-  kComb.textContent    = fmt(combTotal$);
-  kMant.textContent    = fmt(mantTotal);
-  kPeaje.textContent   = fmt(peajeTotal);
-  kAdel.textContent    = fmt(adelTotal);
-  kEntrada.textContent = fmt(entTotal);
-  kComision.textContent= fmt(comiTotal);
-  kGastos.textContent  = fmt(gastos);
+  const gastos     = combTotal$ + mantTotal + peajeTotal + adelTotal + entTotal + comiTotal;
+  const margen     = subtotal - gastos;       // Margen sobre ingresos netos (sin IVA)
+
+  // A pagar choferes: Comisión − Adelantos + Peajes + Entradas
+  const aPagarChofer = comiTotal - adelTotal + peajeTotal + entTotal;
+
+  // Cards
+  kIngSub.textContent = fmt(subtotal);
+  kIVA.textContent    = fmt(iva);
+  kIngTot.textContent = fmt(totalIng);
+  kComb.textContent   = fmt(combTotal$);
+  kMant.textContent   = fmt(mantTotal);
+  kPeaje.textContent  = fmt(peajeTotal);
+  kAdel.textContent   = fmt(adelTotal);
+  kEntrada.textContent= fmt(entTotal);
+  kComision.textContent=fmt(comiTotal);
+  kAPagarChofer.textContent = fmt(aPagarChofer);
   kMargen.textContent  = fmt(margen);
 
+  // Tabla movimientos
+  const tbody = document.getElementById('tbody');
   tbody.innerHTML = movs.length ? movs.map(m=>`
     <tr>
       <td>${m.fecha}</td>
@@ -512,6 +528,7 @@ function render(){
   showDbg();
 }
 
+/* ======= Render por chofer ======= */
 function renderChofer(viajesFiltrados){
   const map = new Map();
   for (const v of viajesFiltrados){
@@ -580,6 +597,7 @@ function renderChofer(viajesFiltrados){
   window.__rowsChoferPat = rows2;
 }
 
+/* ======= Charts ======= */
 function renderCharts(movsAll){
   if (!window.Chart){ return; }
   const mm = selectedPatChip ? movsAll.filter(m=>m.patente===selectedPatChip) : movsAll;
@@ -598,12 +616,15 @@ function renderCharts(movsAll){
   window.chrtPat = new window.Chart(ctx1,{
     type:'bar',
     data:{labels, datasets:[
-      {label:'Ingresos', data:ingV, backgroundColor:'#4FC3F7', borderColor:'#4FC3F7', borderWidth:1},
-      {label:'Egresos',  data:egrV, backgroundColor:'#EF5350', borderColor:'#EF5350', borderWidth:1}
+      {label:'Ingresos (subtotal)', data:ingV, backgroundColor:'#4FC3F7', borderColor:'#4FC3F7', borderWidth:1},
+      {label:'Egresos',            data:egrV, backgroundColor:'#EF5350', borderColor:'#EF5350', borderWidth:1}
     ]},
     options:{
       responsive:true,
-      plugins:{ legend:{position:'bottom', labels:{color:'#fff'}}, tooltip:{bodyColor:'#111', titleColor:'#111'} },
+      plugins:{
+        legend:{position:'bottom', labels:{color:'#fff'}},
+        tooltip:{bodyColor:'#fff', titleColor:'#fff'} // <-- texto blanco
+      },
       scales:{ x:{ticks:{color:'#eee'}, grid:{color:'#333'}}, y:{ticks:{color:'#eee'}, grid:{color:'#333'}} }
     }
   });
@@ -617,11 +638,13 @@ function renderCharts(movsAll){
     data:{ labels:comp, datasets:[{ data:vals,
       backgroundColor:['#42A5F5','#EC407A','#FFB300','#66BB6A','#AB47BC','#8D6E63'],
       borderColor:['#42A5F5','#EC407A','#FFB300','#66BB6A','#AB47BC','#8D6E63'], borderWidth:1 }] },
-    options:{ responsive:true, cutout:'55%', plugins:{ legend:{position:'bottom', labels:{color:'#fff'}} } }
+    options:{ responsive:true, cutout:'55%',
+      plugins:{ legend:{position:'bottom', labels:{color:'#fff'}}, tooltip:{bodyColor:'#fff', titleColor:'#fff'} } // tooltip claro
+    }
   });
 }
 
-/* Eventos */
+/* ======= Eventos ======= */
 [fDesde,fHasta,fChofer,fPatente,fEstadoMant,fQ].forEach(el => el.addEventListener('input', render));
 document.getElementById('btnLimpiar').addEventListener('click', ()=>{
   fDesde.value=''; fHasta.value=''; fChofer.value=''; fPatente.value=''; fEstadoMant.value=''; fQ.value='';
