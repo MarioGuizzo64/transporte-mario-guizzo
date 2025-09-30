@@ -52,7 +52,7 @@
 
       <div class="actions">
         <button type="button" class="btn btn-naranja" id="btnVolver">Volver</button>
-        <button type="submit" class="btn btn-verde">Guardar carga</button>
+        <button type="submit" class="btn btn-verde" id="btnGuardar">Guardar carga</button>
       </div>
       <div class="note">Podés completar **Precio** o **Total**; si ambos están, se usa tal cual.</div>
     </form>
@@ -95,6 +95,17 @@
       return isNaN(n) ? 0 : n;
     };
 
+    // Espera un usuario listo antes de permitir guardar
+    let currentUser = null;
+    onAuthStateChanged(auth, (u) => {
+      if (!u) { window.location.href = "login.html"; return; }
+      currentUser = u;
+      if (!document.getElementById('fFecha').value) {
+        document.getElementById('fFecha').value = new Date().toISOString().slice(0,10);
+      }
+      document.getElementById('btnGuardar').disabled = false;
+    });
+
     const fFecha    = document.getElementById('fFecha');
     const fLitros   = document.getElementById('fLitros');
     const fPrecio   = document.getElementById('fPrecio');
@@ -106,15 +117,12 @@
     // Mayúsculas en patente
     fPatente.addEventListener('input', e => e.target.value = e.target.value.toUpperCase());
 
-    onAuthStateChanged(auth, (u) => {
-      if (!u) { window.location.href = "login.html"; return; }
-      if (!fFecha.value) fFecha.value = new Date().toISOString().slice(0,10);
-    });
-
     document.getElementById('btnVolver').onclick = () => { window.location.href = returnUrl; };
 
     document.getElementById('form').addEventListener('submit', async (e)=>{
       e.preventDefault();
+
+      if (!currentUser) { alert("Debés iniciar sesión."); return; }
 
       // Validación mínima
       if (!fFecha.value || !fLitros.value) { alert('Completá fecha y litros.'); return; }
@@ -122,6 +130,7 @@
       const litros = toNum(fLitros.value);
       const precioPorLitro = fPrecio.value === '' ? null : toNum(fPrecio.value);
       const totalPagado    = fTotal.value  === '' ? null : toNum(fTotal.value);
+      const patenteNorm    = (fPatente.value||'').trim().toUpperCase();
 
       const data = {
         fecha: fFecha.value,
@@ -130,13 +139,16 @@
         totalPagado,
         estacionServicio: (fEstacion.value||'').trim(),
         tipoCombustible: fTipo.value || '',
-        patenteCamion: (fPatente.value||'').trim().toUpperCase(),
-        observaciones: '',
+        // Guardamos ambas variantes para máxima compatibilidad con las reglas:
+        patente: patenteNorm,
+        patenteCamion: patenteNorm,
+        uidCreador: currentUser.uid,   // <- CLAVE para pasar createdByMe(...)
+        creadoPor: currentUser.uid,    // <- redundancia compatible
         timestamp: serverTimestamp()
       };
 
       try{
-        // Guardamos en la colección principal usada por admin
+        // Usa el MISMO nombre de colección que protegen tus reglas
         await addDoc(collection(db,'cargas-combustible'), data);
         alert('Carga guardada con éxito.');
         window.location.href = returnUrl;
