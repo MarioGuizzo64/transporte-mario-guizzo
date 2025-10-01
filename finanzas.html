@@ -68,6 +68,11 @@
     <div class="right" style="margin-left:auto">
       <button id="btnCSV" class="btn btn-azul">Exportar CSV</button>
       <button id="btnPrintTabla" class="btn btn-verde">Imprimir tabla</button>
+      <!-- NUEVO: selector de orientación -->
+      <select id="selOrient">
+        <option value="portrait">Vertical (A4)</option>
+        <option value="landscape">Horizontal (A4)</option>
+      </select>
       <button id="btnPrintLiq" class="btn btn-verde">Imprimir liquidación</button>
     </div>
   </div>
@@ -307,7 +312,6 @@ function getPctChofer(nombre, patente){
 
   return DEFAULT_COMMISSION; // 18%
 }
-
 const fechaViaje = (v) => fechaStr(v.fecha || v.fechaViaje || v.fechaSalida || v.fechaCarga || v.createdAt || null);
 
 /* Combustible helpers */
@@ -511,7 +515,6 @@ function render(){
   kMargen.textContent  = fmt(margen);
 
   // Tabla movimientos
-  const tbody = document.getElementById('tbody');
   tbody.innerHTML = movs.length ? movs.map(m=>`
     <tr>
       <td>${m.fecha}</td>
@@ -643,7 +646,7 @@ function renderCharts(movsAll){
   });
 }
 
-/* ======= Eventos ======= */
+/* ======= Export/impresión ======= */
 [fDesde,fHasta,fChofer,fPatente,fEstadoMant,fQ].forEach(el => el.addEventListener('input', render));
 document.getElementById('btnLimpiar').addEventListener('click', ()=>{
   fDesde.value=''; fHasta.value=''; fChofer.value=''; fPatente.value=''; fEstadoMant.value=''; fQ.value='';
@@ -680,15 +683,21 @@ document.getElementById('btnPrintTabla').addEventListener('click', ()=>{
   const w = window.open('', '_blank', 'width=900,height=1000'); w.document.write(html); w.document.close(); w.focus();
 });
 
-/* ======= Imprimir liquidación con detalle por patente ======= */
+/* ======= NUEVO: imprimir liquidación con detalle de viajes por patente ======= */
 document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
   const patenteSel = (fPatente.value||'').toUpperCase();
   if (!patenteSel){
     alert('Elegí una patente para imprimir la liquidación con detalle.');
     return;
   }
+  const orient = document.getElementById('selOrient').value; // 'portrait' | 'landscape'
+
+  // Filtrado igual que en pantalla
   const d = fDesde.value||'', h = fHasta.value||'';
   const ch = fChofer.value||'', q = fQ.value||'';
+  const fechaDMY = (f)=>{ if(!f) return '—'; const d=new Date(f); return isNaN(d)? String(f).slice(0,10) : `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; };
+  const fmtAR = (n)=> new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(Number(n||0));
+  const getCTG = (v)=> v.ctg || v.nroCTG || v.numeroCTG || v.CTG || v.ctgNumero || '';
 
   const viajesDet = viajes.filter(v=>{
     const f = fechaViaje(v);
@@ -699,14 +708,6 @@ document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
     return true;
   }).sort((a,b)=> (fechaViaje(a)||'').localeCompare(fechaViaje(b)));
 
-  const fmtAR = (n)=> new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(Number(n||0));
-  const fechaDMY = (f)=> {
-    if(!f) return '—';
-    const d=new Date(f);
-    return isNaN(d)? String(f).slice(0,10) : `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
-  };
-  const getCTG = (v)=> v.ctg || v.nroCTG || v.numeroCTG || v.CTG || v.ctgNumero || '';
-
   const getTarifa = (v)=>{
     if (v.tarifaPorTon) return `$ ${fmtAR(parseARS(v.tarifaPorTon))}/tn`;
     if (v.tarifaPorKg)  return `$ ${fmtAR(parseARS(v.tarifaPorKg))}/kg`;
@@ -714,25 +715,21 @@ document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
     return '';
   };
 
-// Kg CARGADOS: solo busca campos de cargado; NO usa v.kg ni cae a descargados.
-const kgCarg = (v)=> {
-  const cand = [
-    v.kgCargadosRaw, v.kgCargados, v.kgCargado,
-    v.kgCarga, v.kgCargaTN, v.kgCargadosTn, v.kgCargadosTns,
-    v.kilosCargados, v.kilosCarga
-  ];
-  const val = cand.find(x => x!=null && String(x).trim()!=='');
-  return (val==null)? '' : String(val);
-};
+  // Kg cargados y descargados: probá múltiples nombres de campos, devolvé string tal cual (no lo reformateo para respetar coma/punto).
+  const kgCarg = (v)=> {
+    const cand = [
+      v.kgCargadosRaw, v.kgCargados, v.kgCargado, v.kgC, v.kgCarga, v.kilosCargados, v.kilosCarga
+    ];
+    let val = cand.find(x => x!=null && String(x).trim()!=='');
+    if (val==null || String(val).trim()==='') val = ''; // no “heredo” descargados, así detectás si falta
+    return (val==null)? '' : String(val);
+  };
+  const kgDesc = (v)=> {
+    const cand = [v.kgDescargadosRaw, v.kgDescargados, v.kgDesc, v.kilosDescargados, v.kg];
+    const val = cand.find(x => x!=null && String(x).trim()!=='');
+    return (val==null)? '' : String(val);
+  };
 
-// Kg DESCARGADOS: prioriza campos de descarga; como ÚLTIMO recurso usa v.kg (legado)
-const kgDesc = (v)=> {
-  const cand = [v.kgDescargadosRaw, v.kgDescargados, v.kgDesc, v.kilosDescargados];
-  let val = cand.find(x => x!=null && String(x).trim()!=='');
-  if (val==null) val = v.kg; // fallback legado
-  return (val==null)? '' : String(val);
-};
-  
   const adel    = (v)=> (v.adelantoAplica ? parseARS(v.adelantoMonto||0) : 0);
   const peaje   = (v)=> (v.peajeAplica   ? parseARS(v.peajeMonto  ||0) : 0);
   const entrada = (v)=> (v.entradaAplica ? parseARS(v.entradaMonto||0) : 0);
@@ -745,15 +742,11 @@ const kgDesc = (v)=> {
     const pct = getPctChofer(v.chofer, v.patente);
     const comi = ingreso * pct;
     const liq  = comi - adel(v) + peaje(v) + entrada(v);
-    tComi += comi;
-    tPeaje += peaje(v);
-    tEnt  += entrada(v);
-    tAdel += adel(v);
-    tLiq  += liq;
-    tKgCarg += parseARS(kgCarg(v));
-    tKgDesc += parseARS(kgDesc(v));
+    tComi += comi; tPeaje += peaje(v); tEnt += entrada(v); tAdel += adel(v); tLiq += liq;
+    tKgCarg += parseARS(kgCarg(v)); tKgDesc += parseARS(kgDesc(v));
   });
 
+  // Resumen superior (sin columnas de chofer/ingreso)
   const resumenHTML = `
     <table class="t resumen">
       <thead><tr>
@@ -769,100 +762,112 @@ const kgDesc = (v)=> {
       </tr></tbody>
     </table>`;
 
+  // Filas detalle
   const rowsDet = viajesDet.map((v,i)=>`
     <tr>
       <td class="c">${i+1}</td>
-      <td class="c">${fechaDMY(fechaViaje(v))}</td>
-      <td class="c">${getCTG(v)}</td>
-      <td>${(v.origen||'').toString()} → ${(v.destino||'').toString()}</td>
-      <td class="r">${getTarifa(v)}</td>
-      <td class="r">${kgCarg(v)}</td>
-      <td class="r">${kgDesc(v)}</td>
-      <td class="r">${adel(v) ? '$ '+fmtAR(adel(v)) : ''}</td>
-      <td class="r">${peaje(v) ? '$ '+fmtAR(peaje(v)) : ''}</td>
-      <td class="r">${entrada(v) ? '$ '+fmtAR(entrada(v)) : ''}</td>
-      <td class="obs">${(v.observaciones||'').toString()}</td>
-    </tr>
-  `).join('');
+      <td class="c nowrap">${fechaDMY(fechaViaje(v))}</td>
+      <td class="c nowrap">${getCTG(v)}</td>
+      <td class="wrap">${(v.origen||'')} → ${(v.destino||'')}</td>
+      <td class="r nowrap">${getTarifa(v)}</td>
+      <td class="r nowrap">${kgCarg(v)}</td>
+      <td class="r nowrap">${kgDesc(v)}</td>
+      <td class="r nowrap">${adel(v) ? '$ '+fmtAR(adel(v)) : ''}</td>
+      <td class="r nowrap">${peaje(v) ? '$ '+fmtAR(peaje(v)) : ''}</td>
+      <td class="r nowrap">${entrada(v) ? '$ '+fmtAR(entrada(v)) : ''}</td>
+      <td class="wrap">${(v.observaciones||'').toString().replace(/[\r\n]+/g,' ')}</td>
+    </tr>`).join('');
 
   const totDet = `
     <tfoot><tr>
       <td colspan="5" class="r"><b>Totales</b></td>
-      <td class="r"><b>${fmtAR(tKgCarg)}</b></td>
-      <td class="r"><b>${fmtAR(tKgDesc)}</b></td>
-      <td class="r"><b>$ ${fmtAR(tAdel)}</b></td>
-      <td class="r"><b>$ ${fmtAR(tPeaje)}</b></td>
-      <td class="r"><b>$ ${fmtAR(tEnt)}</b></td>
+      <td class="r nowrap"><b>${fmtAR(tKgCarg)}</b></td>
+      <td class="r nowrap"><b>${fmtAR(tKgDesc)}</b></td>
+      <td class="r nowrap"><b>$ ${fmtAR(tAdel)}</b></td>
+      <td class="r nowrap"><b>$ ${fmtAR(tPeaje)}</b></td>
+      <td class="r nowrap"><b>$ ${fmtAR(tEnt)}</b></td>
       <td></td>
     </tr></tfoot>`;
 
+  // Colgroup por orientación (porcentajes suman 100)
+  const colgroup = (orient==='landscape')
+    ? `<colgroup>
+         <col style="width:4%"><col style="width:8%"><col style="width:12%"><col style="width:22%">
+         <col style="width:10%"><col style="width:7%"><col style="width:7%"><col style="width:9%">
+         <col style="width:6%"><col style="width:6%"><col style="width:9%">
+       </colgroup>`
+    : `<colgroup>
+         <col style="width:4%"><col style="width:8%"><col style="width:12%"><col style="width:20%">
+         <col style="width:9%"><col style="width:7%"><col style="width:7%"><col style="width:9%">
+         <col style="width:6%"><col style="width:6%"><col style="width:12%">
+       </colgroup>`;
+
   const html = `
-<!DOCTYPE html><html><head><meta charset="utf-8"><title>LIQUIDACIÓN ${patenteSel}</title>
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Liquidación ${patenteSel}</title>
 <style>
-  @page{size:A4;margin:0}
+  @page{size:A4 ${orient};margin:0}
   body{font-family:Arial,Helvetica,sans-serif;margin:0}
-  .content{padding:18mm 14mm 14mm 14mm;color:#111}
-  /* Marco doble 5mm */
-  .frame{position:fixed;inset:5mm;border:2px solid #666}
+  .page{position:relative;min-height:${orient==='landscape'?'210mm':'297mm'}}
+  .frame{position:absolute;inset:5mm;border:2px solid #666}
   .frame::after{content:"";position:absolute;inset:3mm;border:1px solid #999}
-  .head{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;margin-bottom:6mm}
-  .head img{height:24mm;object-fit:contain}
-  h1{margin:0;letter-spacing:1px;text-transform:uppercase;text-align:center}
-  .muted{color:#666;font-size:11px}
+  .content{position:relative;padding:${orient==='landscape'?'14mm':'18mm'} 12mm 12mm 12mm;color:#111}
+  .head{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;margin-bottom:6mm}
+  .head img{height:${orient==='landscape'?'18mm':'22mm'};object-fit:contain}
+  h1{margin:0;text-align:center;text-transform:uppercase;letter-spacing:1px;font-size:${orient==='landscape'?'18px':'20px'}}
+  .muted{color:#666;font-size:${orient==='landscape'?'10px':'11px'};text-align:center;margin-top:2mm}
   .badge{background:#e8f0ff;border:1px solid #c8d8ff;color:#003366;padding:3px 8px;border-radius:999px;font-size:12px}
   .t{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:2mm}
-  .t th,.t td{
-    border-bottom:1px solid #ddd;padding:6px 8px;vertical-align:top;font-size:12px;
-    word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap;line-height:1.2
-  }
+  .t th,.t td{border-bottom:1px solid #ddd;padding:${orient==='landscape'?'5px 6px':'6px 8px'};vertical-align:top;font-size:${orient==='landscape'?'11px':'12px'}}
   .t thead th{background:#f3f6ff;border-bottom:1px solid #cfd8ff}
   .resumen thead th{background:#eef7ee;border-bottom:1px solid #cfe3cf}
-  .c{text-align:center}.r{text-align:right}
-  .small{font-size:11px;color:#555}
-  th.obs,td.obs{width:70mm;max-width:70mm}
+  .r{text-align:right} .c{text-align:center}
+  .nowrap{white-space:nowrap}
+  .wrap{white-space:normal;word-break:break-word;overflow-wrap:anywhere}
 </style></head>
 <body onload="window.print()">
-
-<div class="frame"></div>
-<div class="content">
-  <div class="head">
-    <img src="/logo.png" alt="Logo" onerror="this.style.display='none'">
-    <div>
-      <h1>LIQUIDACIÓN — PATENTE ${patenteSel}</h1>
-      <div class="muted">
-        Rango: ${fDesde.value||'—'} a ${fHasta.value||'—'} · Chofer: ${fChofer.value||'Todos'} · Búsqueda: ${fQ.value||'—'}
+<div class="page">
+  <div class="frame"></div>
+  <div class="content">
+    <div class="head">
+      <img src="/logo.png" alt="Logo" onerror="this.style.display='none'">
+      <div>
+        <h1>LIQUIDACIÓN — PATENTE ${patenteSel}</h1>
+        <div class="muted">Rango: ${fDesde.value||'—'} a ${fHasta.value||'—'} · Chofer: ${fChofer.value||'Todos'} · Búsqueda: ${fQ.value||'—'}</div>
       </div>
+      <div class="badge">Detalle de viajes</div>
     </div>
-    <div class="badge">Detalle de viajes</div>
+
+    ${resumenHTML}
+
+    <table class="t" style="margin-top:6mm">
+      ${colgroup}
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Fecha</th>
+          <th>CTG</th>
+          <th>Origen y destino</th>
+          <th class="r">Tarifa</th>
+          <th class="r">Kg cargados</th>
+          <th class="r">Kg descargados</th>
+          <th class="r">Adelanto</th>
+          <th class="r">Peaje</th>
+          <th class="r">Entrada</th>
+          <th>Observaciones</th>
+        </tr>
+      </thead>
+      <tbody>${rowsDet || '<tr><td colspan="11" class="c">Sin viajes para los filtros seleccionados.</td></tr>'}</tbody>
+      ${rowsDet ? totDet : ''}
+    </table>
+
+    <div class="muted" style="margin-top:4mm">
+      Liquidación = Comisión – Adelantos + Peajes + Entradas. Comisión por viaje según % del chofer (18% por defecto).
+    </div>
   </div>
-
-  ${resumenHTML}
-
-  <table class="t" style="margin-top:6mm">
-    <thead>
-      <tr>
-        <th style="width:18mm">#</th>
-        <th style="width:22mm">Fecha</th>
-        <th style="width:26mm">CTG</th>
-        <th>Origen y destino</th>
-        <th style="width:28mm" class="r">Tarifa</th>
-        <th style="width:28mm" class="r">Kg cargados</th>
-        <th style="width:32mm" class="r">Kg descargados</th>
-        <th style="width:24mm" class="r">Adelanto</th>
-        <th style="width:22mm" class="r">Peaje</th>
-        <th style="width:22mm" class="r">Entrada</th>
-        <th class="obs">Observaciones</th>
-      </tr>
-    </thead>
-    <tbody>${rowsDet || '<tr><td colspan="11" class="small">Sin viajes para los filtros seleccionados.</td></tr>'}</tbody>
-    ${rowsDet ? totDet : ''}
-  </table>
-
-  <div class="small" style="margin-top:4mm">Liquidación = Comisión – Adelantos + Peajes + Entradas. Comisión por viaje según % del chofer (18% por defecto).</div>
 </div>
 </body></html>`;
 
-  const w = window.open('', '_blank', 'width=1000,height=1200');
+  const w = window.open('', '_blank', 'width=1100,height=800');
   w.document.write(html); w.document.close(); w.focus();
 });
 </script>
