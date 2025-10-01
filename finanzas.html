@@ -714,22 +714,25 @@ document.getElementById('btnPrintLiq').addEventListener('click', ()=>{
     return '';
   };
 
-  // Kg cargados/descargados: aceptamos varios nombres de campo
-  const kgCarg = (v)=> {
-    const cand = [
-      v.kgCargadosRaw, v.kgCargados, v.kgCargado, v.kgC, v.kgCarga, v.kgCargaTN, v.kgCargadosTn, v.kgCargadosTns,
-      v.kg, v.kilosCargados, v.kilosCarga
-    ];
-    let val = cand.find(x => x!=null && String(x).trim()!=='');
-    if (val==null || String(val).trim()==='') val = v.kgDescargados ?? v.kgDesc ?? v.kilosDescargados ?? '';
-    return (val==null)? '' : String(val);
-  };
-  const kgDesc = (v)=> {
-    const cand = [v.kgDescargadosRaw, v.kgDescargados, v.kgDesc, v.kilosDescargados, v.kg];
-    const val = cand.find(x => x!=null && String(x).trim()!=='');
-    return (val==null)? '' : String(val);
-  };
+// Kg CARGADOS: solo busca campos de cargado; NO usa v.kg ni cae a descargados.
+const kgCarg = (v)=> {
+  const cand = [
+    v.kgCargadosRaw, v.kgCargados, v.kgCargado,
+    v.kgCarga, v.kgCargaTN, v.kgCargadosTn, v.kgCargadosTns,
+    v.kilosCargados, v.kilosCarga
+  ];
+  const val = cand.find(x => x!=null && String(x).trim()!=='');
+  return (val==null)? '' : String(val);
+};
 
+// Kg DESCARGADOS: prioriza campos de descarga; como ÚLTIMO recurso usa v.kg (legado)
+const kgDesc = (v)=> {
+  const cand = [v.kgDescargadosRaw, v.kgDescargados, v.kgDesc, v.kilosDescargados];
+  let val = cand.find(x => x!=null && String(x).trim()!=='');
+  if (val==null) val = v.kg; // fallback legado
+  return (val==null)? '' : String(val);
+};
+  
   const adel    = (v)=> (v.adelantoAplica ? parseARS(v.adelantoMonto||0) : 0);
   const peaje   = (v)=> (v.peajeAplica   ? parseARS(v.peajeMonto  ||0) : 0);
   const entrada = (v)=> (v.entradaAplica ? parseARS(v.entradaMonto||0) : 0);
